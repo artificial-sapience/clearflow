@@ -2,7 +2,6 @@
 
 Trustworthy orchestration for LLM-powered agents. Predictable routing. Immutable state. Single termination enforced.
 
-[![codecov](https://codecov.io/gh/consent-ai/ClearFlow/graph/badge.svg)](https://codecov.io/gh/consent-ai/ClearFlow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 
