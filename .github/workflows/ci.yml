@@ -1,0 +1,240 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "0.5.11"
+
+jobs:
+  version:
+    name: Calculate Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.gitversion.outputs.semVer }}
+      versionTag: ${{ steps.gitversion.outputs.majorMinorPatch }}
+      preReleaseTag: ${{ steps.gitversion.outputs.preReleaseTag }}
+      pep440Version: ${{ steps.pep440.outputs.pep440_version }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for GitVersion
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v4
+      with:
+        versionSpec: '6.x'
+        
+    - name: Calculate version
+      id: gitversion
+      uses: gittools/actions/gitversion/execute@v4
+        
+    - name: Display version
+      run: |
+        echo "Version: ${{ steps.gitversion.outputs.semVer }}"
+        echo "Major: ${{ steps.gitversion.outputs.major }}"
+        echo "Minor: ${{ steps.gitversion.outputs.minor }}"
+        echo "Patch: ${{ steps.gitversion.outputs.patch }}"
+        echo "PreReleaseTag: ${{ steps.gitversion.outputs.preReleaseTag }}"
+        echo "PreReleaseNumber: ${{ steps.gitversion.outputs.preReleaseNumber }}"
+        
+    - name: Convert to PEP 440 compliant version
+      id: pep440
+      run: |
+        VERSION="${{ steps.gitversion.outputs.semVer }}"
+        # Convert GitVersion format to PEP 440
+        # Examples: 0.0.1-pr.15 -> 0.0.1.dev15, 0.0.1-alpha.1 -> 0.0.1a1
+        if [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-pr\.([0-9]+)$ ]]; then
+          PEP_VERSION="${BASH_REMATCH[1]}.dev${BASH_REMATCH[2]}"
+        elif [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-alpha\.([0-9]+)$ ]]; then
+          PEP_VERSION="${BASH_REMATCH[1]}a${BASH_REMATCH[2]}"
+        elif [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
+          PEP_VERSION="${BASH_REMATCH[1]}b${BASH_REMATCH[2]}"
+        elif [[ "$VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-rc\.([0-9]+)$ ]]; then
+          PEP_VERSION="${BASH_REMATCH[1]}rc${BASH_REMATCH[2]}"
+        else
+          PEP_VERSION="$VERSION"
+        fi
+        echo "pep440_version=$PEP_VERSION" >> $GITHUB_OUTPUT
+        echo "Converted version: $VERSION -> $PEP_VERSION"
+
+  lint-and-type-check:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    needs: version
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: ${{ env.UV_VERSION }}
+        enable-cache: true
+        
+    - name: Install dependencies
+      run: uv sync --group dev
+        
+    - name: Run ruff linting with auto-fix
+      run: uv run ruff check --fix clearflow tests
+      
+    - name: Verify no unfixed linting issues
+      run: uv run ruff check --exit-non-zero-on-fix clearflow tests
+      
+    - name: Run ruff formatting
+      run: uv run ruff format clearflow tests
+      
+    - name: Verify formatting is correct
+      run: uv run ruff format --check clearflow tests
+      
+    - name: Run mypy type checking
+      run: uv run mypy --strict clearflow tests
+      
+    - name: Run pyright type checking
+      run: uv run pyright clearflow tests
+
+  test-matrix:
+    name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.13"]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: ${{ env.UV_VERSION }}
+        enable-cache: true
+        
+    - name: Update version in pyproject.toml
+      shell: bash
+      run: |
+        # Update the version in pyproject.toml with PEP 440 compliant version
+        VERSION="${{ needs.version.outputs.pep440Version }}"
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        else
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        fi
+        echo "Updated version to: $VERSION"
+        
+    - name: Install dependencies
+      run: uv sync --group dev
+        
+    - name: Run tests with coverage
+      run: uv run pytest -x -v tests --cov=clearflow --cov-report=xml --cov-report=term --cov-fail-under=100
+        
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && github.repository == 'consent-ai/ClearFlow'
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+      continue-on-error: true
+
+
+  build:
+    name: Build Distribution
+    runs-on: ubuntu-latest
+    needs: version
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: ${{ env.UV_VERSION }}
+        
+    - name: Update version in pyproject.toml
+      shell: bash
+      run: |
+        # Update the version in pyproject.toml with PEP 440 compliant version
+        VERSION="${{ needs.version.outputs.pep440Version }}"
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        else
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+        fi
+        echo "Building version: $VERSION"
+        
+    - name: Build package
+      run: |
+        uv build
+        
+    - name: Check dist contents
+      run: |
+        ls -la dist/
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-${{ needs.version.outputs.version }}
+        path: dist/
+
+  security-check:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: version
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: ${{ env.UV_VERSION }}
+        enable-cache: true
+        
+    - name: Install dependencies
+      run: uv sync --group dev
+        
+    - name: Run safety check
+      run: |
+        uv run safety check --json
+      continue-on-error: true  # Don't fail the build on vulnerabilities, but report them
