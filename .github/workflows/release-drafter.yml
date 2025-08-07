@@ -17,6 +17,25 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v6
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for GitVersion
+          
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v4
+        with:
+          versionSpec: '6.x'
+          
+      - name: Calculate version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v4
+        
+      - name: Update Release Draft
+        uses: release-drafter/release-drafter@v6
+        with:
+          version: ${{ steps.gitversion.outputs.majorMinorPatch }}
+          name: v${{ steps.gitversion.outputs.majorMinorPatch }}
+          tag: v${{ steps.gitversion.outputs.majorMinorPatch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
