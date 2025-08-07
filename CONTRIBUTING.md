@@ -15,6 +15,10 @@ If your contribution reduces any of these metrics, we'll work with you to addres
 ## Setup
 
 ```bash
+# Install ClearFlow for testing
+pip install clearflow
+
+# For development
 git clone https://github.com/consent-ai/ClearFlow.git
 cd ClearFlow
 uv sync --group dev        # Install with dev dependencies

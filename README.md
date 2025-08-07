@@ -2,8 +2,13 @@
 
 Trustworthy orchestration for LLM-powered agents. Predictable routing. Immutable state. Single termination enforced.
 
+[![codecov](https://codecov.io/gh/consent-ai/ClearFlow/graph/badge.svg?token=29YHLHUXN3)](https://codecov.io/gh/consent-ai/ClearFlow)
+[![PyPI version](https://badge.fury.io/py/clearflow.svg)](https://badge.fury.io/py/clearflow)
+[![CI Status](https://github.com/consent-ai/ClearFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/consent-ai/ClearFlow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 
 ## For Production Agents
 
@@ -40,7 +45,17 @@ We provide a trustworthy orchestration framework for connecting LLM calls and ot
 ## Get Started
 
 ```bash
-# Clone and install locally (package not yet published)
+# Install from PyPI
+pip install clearflow
+
+# Or with your preferred package manager
+uv add clearflow
+poetry add clearflow
+pdm add clearflow
+```
+
+For development:
+```bash
 git clone https://github.com/consent-ai/ClearFlow.git
 cd ClearFlow
 pip install -e .
@@ -51,6 +66,8 @@ See [examples/chat](examples/chat/) for a working example showing the core patte
 ## Early Stage Notice
 
 ClearFlow is young (v0.x) and focused. We do one thing well: provide trustworthy orchestration for LLM-powered agents. We're the foundation layer - you bring your own LLM integrations and agent logic.
+
+**Package:** [pypi.org/project/clearflow](https://pypi.org/project/clearflow/)
 
 ## Philosophy
 
