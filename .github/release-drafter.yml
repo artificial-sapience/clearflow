@@ -1,7 +1,8 @@
 # .github/release-drafter.yml
 
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+# Version is provided by GitVersion in the workflow
+name-template: '$INPUT_NAME'
+tag-template: '$INPUT_TAG'
 categories:
   - title: '🚀 Features'
     labels:
@@ -38,17 +39,7 @@ categories:
       - 'revert'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
-version-resolver:
-  major:
-    labels:
-      - 'major'
-  minor:
-    labels:
-      - 'minor'
-  patch:
-    labels:
-      - 'patch'
-  default: patch
+# Version resolver removed - GitVersion handles versioning
 template: |
   ## What's Changed
 
