@@ -78,13 +78,13 @@ jobs:
     - name: Get draft release
       id: draft
       run: |
-        DRAFT_RELEASE=$(gh release list --draft --json tagName,id --jq '.[0]')
-        if [ -z "$DRAFT_RELEASE" ]; then
+        DRAFT_RELEASE=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | select(.draft == true)] | first')
+        if [ -z "$DRAFT_RELEASE" ] || [ "$DRAFT_RELEASE" = "null" ]; then
           echo "::error::No draft release found. Please ensure Release Drafter has created a draft."
           exit 1
         fi
         echo "draft_id=$(echo $DRAFT_RELEASE | jq -r .id)" >> $GITHUB_OUTPUT
-        echo "Found draft release: $(echo $DRAFT_RELEASE | jq -r .tagName)"
+        echo "Found draft release: $(echo $DRAFT_RELEASE | jq -r .tag_name)"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
