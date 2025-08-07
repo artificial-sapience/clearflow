@@ -4,7 +4,7 @@
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 
-Orchestration for LLM-powered agents. Predictable routing, immutable state, enforced single termination. 200 lines, zero dependencies, 100% coverage.
+Type-safe async workflows for LLM agents. 200 lines, zero dependencies, 100% coverage.
 
 ## Installation
 
