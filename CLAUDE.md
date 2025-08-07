@@ -2,16 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Core Philosophy: Trust Through Proof
+## Core Philosophy
 
-ClearFlow provides trustworthy orchestration with predictable routing for LLM-powered agents. We focus on what we can actually guarantee:
-- **100% test coverage** is non-negotiable for the orchestration code
+ClearFlow is a 200-line orchestration framework with predictable routing for LLM-powered agents. Focus on what's guaranteed:
+- **100% test coverage** is non-negotiable
 - **Type safety** with mypy/pyright strict mode is mandatory
-- **Immutability** is enforced to track state between LLM calls
-- **Explicit is better than implicit** - every route and transformation is visible
-- **Predictable orchestration** - given an outcome, the next step is always the same (but NOT deterministic execution)
+- **Immutability** is enforced
+- **Predictable routing** - given an outcome, the next step is always the same (NOT deterministic execution)
+- **Zero dependencies**
 
-Our target audience: Engineers building LLM-powered agents who need at least one layer they can fully test and trust.
+Target audience: Developers building multi-step LLM workflows who need type-safe state management and testable orchestration.
 
 ## Development Commands
 
@@ -59,24 +59,14 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
    - Trustworthy orchestration with full generic support
    - Build-time validation of flow structure
 
-### What Makes ClearFlow Trustworthy
+### Key Facts
 
-1. **Verifiable Claims**
-   - <200 lines of auditable orchestration code (188 lines exactly)
-   - 100% test coverage of the framework
-   - No `Any` or `type: ignore` in framework code
-   - All types frozen with `@dataclass(frozen=True)`
-
-2. **Predictable Routing** (NOT deterministic execution)
-   - Single termination rule: exactly one endpoint
-   - Static orchestration table - given an outcome, next step is predictable
-   - Build-time validation catches flow structure errors
-   - But nodes can do anything - we don't control execution
-
-3. **Honest Communication**
-   - We provide orchestration structure, not execution guarantees
-   - Clear boundaries: orchestration logic vs node behavior
-   - No promises about timing, ordering, or external service behavior
+- **Code size**: <200 lines (currently 188)
+- **Test coverage**: 100% required
+- **Type safety**: No `Any` or `type: ignore` allowed
+- **Immutability**: All dataclasses frozen
+- **Routing**: Predictable (NOT deterministic execution)
+- **Single termination**: Exactly one route to `None` per flow
 
 ### Common Patterns
 
@@ -142,14 +132,26 @@ flow = (
    - Reject anything that adds implicit behavior
    - "No" is a complete answer
 
-### Communication Style
+### Documentation Style
+
+**CRITICAL**: All documentation must be:
+- **Factual and concise** - No verbosity or repetition
+- **Free of "we/our" language** - Use neutral technical language
+- **Focused on what matters** - Essential information only
+- **Proportional** - Documentation should be shorter than the code (200 lines)
+- **Ego-free** - No defensiveness, no overselling, no anxiety
+
+Examples:
+- ❌ "We provide trustworthy orchestration for mission-critical systems"
+- ✅ "Type-safe async workflows for LLM agents"
+- ❌ "Our philosophy is trust through proof"
+- ✅ "100% test coverage required"
 
 When responding to users:
-- Be direct and honest
-- Acknowledge limitations upfront
-- No false promises about capabilities
-- Focus on verifiable facts
-- Remember: our users value truth over comfort
+- Be direct and factual
+- State limitations without defensiveness
+- Use technical language, not marketing speak
+- Keep responses concise
 
 ### Red Flags to Avoid
 
@@ -173,31 +175,33 @@ When responding to users:
    - Absolute statements about what users can't do
    - Marketing language that can't be verified
 
-### The Trust Test
+### Before Any Change
 
-Before any change, ask:
-- Can we prove this works correctly?
+Ask:
+- Can this be tested completely?
 - Does this make behavior more predictable?
-- Will our target users trust this?
-- Can we test this completely?
+- Is this simpler than the alternative?
 
 If any answer is "no", don't do it.
 
 ## Remember
 
-Our users chose ClearFlow because they need at least one layer of their LLM agent stack they can trust. We provide predictable routing and immutable state - nothing more, nothing less.
+ClearFlow provides predictable routing and immutable state - nothing more, nothing less. Keep the code minimal, the documentation concise, and the claims verifiable.
 
-Every line of code, every design decision, every word in documentation must be honest about what we can and cannot guarantee.
+## Documentation Size Limits
 
-We measure success by orchestration logic that behaves predictably, even when the nodes it orchestrates do not.
+ClearFlow is 200 lines. Documentation should be proportional:
+- README.md: <30 lines
+- CONTRIBUTING.md: <50 lines  
+- Individual docs: <100 lines
+- Total documentation: <500 lines
 
-## Critical Lesson from This Session
+If a document is longer than the code it describes, it's too long.
 
-**Determinism vs Predictability**: We learned that ClearFlow is NOT deterministic because:
-- Nodes execute arbitrary async code
-- We don't control timing or execution order
-- External services and LLMs introduce variability
+## Critical Technical Distinction
 
-What we DO provide is **predictable routing**: given a node outcome, the next step is always the same. This is valuable but fundamentally different from deterministic execution.
+**Predictable routing ≠ Deterministic execution**
 
-Always be precise with technical terms. Our users are engineers who will verify our claims.
+ClearFlow provides predictable routing (given outcome X, next step is always Y) but NOT deterministic execution (nodes execute arbitrary async code with unpredictable timing).
+
+Always use precise technical terms. Users are engineers who will verify claims.

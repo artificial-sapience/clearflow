@@ -17,4 +17,4 @@ python main.py
 ## Requirements
 
 - Python 3.13+
-- Install ClearFlow: `pip install ..` (from examples directory)
+- ClearFlow: `pip install clearflow`
