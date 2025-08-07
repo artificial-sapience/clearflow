@@ -75,19 +75,6 @@ jobs:
       run: |
         ls -la dist/
         
-    - name: Get draft release
-      id: draft
-      run: |
-        DRAFT_RELEASE=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | select(.draft == true)] | first')
-        if [ -z "$DRAFT_RELEASE" ] || [ "$DRAFT_RELEASE" = "null" ]; then
-          echo "::error::No draft release found. Please ensure Release Drafter has created a draft."
-          exit 1
-        fi
-        echo "draft_id=$(echo $DRAFT_RELEASE | jq -r .id)" >> $GITHUB_OUTPUT
-        echo "Found draft release: $(echo $DRAFT_RELEASE | jq -r .tag_name)"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
     - name: Create and push tag
       run: |
         git config user.name "github-actions[bot]"
@@ -103,8 +90,16 @@ jobs:
         
     - name: Publish GitHub Release
       run: |
+        # Get the most recent draft release
+        DRAFT_TAG=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | select(.draft == true)] | first | .tag_name')
+        
+        if [ -z "$DRAFT_TAG" ] || [ "$DRAFT_TAG" = "null" ]; then
+          echo "::error::No draft release found"
+          exit 1
+        fi
+        
         # Update draft with correct tag and publish it
-        gh release edit ${{ steps.draft.outputs.draft_id }} \
+        gh release edit "$DRAFT_TAG" \
           --tag "v${{ needs.version.outputs.versionTag }}" \
           --title "v${{ needs.version.outputs.versionTag }}" \
           --draft=false \
