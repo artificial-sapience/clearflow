@@ -16,6 +16,10 @@ pip install clearflow
 
 - [Chat application](examples/chat/) - LLM conversation with state management
 
+## Acknowledgments
+
+Inspired by [PocketFlow](https://github.com/The-Pocket/PocketFlow)'s Node-Flow-State pattern.
+
 ## License
 
 MIT
