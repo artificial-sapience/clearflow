@@ -1,6 +1,6 @@
 # ClearFlow
 
-Trustworthy orchestration for LLM-powered agents. Predictable routing. Immutable state. Single termination enforced.
+A minimal orchestration framework for LLM-powered agents with predictable routing, immutable state, and enforced single termination.
 
 [![codecov](https://codecov.io/gh/consent-ai/ClearFlow/graph/badge.svg?token=29YHLHUXN3)](https://codecov.io/gh/consent-ai/ClearFlow)
 [![PyPI version](https://badge.fury.io/py/clearflow.svg)](https://badge.fury.io/py/clearflow)
@@ -10,30 +10,24 @@ Trustworthy orchestration for LLM-powered agents. Predictable routing. Immutable
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
 
-## For Production Agents
+## What ClearFlow Does
 
-If you're building LLM-powered agents for mission and life-critical systems - financial trading bots, medical diagnostic assistants, industrial control systems, autonomous code generators, security incident responders - you understand the challenges of working with probabilistic AI systems.
+ClearFlow is an orchestration framework for LLM-powered agents that provides predictable routing between async operations. Built for production systems where surprises are unacceptable.
 
-You need predictable foundations. ClearFlow provides explicit, trustworthy orchestration so your framework isn't another source of surprises.
-
-## What We Actually Do
-
-We provide a trustworthy orchestration framework for connecting LLM calls and other async operations in your agents.
-
-**What we guarantee:**
+**Guarantees:**
 - **Static orchestration** - Given a node outcome, the next step is always predictable
 - **Type-safe generics** - Full mypy/pyright strict validation
 - **Immutable state** - State objects cannot be mutated, only transformed
 - **Single termination** - Every flow has exactly one endpoint, enforced at build time
 - **No hidden behavior** - What you define is what executes
 
-**What we DON'T guarantee:**
-- Deterministic execution (your nodes can do anything)
-- Consistent timing or ordering of async operations  
-- Protection from failures in your node implementations
-- Any behavior of the LLMs or external services you call
+**Limitations:**
+- No deterministic execution (nodes execute arbitrary async code)
+- No timing or ordering guarantees for async operations
+- No protection from failures in node implementations
+- No control over LLM or external service behavior
 
-## Verify Our Claims
+## Verification
 
 - **100% test coverage**: Run `./quality-check.sh`
 - **Type safety**: Check [clearflow/__init__.py](clearflow/__init__.py) - no `Any`, no `type: ignore`
@@ -42,46 +36,53 @@ We provide a trustworthy orchestration framework for connecting LLM calls and ot
 - **Immutable types**: All dataclasses use `frozen=True`
 - **Single termination**: See enforcement in `_StartedWithFlow.build()` method
 
-## Get Started
+## Quick Start
+
+```python
+from clearflow import Flow, Node, NodeResult, State
+
+class ProcessNode(Node[dict]):
+    async def exec(self, state: State[dict]) -> NodeResult[dict]:
+        # Transform state immutably
+        new_state = state.transform(lambda d: {**d, "processed": True})
+        return NodeResult(new_state, outcome="success")
+
+# Build flow with single termination
+flow = (
+    Flow[dict]("Pipeline")
+    .start_with(ProcessNode("process"))
+    .route("process", "success", None)  # Single termination point
+    .build()
+)
+
+# Execute
+initial_state = State({"input": "data"})
+result = await flow(initial_state)
+```
+
+See [examples/chat](examples/chat/) for a complete working example.
+
+## Installation
 
 ```bash
-# Install from PyPI
+# From PyPI
 pip install clearflow
-
-# Or with your preferred package manager
-uv add clearflow
-poetry add clearflow
-pdm add clearflow
 ```
-
-For development:
-```bash
-git clone https://github.com/consent-ai/ClearFlow.git
-cd ClearFlow
-pip install -e .
-```
-
-See [examples/chat](examples/chat/) for a working example showing the core patterns.
-
-## Early Stage Notice
-
-ClearFlow is young (v0.x) and focused. We do one thing well: provide trustworthy orchestration for LLM-powered agents. We're the foundation layer - you bring your own LLM integrations and agent logic.
 
 **Package:** [pypi.org/project/clearflow](https://pypi.org/project/clearflow/)
 
-## Philosophy
+## Design Principles
 
-We believe:
-- **Explicit is better than implicit** - Every route and transformation is visible
-- **Type safety prevents errors** - Catch issues at development time, not in production
-- **Immutability aids debugging** - Trace exactly how state changes through your flow
-- **Constraints enable confidence** - Single termination means predictable completion
+- **Explicit over implicit** - Every route and transformation is visible
+- **Type safety** - Catch issues at development time, not in production
+- **Immutability** - Trace state changes through the flow without side effects
+- **Single termination** - One endpoint per flow ensures predictable completion
 
-ClearFlow is a minimal orchestration layer that does exactly what you tell it to do - nothing more, nothing less.
+ClearFlow is a minimal orchestration layer (< 200 lines) with zero dependencies that executes exactly as defined.
 
 ## Acknowledgments
 
-ClearFlow was inspired by [PocketFlow](https://github.com/The-Pocket/PocketFlow)'s elegant Node-Flow-State pattern and its proof that powerful workflow systems can be built with minimal code. We've adopted their core concepts and naming conventions while adding functional patterns, type safety, and immutability constraints needed for mission-critical systems.
+ClearFlow builds on [PocketFlow](https://github.com/The-Pocket/PocketFlow)'s Node-Flow-State pattern, adding functional patterns, type safety, and immutability constraints for production systems.
 
 ## License
 
