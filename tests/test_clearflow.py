@@ -2,7 +2,7 @@
 
 This test suite validates the core principles of ClearFlow:
 - Pure functions (no side effects)
-- Predictable routing
+- Explicit routing
 - Composability of flows
 - Type safety with any state structure
 
@@ -655,7 +655,7 @@ class TestErrorHandling:
 
         @dc(frozen=True)
         class UnpredictableNode(Node[dict[str, str]]):
-            """Node with unpredictable outcomes."""
+            """Node with variable outcomes."""
 
             @override
             async def exec(self, state: dict[str, str]) -> NodeResult[dict[str, str]]:

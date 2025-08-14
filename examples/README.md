@@ -5,7 +5,7 @@ Learn ClearFlow through working examples.
 ## Examples
 
 ### [Chat](./chat/)
-A conversational AI with OpenAI - demonstrates predictable routing and state management for LLM-powered conversations.
+A conversational AI with OpenAI - demonstrates explicit routing and state management for language model conversations.
 
 ```bash
 cd chat

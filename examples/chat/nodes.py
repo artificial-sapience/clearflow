@@ -14,13 +14,13 @@ ChatState = dict[str, Any]  # Still need Any for other fields
 
 @dataclass(frozen=True)
 class ChatNode(Node[ChatState]):
-    """Node that processes chat messages through an LLM.
+    """Node that processes chat messages through a language model.
 
     This node handles the complete conversation management:
     1. Maintains conversation history
     2. Adds user messages when provided
     3. Ensures system prompt is present
-    4. Processes through LLM
+    4. Processes through language model
     5. Returns updated conversation state
     """
 
@@ -29,7 +29,7 @@ class ChatNode(Node[ChatState]):
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        """Process user input and generate LLM response."""
+        """Process user input and generate language model response."""
         # Get conversation history and current user input
         messages: list[ChatMessage] = state.get("messages", [])
         user_input: str | None = state.get("user_input")

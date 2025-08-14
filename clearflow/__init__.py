@@ -1,10 +1,5 @@
 # Copyright (c) 2025 ClearFlow Contributors
 
-"""Trustworthy orchestration for LLM-powered agents.
-
-Predictable routing. Single termination enforced.
-"""
-
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, field

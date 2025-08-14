@@ -1,7 +1,7 @@
 [project]
 name = "clearflow"
 version = "0.0.0"  # Version dynamically set by CI/CD pipeline
-description = "Trustworthy orchestration for LLM-powered agents with predictable routing, immutable state, and zero dependencies"
+description = "Reliable language model orchestration. Type-safe with 100% test coverage."
 authors = [{name = "Richard Beauchamp", email = "rbeauchamp@users.noreply.github.com"}]
 maintainers = [{name = "ClearFlow Contributors"}]
 license = {text = "MIT"}
@@ -10,8 +10,8 @@ requires-python = ">=3.13"
 dependencies = []
 
 keywords = [
-    "llm", "ai-agents", "functional-programming", "agents", "agentic", 
-    "mission-critical", "zero-dependencies", "immutable", "composable"
+    "language-models", "ai-agents", "orchestration", "agents", "async", 
+    "type-safe", "zero-dependencies", "reliable"
 ]
 
 classifiers = [
@@ -98,6 +98,7 @@ select = ["ALL"]  # Maximum strictness for mission-critical code
 # Pragmatic ignores focused on productivity while maintaining quality:
 ignore = [
     # Docstring conflicts
+    "D104",    # Missing docstring in public package (let classes document themselves)
     "D203",    # 1 blank line required before class docstring (conflicts with D211)
     "D213",    # Multi-line docstring summary should start at the second line (conflicts with D212)
     # Formatter conflicts

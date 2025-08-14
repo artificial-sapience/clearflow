@@ -7,7 +7,7 @@ from clearflow import Flow, Node
 
 
 def create_extraction_flow() -> Node[ExtractorState]:
-    """Create the resume extraction flow with predictable routing.
+    """Create the resume extraction flow with explicit routing.
 
     Flow structure:
     1. Extract structured data from text
@@ -23,7 +23,7 @@ def create_extraction_flow() -> Node[ExtractorState]:
     formatter = FormatterNode(name="formatter")
     complete = CompleteNode(name="complete")
 
-    # Build flow with predictable routing and single termination
+    # Build flow with explicit routing and single termination
     return (
         Flow[ExtractorState]("ResumeExtraction")
         # Start with extraction

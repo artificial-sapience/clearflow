@@ -2,9 +2,9 @@
 
 ## Who Uses ClearFlow
 
-Developers building multi-step LLM workflows who need:
+Developers building multi-step language model workflows who need:
 - Type-safe state management between async operations
-- Predictable routing regardless of LLM outputs
+- Explicit routing regardless of model outputs
 - Testable orchestration logic
 
 ## Contributing

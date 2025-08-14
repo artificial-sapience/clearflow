@@ -6,12 +6,12 @@ from clearflow import Flow, Node
 
 
 def create_chat_flow() -> Node[ChatState]:
-    """Create a chat flow that manages conversations through an LLM.
+    """Create a chat flow that manages conversations through a language model.
 
     The ChatNode handles all conversation management including:
     - Maintaining message history
     - Adding user messages
-    - Processing through the LLM
+    - Processing through the language model
     - Returning responses
 
     The UI layer (main.py) only handles input/output.

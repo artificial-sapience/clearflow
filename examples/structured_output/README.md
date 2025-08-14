@@ -5,7 +5,7 @@ Extract structured data from unstructured text using OpenAI's Pydantic integrati
 ## Features
 
 - **Type-safe extraction** using Pydantic models
-- **Predictable routing** with clear outcomes
+- **Explicit routing** with clear outcomes
 - **Validation** of extracted data
 - **Formatted output** for display
 
