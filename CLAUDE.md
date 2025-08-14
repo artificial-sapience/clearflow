@@ -146,12 +146,19 @@ Examples:
 - ✅ "Type-safe async workflows for LLM agents"
 - ❌ "Our philosophy is trust through proof"
 - ✅ "100% test coverage required"
+- ❌ "This guide explains how to create high-quality examples"
+- ✅ "Creating Examples"
+
+**Documentation Smell Test**:
+If documentation sounds anxious, defensive, or like it's trying to impress, rewrite it.
+Good documentation states facts without emotion.
 
 When responding to users:
 - Be direct and factual
 - State limitations without defensiveness
 - Use technical language, not marketing speak
 - Keep responses concise
+- Don't explain why you can't do something (preachy)
 
 ### Red Flags to Avoid
 
@@ -184,6 +191,21 @@ Ask:
 
 If any answer is "no", don't do it.
 
+### Git Workflow
+
+1. **Branch Protection**: Main branch requires PR with passing checks
+2. **Conventional Commits**: Use `fix:`, `feat:`, `docs:`, `ci:` prefixes
+3. **Local Protection**: Pre-commit hook prevents direct commits to main
+4. **PR Process**:
+   ```bash
+   git checkout -b type/description
+   # Make changes
+   ./quality-check.sh
+   git commit -m "type: clear description"
+   git push -u origin type/description
+   gh pr create --title "type: description" --body "concise explanation"
+   ```
+
 ## Remember
 
 ClearFlow provides predictable routing and immutable state - nothing more, nothing less. Keep the code minimal, the documentation concise, and the claims verifiable.
@@ -198,6 +220,25 @@ ClearFlow is 200 lines. Documentation should be proportional:
 
 If a document is longer than the code it describes, it's too long.
 
+## Release Process
+
+ClearFlow uses automated release management:
+
+1. **Version Management**: GitVersion calculates versions based on git history
+2. **Draft Releases**: Release Drafter maintains draft with changelog from PR merges
+3. **Publishing**: Manual trigger of release.yml workflow:
+   - Builds package with calculated version
+   - Creates git tag
+   - Publishes to PyPI via trusted publisher
+   - Converts draft to published GitHub release
+
+**Known Issues**:
+- Draft release IDs can become stale - always fetch fresh by tag name
+- PyPI trusted publisher requires exact workflow path match
+- Version must be updated in pyproject.toml before building
+
+**PyPI Package**: https://pypi.org/project/clearflow/
+
 ## Critical Technical Distinction
 
 **Predictable routing ≠ Deterministic execution**
@@ -205,3 +246,12 @@ If a document is longer than the code it describes, it's too long.
 ClearFlow provides predictable routing (given outcome X, next step is always Y) but NOT deterministic execution (nodes execute arbitrary async code with unpredictable timing).
 
 Always use precise technical terms. Users are engineers who will verify claims.
+
+## Lessons Learned
+
+1. **Documentation debt is real** - A 200-line library had 783 lines of docs (reduced to 150)
+2. **Ego leaks into docs** - Watch for defensive language, "we/our", trying to sound important
+3. **Less is more** - If you can say it in 20 lines instead of 100, do it
+4. **Show, don't tell** - Code examples > philosophical manifestos
+5. **Trust the code** - A well-written 200-line library doesn't need 450-line guides
+6. **Be boring** - Boring, obvious code and docs are better than clever ones
