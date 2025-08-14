@@ -41,10 +41,11 @@ pip install clearflow
 
 ## Why ClearFlow?
 
-- **Zero dependencies** - No supply chain risks
-- **166 lines** - Read the entire source in 5 minutes
-- **Type-safe** - Full mypy/pyright strict mode support
-- **100% tested** - Every line has test coverage
+- **<200 lines** - Read the entire source in 5 minutes
+- **Zero dependencies** - No bloat, no conflicts  
+- **100% tested** - Every line covered, no surprises
+- **Type-safe** - Catch errors at compile time, not production
+- **Composable** - Build complex agents from simple pieces
 
 ## Examples
 

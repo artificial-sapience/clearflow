@@ -23,16 +23,16 @@ uv sync --group dev
 3. Update tests (maintain 100% coverage)
 4. Use conventional commits: `fix:`, `feat:`, `docs:`
 
-## State Management
+## Immutable Patterns
 
-ClearFlow uses immutable state:
+ClearFlow encourages immutable state:
 
 ```python
-# Correct - using transform()
-new_state = state.transform(lambda d: {**d, "processed": True})
+# Correct - create new state
+new_state = {**state, "processed": True}
 
 # Wrong - mutation not allowed
-state.data["key"] = value
+state["key"] = value
 ```
 
 ## What Gets Merged
