@@ -3,10 +3,10 @@
 from models import ExtractorState
 from nodes import CompleteNode, ExtractorNode, FormatterNode, ValidatorNode
 
-from clearflow import Flow
+from clearflow import Flow, Node
 
 
-def create_extraction_flow() -> Flow[ExtractorState]:
+def create_extraction_flow() -> Node[ExtractorState]:
     """Create the resume extraction flow with predictable routing.
 
     Flow structure:

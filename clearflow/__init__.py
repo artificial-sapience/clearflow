@@ -2,59 +2,39 @@
 
 """Trustworthy orchestration for LLM-powered agents.
 
-Predictable routing. Immutable state. Single termination enforced.
+Predictable routing. Single termination enforced.
 """
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import override
+from typing import TypeVar, override
 
 __all__ = [
     "Flow",
     "Node",
     "NodeResult",
-    "State",
 ]
 
 # Type definitions
+T = TypeVar("T")
 FromNodeName = str
 Outcome = str
 RouteKey = tuple[FromNodeName, Outcome]
 
 
 @dataclass(frozen=True)
-class State[T]:
-    """State container with functional transform API.
-
-    While the State container itself is frozen, the data inside (T) follows
-    standard Python mutability rules. The transform() method encourages
-    creating new state instances for better debugging and testing.
-    """
-
-    data: T
-
-    def transform(self, fn: Callable[[T], T]) -> "State[T]":
-        """Create a new State by transforming the data.
-
-        This method encourages functional patterns but doesn't enforce
-        immutability of the underlying data structure.
-        """
-        return State(fn(self.data))
-
-
-@dataclass(frozen=True)
 class NodeResult[T]:
     """Result of node execution with state and outcome."""
 
-    state: State[T]
+    state: T
     outcome: Outcome
 
 
 @dataclass(frozen=True, kw_only=True)
 class Node[T](ABC):
-    """Async node that transforms state."""
+    """Async node that transforms state of type T."""
 
     name: str = field(default="")
 
@@ -64,18 +44,18 @@ class Node[T](ABC):
             # Use object.__setattr__ to bypass frozen dataclass restriction
             object.__setattr__(self, "name", self.__class__.__name__)
 
-    async def __call__(self, state: State[T]) -> NodeResult[T]:
+    async def __call__(self, state: T) -> NodeResult[T]:
         """Execute node lifecycle."""
         state = await self.prep(state)
         result = await self.exec(state)
         return await self.post(result)
 
-    async def prep(self, state: State[T]) -> State[T]:
+    async def prep(self, state: T) -> T:
         """Pre-execution hook."""
         return state
 
     @abstractmethod
-    async def exec(self, state: State[T]) -> NodeResult[T]:
+    async def exec(self, state: T) -> NodeResult[T]:
         """Main execution - must be implemented by subclasses."""
         ...
 
@@ -85,14 +65,14 @@ class Node[T](ABC):
 
 
 @dataclass(frozen=True, kw_only=True)
-class _Flow[T](Node[T]):
+class _Flow(Node[T]):
     """Internal flow implementation."""
 
     start_node: Node[T]
     routes: Mapping[RouteKey, Node[T] | None]
 
     @override
-    async def exec(self, state: State[T]) -> NodeResult[T]:
+    async def exec(self, state: T) -> NodeResult[T]:
         current_node = self.start_node
         current_state = state
 
