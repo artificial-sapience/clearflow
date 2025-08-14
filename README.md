@@ -13,9 +13,13 @@ from clearflow import Flow, Node, NodeResult
 
 class ChatNode(Node[dict]):
     async def exec(self, state: dict) -> NodeResult[dict]:
-        # Your language model logic here
-        response = await llm_call(state["prompt"])
-        return NodeResult({**state, "response": response}, outcome="success")
+        messages = state.get("messages", [])
+        # Call your language model here:
+        # response = await openai_client.chat.completions.create(messages=messages)
+        # content = response.choices[0].message.content
+        content = "Hello!"  # Placeholder response
+        new_messages = [*messages, {"role": "assistant", "content": content}]
+        return NodeResult({**state, "messages": new_messages}, outcome="success")
 
 # Build flow with explicit routing
 chat = ChatNode()
@@ -26,7 +30,7 @@ flow = (
     .build()
 )
 
-result = await flow({"prompt": "Hello"})
+result = await flow({"messages": []})
 ```
 
 ## Installation
