@@ -3,10 +3,8 @@
 from dataclasses import dataclass
 from typing import override
 
-from openai import AsyncOpenAI
-from pydantic import ValidationError
-
 from models import ExtractedResume, ExtractorState
+from openai import AsyncOpenAI
 
 from clearflow import Node, NodeResult, State
 
@@ -40,7 +38,10 @@ class ExtractorNode(Node[ExtractorState]):
                 messages=[
                     {
                         "role": "system",
-                        "content": "Extract structured information from the resume text. Be thorough and accurate.",
+                        "content": (
+                            "Extract structured information from the resume text. "
+                            "Be thorough and accurate."
+                        ),
                     },
                     {"role": "user", "content": input_text},
                 ],
@@ -50,7 +51,7 @@ class ExtractorNode(Node[ExtractorState]):
             # The completion object itself is the ParsedChatCompletion
             # Access the parsed data directly
             parsed_data = completion.choices[0].message.parsed
-            
+
             if parsed_data:
                 new_state = state.transform(
                     lambda d: {
@@ -60,22 +61,24 @@ class ExtractorNode(Node[ExtractorState]):
                     }
                 )
                 return NodeResult(new_state, outcome="extracted")
-            else:
-                # Handle refusal or parsing failure
-                refusal_msg = completion.choices[0].message.refusal or "Failed to parse resume"
-                new_state = state.transform(
-                    lambda d: {
-                        **d,
-                        "validation_errors": [f"Extraction failed: {refusal_msg}"],
-                    }
-                )
-                return NodeResult(new_state, outcome="failed")
-
-        except Exception as e:
+            # Handle refusal or parsing failure
+            refusal_msg = (
+                completion.choices[0].message.refusal or "Failed to parse resume"
+            )
             new_state = state.transform(
                 lambda d: {
                     **d,
-                    "validation_errors": [f"API error: {str(e)}"],
+                    "validation_errors": [f"Extraction failed: {refusal_msg}"],
+                }
+            )
+            return NodeResult(new_state, outcome="failed")
+
+        except (ValueError, TypeError, KeyError) as exc:
+            error_msg = f"API error: {exc!s}"
+            new_state = state.transform(
+                lambda d: {
+                    **d,
+                    "validation_errors": [error_msg],
                 }
             )
             return NodeResult(new_state, outcome="failed")
@@ -107,7 +110,9 @@ class ValidatorNode(Node[ExtractorState]):
 
         # Validate minimum requirements
         if len(extracted_data.experiences) < self.min_experiences:
-            errors.append(f"At least {self.min_experiences} work experience(s) required")
+            errors.append(
+                f"At least {self.min_experiences} work experience(s) required"
+            )
         if len(extracted_data.skills) < self.min_skills:
             errors.append(f"At least {self.min_skills} skill(s) required")
 
@@ -148,18 +153,18 @@ class FormatterNode(Node[ExtractorState]):
         if extracted_data.experiences:
             lines.extend(["", "WORK EXPERIENCE:"])
             for exp in extracted_data.experiences:
-                lines.extend(
-                    [
-                        f"  • {exp.role} at {exp.company} ({exp.duration})",
-                    ]
-                )
+                lines.extend([
+                    f"  • {exp.role} at {exp.company} ({exp.duration})",
+                ])
                 if exp.description:
                     lines.append(f"    {exp.description}")
 
         if extracted_data.education:
             lines.extend(["", "EDUCATION:"])
-            for edu in extracted_data.education:
-                lines.append(f"  • {edu.degree} from {edu.institution} ({edu.year})")
+            lines.extend(
+                f"  • {edu.degree} from {edu.institution} ({edu.year})"
+                for edu in extracted_data.education
+            )
 
         if extracted_data.skills:
             lines.extend(["", f"SKILLS: {', '.join(extracted_data.skills)}"])

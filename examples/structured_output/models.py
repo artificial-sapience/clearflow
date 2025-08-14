@@ -11,7 +11,9 @@ class WorkExperience(BaseModel):
     company: str = Field(description="Company name")
     role: str = Field(description="Job title/role")
     duration: str = Field(description="Employment period (e.g., 'Jan 2020 - Dec 2022')")
-    description: str = Field(default="", description="Brief description of responsibilities")
+    description: str = Field(
+        default="", description="Brief description of responsibilities"
+    )
 
 
 class Education(BaseModel):

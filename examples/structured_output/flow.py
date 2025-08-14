@@ -1,7 +1,7 @@
 """Flow builder for structured output extraction."""
 
-from nodes import CompleteNode, ExtractorNode, FormatterNode, ValidatorNode
 from models import ExtractorState
+from nodes import CompleteNode, ExtractorNode, FormatterNode, ValidatorNode
 
 from clearflow import Flow
 
@@ -24,7 +24,7 @@ def create_extraction_flow() -> Flow[ExtractorState]:
     complete = CompleteNode(name="complete")
 
     # Build flow with predictable routing and single termination
-    flow = (
+    return (
         Flow[ExtractorState]("ResumeExtraction")
         # Start with extraction
         .start_with(extractor)
@@ -43,5 +43,3 @@ def create_extraction_flow() -> Flow[ExtractorState]:
         # Build the flow
         .build()
     )
-
-    return flow

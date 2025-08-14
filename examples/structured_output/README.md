@@ -34,16 +34,28 @@ Edit `data.txt` to test with different resumes. Adjust validation rules in `node
 
 ## Flow Structure
 
-```
-extractor → validator → formatter → complete → None
-             ↓           ↓           ↓
-          complete    complete    (done)
+```mermaid
+graph LR
+    Start([Start]) --> E[extractor]
+    E -->|extracted| V[validator]
+    E -->|failed| C[complete]
+    E -->|no_input| C
+    V -->|valid| F[formatter]
+    V -->|invalid| C
+    F -->|formatted| C
+    F -->|no_data| C
+    C -->|done| End([End/None])
+    
+    style E fill:#e1f5fe
+    style V fill:#fff3e0
+    style F fill:#f3e5f5
+    style C fill:#e8f5e9
 ```
 
 ClearFlow enforces single termination - all paths converge to `complete` node.
 
-Outcomes:
+**Node Outcomes:**
 - `extractor`: extracted/failed/no_input
 - `validator`: valid/invalid  
 - `formatter`: formatted/no_data
-- `complete`: done
+- `complete`: done (→ None)

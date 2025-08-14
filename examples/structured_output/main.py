@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-
 from flow import create_extraction_flow
 from models import ExtractorState
 
@@ -17,7 +16,7 @@ from clearflow import State
 def load_resume_text(file_path: str = "data.txt") -> str:
     """Load resume text from file."""
     try:
-        return Path(file_path).read_text()
+        return Path(file_path).read_text(encoding="utf-8")
     except FileNotFoundError:
         print(f"Error: Could not find {file_path}")
         print("Please create a data.txt file with resume content.")
