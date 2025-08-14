@@ -5,6 +5,16 @@ from typing import TypedDict
 from pydantic import BaseModel, Field
 
 
+def _empty_work_list() -> list["WorkExperience"]:
+    """Factory function for empty work experience list."""
+    return []
+
+
+def _empty_education_list() -> list["Education"]:
+    """Factory function for empty education list."""
+    return []
+
+
 class WorkExperience(BaseModel):
     """A single work experience entry."""
 
@@ -32,10 +42,10 @@ class ExtractedResume(BaseModel):
     phone: str = Field(default="", description="Phone number")
     summary: str = Field(default="", description="Professional summary")
     experiences: list[WorkExperience] = Field(
-        default_factory=list, description="Work experience entries"
+        default_factory=_empty_work_list, description="Work experience entries"
     )
     education: list[Education] = Field(
-        default_factory=list, description="Education entries"
+        default_factory=_empty_education_list, description="Education entries"
     )
     skills: list[str] = Field(default_factory=list, description="List of skills")
 

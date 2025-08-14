@@ -10,8 +10,6 @@ from dotenv import load_dotenv
 from flow import create_extraction_flow
 from models import ExtractorState
 
-from clearflow import State
-
 
 def load_resume_text(file_path: str = "data.txt") -> str:
     """Load resume text from file."""
@@ -30,18 +28,18 @@ def display_errors(errors: list[str]) -> None:
         print(f"  • {error}")
 
 
-def display_result(state: State[ExtractorState], outcome: str) -> None:
+def display_result(state: ExtractorState, outcome: str) -> None:
     """Display the result based on flow outcome."""
     print(f"\nFlow completed with outcome: {outcome}")
 
     # Check for errors
-    errors = state.data.get("validation_errors", [])
+    errors = state.get("validation_errors", [])
     if errors:
         display_errors(errors)
         return
 
     # Display formatted output if available
-    formatted = state.data.get("formatted_output")
+    formatted = state.get("formatted_output")
     if formatted:
         print("\n✅ Successfully extracted resume:")
         print(formatted)
@@ -71,7 +69,7 @@ async def main() -> None:
     print(f"Loaded {len(resume_text)} characters")
 
     # Create initial state
-    initial_state: State[ExtractorState] = State({"input_text": resume_text})
+    initial_state: ExtractorState = {"input_text": resume_text}
 
     # Create and run flow
     print("\nRunning extraction flow...")

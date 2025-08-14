@@ -9,8 +9,6 @@ from typing import Any
 from dotenv import load_dotenv
 from flow import create_chat_flow
 
-from clearflow import State
-
 ChatState = dict[str, Any]
 
 
@@ -46,7 +44,7 @@ async def run_chat_session() -> None:
     flow = create_chat_flow()
 
     # Initialize state - let the flow handle conversation initialization
-    state: State[ChatState] = State({})
+    state: ChatState = {}
 
     # Display welcome
     print_welcome()
@@ -61,8 +59,7 @@ async def run_chat_session() -> None:
 
         # Pass user input to flow (business logic handles conversation management)
         # Create new state with user input
-        new_data = {**state.data, "user_input": user_input}
-        state = State(new_data)
+        state = {**state, "user_input": user_input}
         result = await flow(state)
 
         # Preserve conversation state for next iteration
@@ -70,7 +67,7 @@ async def run_chat_session() -> None:
 
         # Display response (pure UI)
         if result.outcome == "responded":
-            last_response = result.state.data.get("last_response")
+            last_response = result.state.get("last_response")
             if last_response:
                 display_response(last_response)
 

@@ -89,7 +89,7 @@ class TestFlexibleState:
             async def exec(self, state: AgentState) -> NodeResult[AgentState]:
                 new_state: AgentState = {
                     "messages": [*state["messages"], "response"],
-                    "context": state["context"]
+                    "context": state["context"],
                 }
                 return NodeResult(new_state, outcome="responded")
 
@@ -113,10 +113,7 @@ class TestFlexibleState:
             @override
             async def exec(self, state: WorkflowState) -> NodeResult[WorkflowState]:
                 # Create new instance (immutable)
-                new_state = WorkflowState(
-                    documents=state.documents,
-                    processed=True
-                )
+                new_state = WorkflowState(documents=state.documents, processed=True)
                 return NodeResult(new_state, outcome="processed")
 
         node = DataclassNode()
@@ -382,10 +379,10 @@ class TestFlow:
             .route(classifier, "urgent", urgent)
             .route(classifier, "question", question)
             .route(classifier, "normal", normal)
-            .route(urgent, "handled", complete)      # Converge to complete
-            .route(question, "handled", complete)    # Converge to complete
-            .route(normal, "handled", complete)      # Converge to complete
-            .route(complete, "done", None)           # Single termination
+            .route(urgent, "handled", complete)  # Converge to complete
+            .route(question, "handled", complete)  # Converge to complete
+            .route(normal, "handled", complete)  # Converge to complete
+            .route(complete, "done", None)  # Single termination
             .build()
         )
 
@@ -590,7 +587,7 @@ class TestRealWorldScenarios:
                 new_state = {
                     **state,
                     "result": "Found 10 relevant results",
-                    "tool_used": "web_search"
+                    "tool_used": "web_search",
                 }
                 return NodeResult(new_state, outcome="searched")
 
@@ -708,3 +705,46 @@ class TestErrorHandling:
         named_node = MyCustomNode(name="custom_name")
         assert named_node.name == "custom_name"
 
+    @staticmethod
+    async def test_single_node_flow_no_routes() -> None:
+        """Test a flow with a single node and no routes (line 94 coverage)."""
+
+        @dc(frozen=True)
+        class StandaloneNode(Node[dict[str, Any]]):
+            @override
+            async def exec(self, state: dict[str, Any]) -> NodeResult[dict[str, Any]]:
+                return NodeResult(state, outcome="standalone")
+
+        node = StandaloneNode()
+
+        # Create flow with single node but no routes
+        flow = Flow[dict[str, Any]]("SingleNodeFlow").start_with(node).build()
+
+        # Execute - should return result as-is since no routes exist
+        result = await flow({"test": "value"})
+        assert result.outcome == "standalone"
+        assert result.state["test"] == "value"
+
+    @staticmethod
+    async def test_node_without_name_validation() -> None:
+        """Test routing fails when from_node lacks name (lines 122-123 coverage)."""
+
+        @dc(frozen=True)
+        class UnnamedNode(Node[dict[str, Any]]):
+            @override
+            async def exec(self, state: dict[str, Any]) -> NodeResult[dict[str, Any]]:
+                return NodeResult(state, outcome="done")
+
+        # Manually create node with empty name to trigger validation
+        unnamed_node = UnnamedNode()
+        object.__setattr__(unnamed_node, "name", "")  # noqa: PLC2801
+
+        target_node = SimpleNode()
+
+        # Should raise ValueError when trying to route from unnamed node
+        with pytest.raises(ValueError, match="from_node must have a name"):
+            (
+                Flow[dict[str, Any]]("TestFlow")
+                .start_with(target_node)
+                .route(unnamed_node, "done", None)
+            )
