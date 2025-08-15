@@ -2,7 +2,7 @@
 
 ## Structure
 
-```
+```text
 examples/
 └── your-example/
     ├── main.py           # Entry point

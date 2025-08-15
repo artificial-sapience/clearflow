@@ -21,6 +21,7 @@ class ExtractorNode(Node[ExtractorState]):
         input_text = state.get("input_text", "")
 
         if not input_text:
+            print("  ⚠️  No input text provided")
             error_state: ExtractorState = {
                 **state,
                 "validation_errors": ["No input text provided"],
@@ -28,6 +29,7 @@ class ExtractorNode(Node[ExtractorState]):
             return NodeResult(error_state, outcome="no_input")
 
         try:
+            print("  🤖 Calling OpenAI API...")
             client = AsyncOpenAI()
 
             # Use OpenAI's structured output with Pydantic
@@ -51,6 +53,12 @@ class ExtractorNode(Node[ExtractorState]):
             parsed_data = completion.choices[0].message.parsed
 
             if parsed_data:
+                msg = (
+                    f"  ✅ Extracted: {parsed_data.name} "
+                    f"({len(parsed_data.skills)} skills, "
+                    f"{len(parsed_data.experiences)} experiences)"
+                )
+                print(msg)
                 success_state: ExtractorState = {
                     **state,
                     "extracted_data": parsed_data,
@@ -86,6 +94,7 @@ class ValidatorNode(Node[ExtractorState]):
     @override
     async def exec(self, state: ExtractorState) -> NodeResult[ExtractorState]:
         """Validate the extracted data meets minimum requirements."""
+        print("→ Validating extracted data...")
         extracted_data = state.get("extracted_data")
         errors: list[str] = []
 
@@ -109,10 +118,12 @@ class ValidatorNode(Node[ExtractorState]):
             errors.append(f"At least {self.min_skills} skill(s) required")
 
         if errors:
+            print(f"  ❌ Validation failed: {len(errors)} error(s)")
             invalid_state: ExtractorState = {**state, "validation_errors": errors}
             return NodeResult(invalid_state, outcome="invalid")
 
         # Valid data
+        print("  ✅ Validation passed")
         valid_state: ExtractorState = {**state, "validation_errors": []}
         return NodeResult(valid_state, outcome="valid")
 
@@ -124,6 +135,7 @@ class FormatterNode(Node[ExtractorState]):
     @override
     async def exec(self, state: ExtractorState) -> NodeResult[ExtractorState]:
         """Format the extracted data into a readable string."""
+        print("→ Formatting output...")
         extracted_data = state.get("extracted_data")
 
         if not extracted_data:
@@ -164,6 +176,7 @@ class FormatterNode(Node[ExtractorState]):
         lines.append("=" * 60)
         formatted = "\n".join(lines)
 
+        print("  ✅ Formatting complete")
         new_state: ExtractorState = {**state, "formatted_output": formatted}
         return NodeResult(new_state, outcome="formatted")
 
@@ -175,6 +188,7 @@ class CompleteNode(Node[ExtractorState]):
     @override
     async def exec(self, state: ExtractorState) -> NodeResult[ExtractorState]:
         """Complete the flow - single termination point."""
+        print("→ Flow complete")
         # This node simply passes through the state
         # All display logic is handled in main.py
         return NodeResult(state, outcome="done")

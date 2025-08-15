@@ -72,7 +72,8 @@ async def main() -> None:
     initial_state: ExtractorState = {"input_text": resume_text}
 
     # Create and run flow
-    print("\nRunning extraction flow...")
+    print("\nStarting extraction flow...")
+    print("→ Extracting structured data from resume...")
     flow = create_extraction_flow()
     result = await flow(initial_state)
 
