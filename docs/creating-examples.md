@@ -2,7 +2,7 @@
 
 ## Structure
 
-```
+```text
 examples/
 └── your-example/
     ├── main.py           # Entry point
@@ -15,11 +15,13 @@ examples/
 ## Quality Checks
 
 Examples must pass:
+
 ```bash
 ./check-examples.sh
 ```
 
 This runs:
+
 - Linting (ruff)
 - Type checking (mypy, pyright)
 - Formatting
@@ -27,12 +29,14 @@ This runs:
 ## Key Patterns
 
 ### State Management
+
 ```python
 # Immutable transformations only
 new_state = state.transform(lambda d: {**d, "processed": True})
 ```
 
 ### Flow Construction
+
 ```python
 Flow[State]("Example")
     .start_with(node1)
@@ -41,6 +45,7 @@ Flow[State]("Example")
 ```
 
 ### Separation of Concerns
+
 - `main.py`: User interaction, I/O
 - `nodes.py`: Business logic
 - `flow.py`: Orchestration

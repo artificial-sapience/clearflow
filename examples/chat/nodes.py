@@ -5,7 +5,7 @@ from typing import Any, cast, override
 
 from openai import AsyncOpenAI
 
-from clearflow import Node, NodeResult, State
+from clearflow import Node, NodeResult
 
 # Type for chat state with properly typed messages
 ChatMessage = dict[str, str]  # {"role": "...", "content": "..."}
@@ -14,13 +14,13 @@ ChatState = dict[str, Any]  # Still need Any for other fields
 
 @dataclass(frozen=True)
 class ChatNode(Node[ChatState]):
-    """Node that processes chat messages through an LLM.
+    """Node that processes chat messages through a language model.
 
     This node handles the complete conversation management:
     1. Maintains conversation history
     2. Adds user messages when provided
     3. Ensures system prompt is present
-    4. Processes through LLM
+    4. Processes through language model
     5. Returns updated conversation state
     """
 
@@ -28,11 +28,11 @@ class ChatNode(Node[ChatState]):
     system_prompt: str = "You are a helpful assistant."
 
     @override
-    async def exec(self, state: State[ChatState]) -> NodeResult[ChatState]:
-        """Process user input and generate LLM response."""
+    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+        """Process user input and generate language model response."""
         # Get conversation history and current user input
-        messages: list[ChatMessage] = state.data.get("messages", [])
-        user_input: str | None = state.data.get("user_input")
+        messages: list[ChatMessage] = state.get("messages", [])
+        user_input: str | None = state.get("user_input")
 
         # Initialize with system message if needed
         if not messages:
@@ -40,8 +40,8 @@ class ChatNode(Node[ChatState]):
 
         # If no user input provided, this is just initialization
         if user_input is None:
-            new_state = state.transform(lambda d: {**d, "messages": messages})
-            return NodeResult(new_state, outcome="awaiting_input")
+            init_state: ChatState = {**state, "messages": messages}
+            return NodeResult(init_state, outcome="awaiting_input")
 
         # Add user message to conversation
         messages = [*messages, {"role": "user", "content": user_input}]
@@ -62,13 +62,11 @@ class ChatNode(Node[ChatState]):
         messages = [*messages, {"role": "assistant", "content": assistant_response}]
 
         # Return updated state with full conversation
-        new_state = state.transform(
-            lambda d: {
-                **d,
-                "messages": messages,
-                "last_response": assistant_response,
-                "user_input": None,  # Clear user input after processing
-            }
-        )
+        new_state: ChatState = {
+            **state,
+            "messages": messages,
+            "last_response": assistant_response,
+            "user_input": None,  # Clear user input after processing
+        }
 
         return NodeResult(new_state, outcome="responded")

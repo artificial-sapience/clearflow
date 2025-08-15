@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Philosophy
 
-ClearFlow is a 200-line orchestration framework with predictable routing for LLM-powered agents. Focus on what's guaranteed:
+ClearFlow provides reliable language model orchestration with type safety and 100% test coverage. Focus on what's guaranteed:
 - **100% test coverage** is non-negotiable
 - **Type safety** with mypy/pyright strict mode is mandatory
 - **Immutability** is enforced
-- **Predictable routing** - given an outcome, the next step is always the same (NOT deterministic execution)
+- **Explicit routing** - given an outcome, the next step is always the same (NOT deterministic execution)
 - **Zero dependencies**
 
-Target audience: Developers building multi-step LLM workflows who need type-safe state management and testable orchestration.
+Target audience: Developers building multi-step language model workflows who need type-safe state management and testable orchestration.
 
 ## Development Commands
 
@@ -37,22 +37,22 @@ uv run pytest --cov=clearflow --cov-report=term-missing --cov-fail-under=100
 
 ## Architecture Overview
 
-ClearFlow is a minimal orchestration framework with functional patterns and **zero third-party dependencies**. It implements a **Node-Flow-State** pattern for managing workflows that include LLM calls and other async operations.
+ClearFlow is a minimal orchestration framework with functional patterns and **zero third-party dependencies**. It implements a **Node-Flow-State** pattern for managing workflows that include language model calls and other async operations.
 
 ### Core Concepts
 
 1. **Nodes**: Async functions that transform state
    - Inherit from `Node[T]` and override `exec()` method
-   - Input: `State[T]`
+   - Input: state of type `T` (any type: dict, TypedDict, dataclass, primitives)
    - Output: `NodeResult[T](state, outcome)`
-   - Designed for predictable transformations
+   - Designed for explicit transformations
    - Lifecycle hooks: `prep()`, `exec()`, `post()`
 
-2. **State**: Generic state container with functional API
-   - Type-safe with `State[T]` where T is user-defined
-   - `transform()` method encourages creating new state instances
-   - All types are frozen (immutable)
-   - Works with standard Python data structures
+2. **State**: Unconstrained - use any type T
+   - Type-safe with `T` where T is any Python type
+   - Natural Python operations: `{**state, "key": "value"}`
+   - Encourages immutable patterns
+   - Works with dict, TypedDict, dataclass, primitives
 
 3. **Flow**: Type-safe workflow builder
    - Single termination rule: exactly one route to `None`
@@ -65,7 +65,7 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
 - **Test coverage**: 100% required
 - **Type safety**: No `Any` or `type: ignore` allowed
 - **Immutability**: All dataclasses frozen
-- **Routing**: Predictable (NOT deterministic execution)
+- **Routing**: Explicit (NOT deterministic execution)
 - **Single termination**: Exactly one route to `None` per flow
 
 ### Common Patterns
@@ -76,9 +76,9 @@ class DocumentLoader(Node[DocumentState]):
     def __init__(self) -> None:
         super().__init__(name="loader")
     
-    async def exec(self, state: State[DocumentState]) -> NodeResult[DocumentState]:
-        content = await load_document(state.data["path"])
-        new_state = state.transform(lambda d: {**d, "content": content})
+    async def exec(self, state: DocumentState) -> NodeResult[DocumentState]:
+        content = await load_document(state["path"])
+        new_state: DocumentState = {**state, "content": content}
         return NodeResult(new_state, outcome="loaded")
 
 # Building a flow with single termination
@@ -100,7 +100,7 @@ flow = (
 - **100% coverage**: No exceptions, ever
 - **Test all outcomes**: Every node outcome must have a test
 - **Verify immutability**: Test that state transformations don't mutate
-- **Domain-relevant**: Use real LLM/agent scenarios, not foo/bar
+- **Domain-relevant**: Use real language model scenarios, not foo/bar
 
 ### Code Quality Standards
 
@@ -143,23 +143,30 @@ flow = (
 
 Examples:
 - ❌ "We provide trustworthy orchestration for mission-critical systems"
-- ✅ "Type-safe async workflows for LLM agents"
+- ✅ "Reliable language model orchestration. Type-safe with 100% test coverage."
 - ❌ "Our philosophy is trust through proof"
 - ✅ "100% test coverage required"
+- ❌ "This guide explains how to create high-quality examples"
+- ✅ "Creating Examples"
+
+**Documentation Smell Test**:
+If documentation sounds anxious, defensive, or like it's trying to impress, rewrite it.
+Good documentation states facts without emotion.
 
 When responding to users:
 - Be direct and factual
 - State limitations without defensiveness
 - Use technical language, not marketing speak
 - Keep responses concise
+- Don't explain why you can't do something (preachy)
 
 ### Red Flags to Avoid
 
 1. **Never claim**:
-   - "Deterministic orchestration" or "deterministic execution" (we only provide predictable routing)
+   - "Deterministic orchestration" or "deterministic execution" (we only provide explicit routing)
    - "Exhaustive outcome handling" (we don't enforce this)
    - "Compile-time safety" (Python doesn't have this)
-   - "Makes LLM agents reliable" (we only provide orchestration structure)
+   - "Makes language model agents reliable" (we only provide orchestration structure)
    - "Production-ready agents" (we provide orchestration, not complete agents)
    - "You can't test LLM outputs" (you can test them, just not deterministically)
 
@@ -170,7 +177,7 @@ When responding to users:
    - Dependencies that could introduce unpredictability
 
 3. **Language to avoid**:
-   - "Deterministic" when describing the framework (use "predictable routing" instead)
+   - "Deterministic" when describing the framework (use "explicit routing" instead)
    - "Unreasonable AI" or other hyperbolic characterizations of LLMs
    - Absolute statements about what users can't do
    - Marketing language that can't be verified
@@ -179,14 +186,29 @@ When responding to users:
 
 Ask:
 - Can this be tested completely?
-- Does this make behavior more predictable?
+- Does this make behavior more explicit?
 - Is this simpler than the alternative?
 
 If any answer is "no", don't do it.
 
+### Git Workflow
+
+1. **Branch Protection**: Main branch requires PR with passing checks
+2. **Conventional Commits**: Use `fix:`, `feat:`, `docs:`, `ci:` prefixes
+3. **Local Protection**: Pre-commit hook prevents direct commits to main
+4. **PR Process**:
+   ```bash
+   git checkout -b type/description
+   # Make changes
+   ./quality-check.sh
+   git commit -m "type: clear description"
+   git push -u origin type/description
+   gh pr create --title "type: description" --body "concise explanation"
+   ```
+
 ## Remember
 
-ClearFlow provides predictable routing and immutable state - nothing more, nothing less. Keep the code minimal, the documentation concise, and the claims verifiable.
+ClearFlow provides explicit routing with single termination enforcement. Keep the code minimal, the documentation concise, and the claims verifiable.
 
 ## Documentation Size Limits
 
@@ -198,10 +220,38 @@ ClearFlow is 200 lines. Documentation should be proportional:
 
 If a document is longer than the code it describes, it's too long.
 
+## Release Process
+
+ClearFlow uses automated release management:
+
+1. **Version Management**: GitVersion calculates versions based on git history
+2. **Draft Releases**: Release Drafter maintains draft with changelog from PR merges
+3. **Publishing**: Manual trigger of release.yml workflow:
+   - Builds package with calculated version
+   - Creates git tag
+   - Publishes to PyPI via trusted publisher
+   - Converts draft to published GitHub release
+
+**Known Issues**:
+- Draft release IDs can become stale - always fetch fresh by tag name
+- PyPI trusted publisher requires exact workflow path match
+- Version must be updated in pyproject.toml before building
+
+**PyPI Package**: https://pypi.org/project/clearflow/
+
 ## Critical Technical Distinction
 
-**Predictable routing ≠ Deterministic execution**
+**Explicit routing ≠ Deterministic execution**
 
-ClearFlow provides predictable routing (given outcome X, next step is always Y) but NOT deterministic execution (nodes execute arbitrary async code with unpredictable timing).
+ClearFlow provides explicit routing (given outcome X, next step is always Y) but NOT deterministic execution (nodes execute arbitrary async code with unpredictable timing).
 
 Always use precise technical terms. Users are engineers who will verify claims.
+
+## Lessons Learned
+
+1. **Documentation debt is real** - A 200-line library had 783 lines of docs (reduced to 150)
+2. **Ego leaks into docs** - Watch for defensive language, "we/our", trying to sound important
+3. **Less is more** - If you can say it in 20 lines instead of 100, do it
+4. **Show, don't tell** - Code examples > philosophical manifestos
+5. **Trust the code** - A well-written 200-line library doesn't need 450-line guides
+6. **Be boring** - Boring, obvious code and docs are better than clever ones
