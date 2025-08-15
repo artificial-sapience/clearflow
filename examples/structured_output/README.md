@@ -23,6 +23,7 @@ python main.py
 ```
 
 The example will:
+
 1. Load resume text from `data.txt`
 2. Extract structured information (name, email, experience, skills)
 3. Validate the data meets requirements
@@ -55,6 +56,7 @@ graph LR
 ClearFlow enforces single termination - all paths converge to `complete` node.
 
 **Node Outcomes:**
+
 - `extractor`: extracted/failed/no_input
 - `validator`: valid/invalid  
 - `formatter`: formatted/no_data

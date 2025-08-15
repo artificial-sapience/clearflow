@@ -32,7 +32,7 @@ ClearFlow encourages immutable state:
 new_state = {**state, "processed": True}
 
 # Wrong - mutation not allowed
-state["key"] = value
+state["processed"] = True
 ```
 
 ## What Gets Merged
