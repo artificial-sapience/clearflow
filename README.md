@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Type-safe async workflow orchestration for LLM agents. **Explicit routing, immutable state, zero dependencies.** Read the entire source in 5 minutes.
+Type-safe async workflow orchestration for language models. **Explicit routing, immutable state, zero dependencies.**
 
 ---
 
