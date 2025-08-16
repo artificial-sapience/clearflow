@@ -57,8 +57,12 @@ flow = (
 )
 
 # 4) Run it
-result = await flow({"messages": [{"role": "user", "content": "Hi"}]})
-print(result.state["messages"][-1]["content"])  # "Hello!"
+async def main() -> None:
+    result = await flow({"messages": [{"role": "user", "content": "Hi"}]})
+    print(result.state["messages"][-1]["content"])  # "Hello!"
+
+import asyncio
+asyncio.run(main())
 ```
 
 ---
@@ -122,9 +126,9 @@ flow = (
     Flow[State]("Pipeline")
     .start_with(Validate())
     .route(Validate(), "valid", Process())
-    .route(Validate(), "invalid", None)  # early termination
+    .route(Validate(), "invalid", Output())  # route invalid to output
     .route(Process(), "success", Output())
-    .route(Output(), "done", None)
+    .route(Output(), "done", None)  # single termination point
     .build()
 )
 
@@ -148,7 +152,7 @@ class N(Node[int]):
         return NodeResult(x + 1, "ok")
 
 @pytest.mark.asyncio
-async def test_n():
+async def test_n() -> None:
     res = await N()(0)
     assert res.state == 1 and res.outcome == "ok"
 ```
