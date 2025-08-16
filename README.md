@@ -1,6 +1,6 @@
 # ClearFlow
 
-[![codecov](https://codecov.io/gh/consent-ai/ClearFlow/graph/badge.svg?token=29YHLHUXN3)](https://codecov.io/gh/consent-ai/ClearFlow)
+[![Coverage Status](https://coveralls.io/repos/github/consent-ai/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/consent-ai/ClearFlow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
