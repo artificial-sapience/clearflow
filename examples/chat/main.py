@@ -4,12 +4,10 @@
 import asyncio
 import os
 import sys
-from typing import Any
 
 from dotenv import load_dotenv
 from flow import create_chat_flow
-
-ChatState = dict[str, Any]
+from nodes import ChatState  # Import the properly typed ChatState
 
 
 def print_welcome() -> None:

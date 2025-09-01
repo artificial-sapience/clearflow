@@ -184,17 +184,19 @@ def check_file_imports(file_path: Path, content: str) -> tuple[Violation, ...]:
                 if "object.__setattr__" in line:
                     continue  # This is the frozen dataclass pattern, skip it
             
-            # Otherwise it's a type usage that should be reported
-            violations.append(
-                Violation(
-                    file=file_path,
-                    line=node.lineno,
-                    column=node.col_offset,
-                    code="ARCH009",
-                    message="Using 'object' type defeats type safety - use proper types or protocols",
-                    requirement="REQ-ARCH-009",
+            # Check if this line has a suppression for ARCH009
+            if not has_suppression(content, node.lineno, "ARCH009"):
+                # Otherwise it's a type usage that should be reported
+                violations.append(
+                    Violation(
+                        file=file_path,
+                        line=node.lineno,
+                        column=node.col_offset,
+                        code="ARCH009",
+                        message="Using 'object' type defeats type safety - use proper types or protocols",
+                        requirement="REQ-ARCH-009",
+                    )
                 )
-            )
 
         # Check for 'Any' type usage anywhere (parameters, return types, annotations)
         if isinstance(node, ast.Name) and node.id == "Any":

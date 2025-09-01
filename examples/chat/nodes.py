@@ -1,15 +1,28 @@
 """Chat node implementation - pure business logic."""
 
 from dataclasses import dataclass
-from typing import Any, cast, override
+from typing import Literal, NotRequired, TypedDict, override
 
 from openai import AsyncOpenAI
 
 from clearflow import Node, NodeResult
 
-# Type for chat state with properly typed messages
-ChatMessage = dict[str, str]  # {"role": "...", "content": "..."}
-ChatState = dict[str, Any]  # Still need Any for other fields
+
+class ChatMessage(TypedDict):
+    """OpenAI chat message structure."""
+    role: Literal['system', 'user', 'assistant']
+    content: str
+
+
+class ChatState(TypedDict, total=False):
+    """Chat application state with proper types.
+    
+    total=False means all fields are optional, which matches
+    our usage pattern where state builds up over time.
+    """
+    messages: list[ChatMessage]
+    last_response: str
+    user_input: str | None
 
 
 @dataclass(frozen=True)
@@ -36,7 +49,8 @@ class ChatNode(Node[ChatState]):
 
         # Initialize with system message if needed
         if not messages:
-            messages = [{"role": "system", "content": self.system_prompt}]
+            system_msg: ChatMessage = {"role": "system", "content": self.system_prompt}
+            messages = [system_msg]
 
         # If no user input provided, this is just initialization
         if user_input is None:
@@ -44,13 +58,14 @@ class ChatNode(Node[ChatState]):
             return NodeResult(init_state, outcome="awaiting_input")
 
         # Add user message to conversation
-        messages = [*messages, {"role": "user", "content": user_input}]
+        user_msg: ChatMessage = {"role": "user", "content": user_input}
+        messages = [*messages, user_msg]
 
-        # Call OpenAI API
+        # Call OpenAI API - messages type matches what OpenAI expects
         client = AsyncOpenAI()
         response = await client.chat.completions.create(
             model=self.model,
-            messages=cast("Any", messages),  # Cast needed for OpenAI's complex types
+            messages=messages,  # Type matches OpenAI's expected structure
         )
 
         # Extract assistant's response
@@ -59,7 +74,8 @@ class ChatNode(Node[ChatState]):
             assistant_response = ""
 
         # Add assistant message to conversation
-        messages = [*messages, {"role": "assistant", "content": assistant_response}]
+        assistant_msg: ChatMessage = {"role": "assistant", "content": assistant_response}
+        messages = [*messages, assistant_msg]
 
         # Return updated state with full conversation
         new_state: ChatState = {

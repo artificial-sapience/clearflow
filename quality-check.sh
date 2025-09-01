@@ -34,7 +34,7 @@ if [ $# -gt 0 ]; then
     QUALITY_TARGETS="$DIRS $FILES"
 else
     # No arguments - check everything
-    QUALITY_TARGETS="clearflow tests examples"
+    QUALITY_TARGETS="clearflow tests examples linters"
 fi
 
 # Ensure we have something to check
@@ -118,8 +118,14 @@ uv run ruff check --fix $QUALITY_TARGETS
 check_step "Ruff automatic fixes"
 
 print_header "Running linting checks"
-# Run ruff check with explicit exit-on-fix and fail the build if it finds issues
-if ! uv run ruff check --exit-non-zero-on-fix $QUALITY_TARGETS; then
+# Ruff auto-reads [tool.ruff] from pyproject.toml
+# Only pass explicit targets if user provided them
+if [ $# -gt 0 ]; then
+    RUFF_ARGS="$QUALITY_TARGETS"
+else
+    RUFF_ARGS=""  # Let ruff use its configured paths
+fi
+if ! uv run ruff check --exit-non-zero-on-fix $RUFF_ARGS; then
     echo -e "${RED}✗ Linting violations detected${NC}"
     echo -e "${YELLOW}⚠️  DO NOT suppress with # noqa comments${NC}"
     echo -e "${YELLOW}⚠️  DO NOT add violations to ignore lists in pyproject.toml${NC}"
@@ -140,8 +146,14 @@ uv run ruff format --check $QUALITY_TARGETS
 check_step "Ruff formatting check"
 
 print_header "Running mypy type checks"
-# Type errors are critical issues that must be fixed - treat ALL warnings as errors
-if ! uv run mypy --strict $QUALITY_TARGETS; then
+# Mypy auto-reads [tool.mypy] from pyproject.toml including 'strict = true'
+# Only pass explicit targets if user provided them
+if [ $# -gt 0 ]; then
+    MYPY_ARGS="$QUALITY_TARGETS"
+else
+    MYPY_ARGS=""  # Let mypy use its configured include paths
+fi
+if ! uv run mypy $MYPY_ARGS; then
     echo -e "${RED}✗ Type checking violations detected${NC}"
     echo -e "${YELLOW}⚠️  DO NOT suppress with # type: ignore comments${NC}"
     echo -e "${YELLOW}⚠️  DO NOT add to [tool.mypy.overrides] in pyproject.toml${NC}"
@@ -152,8 +164,14 @@ fi
 echo -e "${GREEN}✓ Mypy type checking passed${NC}"
 
 print_header "Running pyright type checks"
-# Pyright errors are equally critical
-if ! uv run pyright $QUALITY_TARGETS; then
+# Pyright auto-reads [tool.pyright] from pyproject.toml
+# Only pass explicit targets if user provided them
+if [ $# -gt 0 ]; then
+    PYRIGHT_ARGS="$QUALITY_TARGETS"
+else
+    PYRIGHT_ARGS=""  # Let pyright use its configured include paths
+fi
+if ! uv run pyright $PYRIGHT_ARGS; then
     echo -e "${RED}✗ Pyright type checking violations detected${NC}"
     echo -e "${YELLOW}⚠️  DO NOT suppress with # type: ignore or # pyright: ignore comments${NC}"
     echo -e "${YELLOW}⚠️  DO NOT weaken pyproject.toml settings${NC}"
@@ -253,11 +271,12 @@ fi
 echo -e "${GREEN}✓ CVE scan passed - no known vulnerabilities${NC}"
 
 print_header "Security audit - AST analysis with Bandit"
-# Run bandit security analysis
+# Bandit auto-reads [tool.bandit] from pyproject.toml when installed with [toml] extra
 echo "Checking for security issues (SQL injection, hardcoded passwords, etc.)..."
 # Only check main package, not tests
 if [ -d "clearflow" ]; then
-    uv run bandit -r clearflow/ -f txt --severity low 2>&1 | tail -5
+    # Bandit will use pyproject.toml config automatically
+    uv run bandit -r clearflow/ -f txt 2>&1 | tail -5
     check_step "Bandit security analysis"
 else
     echo -e "${YELLOW}Skipping Bandit (no clearflow directory)${NC}"
@@ -281,10 +300,11 @@ else
 fi
 
 print_header "Dead code detection - Vulture"
-# Check for unused code
+# Vulture doesn't auto-read pyproject.toml, so we hardcode its config here
 echo "Checking for dead/unused code..."
 if [ -d "clearflow" ]; then
-    vulture_output=$(uv run vulture clearflow/ --min-confidence 80 2>&1)
+    # Paths and min-confidence must match what was in the removed [tool.vulture] section
+    vulture_output=$(uv run vulture clearflow tests examples linters --min-confidence 80 2>&1)
     vulture_count=$(echo "$vulture_output" | grep -c "unused" || echo "0")
     if [ "$vulture_count" -gt 0 ]; then
         echo -e "${RED}✗ Found $vulture_count dead code issues${NC}"
@@ -300,10 +320,11 @@ else
 fi
 
 print_header "Docstring coverage - Interrogate"
-# Check docstring coverage (100% requirement)
+# Interrogate auto-reads [tool.interrogate] from pyproject.toml
 echo "Enforcing 100% docstring coverage..."
 if [ -d "clearflow" ]; then
-    uv run interrogate clearflow/ --fail-under 100 -q
+    # Interrogate will use pyproject.toml config (fail-under = 100, quiet = true)
+    uv run interrogate clearflow/
     check_step "Interrogate docstring coverage (must be 100%)"
 else
     echo -e "${YELLOW}Skipping Interrogate (no clearflow directory)${NC}"

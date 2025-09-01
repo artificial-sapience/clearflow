@@ -377,38 +377,8 @@ severity = "low"  # Report all severity levels
 [tool.bandit.assert_used]
 skips = ["*/test_*.py", "*_test.py"]  # Allow assert in tests
 
-[tool.vulture]
-# Dead code detection
-min_confidence = 80  # Minimum confidence to report as unused
-paths = ["clearflow", "tests", "examples", "linters"]
-exclude = [".venv/", "__pycache__/", "*.pyc"]
-ignore_names = ["_*"]  # Ignore private names (they're often hooks)
-ignore_decorators = [
-  "@property",
-  "@staticmethod", 
-  "@classmethod",
-  "@abstractmethod",
-  "@override",
-]
-make_whitelist = false
-
-[tool.xenon]
-# Complexity monitoring - A grade requirement
-max_average = "A"
-max_modules = "A"
-max_absolute = "A"
-exclude = [".venv/*"]
-
-[tool.radon]
-# Cyclomatic Complexity thresholds
-cc_min = "A"
-mi_min = 40  # Maintainability Index minimum (A grade starts at 20)
-exclude = ".venv/*"
-show_complexity = true
-average = true
-order = "SCORE"  # Order by complexity score
-show_closures = false
-no_assert = false
+# Note: vulture, xenon, and radon don't read pyproject.toml automatically
+# Their settings are hardcoded in quality-check.sh where they're invoked
 
 [tool.interrogate]
 # Docstring coverage
