@@ -73,6 +73,12 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
 
     name: str
 
+    def __post_init__(self) -> None:
+        """Validate node configuration after initialization."""
+        if not self.name or not self.name.strip():
+            msg = f"Node name must be a non-empty string, got: {self.name!r}"
+            raise ValueError(msg)
+
     @override
     async def __call__(self, state: TIn) -> NodeResult[TOut]:  # type: ignore[override]
         """Execute node lifecycle."""
@@ -167,11 +173,6 @@ class _FlowBuilder[TStartIn, TStartOut]:
             New FlowBuilder with added route
 
         """
-        if not from_node.name:
-            msg = f"from_node must have a non-empty name: {from_node}"
-            raise ValueError(msg)
-
-        # Create new dict with existing routes plus new route
         route_key: RouteKey = (from_node.name, outcome)
         new_routes = {**self._routes, route_key: to_node}
 
@@ -202,11 +203,9 @@ class _FlowBuilder[TStartIn, TStartOut]:
             flow("Pipeline", start).route(a, "ok", b).end(b, "done")
 
         """
-        # Add the ending route (node -> None)
         route_key: RouteKey = (final_node.name, outcome)
         new_routes = {**self._routes, route_key: None}
 
-        # Build and return the flow directly
         return _Flow[TStartIn, TTermOut](
             name=self._name,
             start_node=self._start,
@@ -230,10 +229,6 @@ def flow[TIn, TStartOut](
         flow("Pipeline", my_node).route(...).end(final_node, "done")
 
     """
-    if not name or not name.strip():
-        msg = "Flow name must be a non-empty string"
-        raise ValueError(msg)
-
     return _FlowBuilder[TIn, TStartOut](
         _name=name,
         _start=start,
