@@ -1,81 +1,65 @@
-# ClearFlow Type Transformation Implementation Plan
+# ClearFlow Implementation Plan
 
-## Overview
-Transform ClearFlow from supporting only `Node[T]` to supporting type-transforming nodes `Node[TIn, TOut=TIn]`.
+## Critical Discovery: Flow Output Type Tracking
 
-## Remaining Tasks
-
-### Phase 1: Fix Test Type Specificity
+### Phase 1: Fix Flow Output Type Tracking ⚠️ NEW CRITICAL ISSUE
 **Status**: 🔴 Not Started  
-**Priority**: CRITICAL - Blocking quality checks
+**Priority**: URGENT - Fundamental design flaw discovered
 
-The tests currently use `dict[str, object]` which defeats the educational purpose. Tests should demonstrate real-world usage with specific types.
+#### Task 1.1: Track termination node's output type
+- Currently using `_Flow[TIn, object]` - erasing known type information
+- Should be `_Flow[TIn, TOut]` where TOut comes from the termination node
+- The single termination rule means we KNOW the output type statically!
 
-#### Task 1.1: Update test_flow.py
-- Replace `dict[str, object]` with specific TypedDict or dataclass types
-- Each test should model a real scenario with proper types
-- Examples: TicketState, WorkflowState, ChatState
+#### Implementation approach:
+1. In `build()`, identify the termination node (the one routing to None)
+2. Extract its output type
+3. Use that type for the Flow instead of `object`
+4. This will dramatically improve type safety
 
-#### Task 1.2: Update test_real_world_scenarios.py  
-- Replace `dict[str, object]` with domain-specific types
-- RAG pipeline should use RAGQueryState, RAGResponseState
-- Tool agent should use ToolAgentState with proper fields
-
-#### Task 1.3: Update test_error_handling.py
-- Even error tests should use proper types
-- Demonstrates that type safety works even in edge cases
-
-### Phase 2: Fix Remaining Architecture Violations
-**Status**: 🟡 In Progress  
-**Priority**: HIGH
-
-#### Task 2.1: Fix parameter violation in clearflow/__init__.py
-- Line 134: `from_node: object` parameter needs suppression
-- Add inline justification comment
-
-#### Task 2.2: Verify all suppressions are working
-- Ensure linter recognizes all `# clearflow: ignore[ARCH009]` comments
-- Should have 0 violations with justified suppressions
-
-### Phase 3: Create Type Transformation Examples
+### Phase 2: Update Tests to New API
 **Status**: 🔴 Not Started  
-**Priority**: MEDIUM
+**Priority**: HIGH (after fixing type tracking)
 
-#### Task 3.1: Create RAG Pipeline Example
-**File**: `examples/rag_pipeline/`
-- Show Query → SearchResults → Context → Response transformations
-- Demonstrate type safety without isinstance checks
-- Include README explaining the pattern
+#### Task 2.1: Update test_flow.py
+- Change from `Flow[T]("name").start_with(node)` to `flow("name", node)`
+- Replace `dict[str, object]` with specific types (TicketState, WorkflowState)
+- Ensure tests demonstrate real-world patterns
 
-#### Task 3.2: Create Tool Orchestration Example
-**File**: `examples/tool_orchestration/`
-- Show ToolQuery → ToolPlan → ToolExecution → ToolResult
-- Demonstrate how types prevent errors
-- Show benefits vs "god object" pattern
+#### Task 2.2: Update test_real_world_scenarios.py
+- Update to use flow() function
+- Replace generic types with domain-specific types (RAGQueryState, ToolAgentState)
+- Show educational patterns
 
-### Phase 4: Documentation Updates
+#### Task 2.3: Update test_error_handling.py
+- Update to new API
+- Use proper types even in error scenarios
+- Demonstrate type safety in edge cases
+
+#### Task 2.4: Update remaining test files
+- test_node_lifecycle.py
+- test_async_operations.py  
+- test_node.py
+- Ensure all use new flow() API and proper types
+
+### Phase 3: Update Examples
 **Status**: 🔴 Not Started  
-**Priority**: LOW
+**Priority**: LOW (focus on core library first)
 
-#### Task 4.1: Update README
-- Add type transformation examples
-- Document the `Node[TIn, TOut=TIn]` pattern
-- Show migration from `Node[T]` (if any breaking changes)
+#### Task 3.1: Update all examples to new API
+- Update to use flow() function instead of Flow class
+- Showcase improved type safety once type tracking is fixed
 
-#### Task 4.2: Write Blog Post or Tutorial
-- "Type-Safe AI Orchestration Without God Objects"
-- Show problems with dict[str, Any] everywhere
-- Demonstrate ClearFlow's solution
+## Completed Tasks ✅
+- Fixed _Flow.exec() complexity (now rank A)
+- Removed object.__setattr__ mutation
+- Replaced hasattr with Protocol types (NodeBase)
+- Simplified _FlowBuilder (removed misleading TCurrent)
+- Reduced suppressions from 14 to 4 (71% reduction)
+- Core library passes all quality checks
 
 ## Success Metrics
-- ✅ 100% test coverage maintained
-- ❌ 0 architecture violations (currently 46)
-- ✅ All tools using pyproject.toml where possible
-- ✅ Examples use proper types (no Any)
-- ❌ Tests use proper types (not object)
-- ✅ Documentation explains type transformations clearly
-
-## Next Session Priority
-1. Fix test type specificity (Phase 1) - Educational value
-2. Complete architecture compliance (Phase 2) 
-3. Create examples (Phase 3) - Show real-world usage
+- ⏳ Fix flow output type tracking (discovered fundamental issue)
+- ⏳ Update all tests to new flow() API  
+- ⏳ Maintain 100% test coverage
+- ⏳ Update examples to showcase type safety

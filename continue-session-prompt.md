@@ -1,31 +1,46 @@
 # Continue Session Prompt
 
-Please continue implementing the ClearFlow type transformation feature to achieve 100% quality check pass.
+Please continue implementing the ClearFlow improvements to achieve 100% quality check pass.
 
 ## Context Files to Review
-1. **session-context.md** - What we accomplished and current blockers
-2. **plan.md** - Remaining tasks with priority order
+1. **session-context.md** - Complete summary of accomplishments and current state
+2. **plan.md** - Detailed tasks in priority order
 
-## Critical Issue to Resolve
-The quality check is blocked by 46 architecture violations - all from tests using `dict[str, object]`.
+## Immediate Priority: Fix _Flow.exec() Complexity
+The core library is nearly perfect, but `_Flow.exec()` has complexity rank B (needs A).
 
-## Your First Tasks
-1. **Fix test type specificity** (Phase 1 in plan.md)
-   - Replace all `dict[str, object]` with proper, educational types
-   - Start with test_flow.py - create TicketState, WorkflowState, etc.
-   - Each test should demonstrate real-world patterns
+## Your Tasks (in order)
+1. **Simplify _FlowBuilder design**
+   - Keep OOP pattern but reduce lines of code
+   - Remove redundant type annotations
+   - Maintain the clean `.route().build()` API
 
-2. **Run quality-check.sh** after each file update
-   - Goal: Reduce violations incrementally
-   - Ensure tests remain passing with 100% coverage
+2. **Fix _Flow.exec() complexity**
+   - Currently rank B according to Xenon
+   - Refactor the execution loop
+   - Extract complex conditions into helper methods
+   - Must maintain 100% test coverage
 
-## Why This Matters
-Tests are **educational documentation**. When users see `dict[str, object]`, they learn the wrong pattern. When they see `TicketState` or `RAGQueryState`, they learn to model their domain properly.
+3. **Update tests to new API**
+   - Change from `Flow[T]("name").start_with(node)` to `flow("name", node)`
+   - Start with test_flow.py, then test_real_world_scenarios.py
+   - Replace all `dict[str, object]` with proper educational types
+
+4. **Run quality check after each major change**
+   - Use: `./quality-check.sh clearflow/` for core library
+   - Use: `./quality-check.sh` for full project
+   - Goal: All tools pass with 0 violations
+
+## Key Context
+- We replaced the Flow class with a simpler flow() function
+- The quality-check.sh script now properly respects argument scope
+- Architecture linter supports multi-line suppressions
+- Core library passes everything except complexity check
 
 ## Success Criteria
-- ✅ 0 architecture violations (currently 46)
-- ✅ All tests using proper types (no `object`)
-- ✅ 100% test coverage maintained
-- ✅ Tests demonstrate real AI orchestration patterns
+✅ _Flow.exec() achieves complexity rank A
+✅ All tests updated to new API with proper types
+✅ 100% test coverage maintained
+✅ 0 violations in quality check
 
-Start by reviewing the context files, then systematically fix each test file's types.
+Start by reviewing the context files, then tackle the _Flow.exec() complexity issue.

@@ -2,9 +2,9 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from types import MappingProxyType
-from typing import TypeVar, cast, override
+from typing import Any, Protocol, TypeVar, cast, override
 
 __all__ = [
     "Node",
@@ -12,13 +12,22 @@ __all__ = [
     "flow",
 ]
 
-# Type definitions
-T = TypeVar("T")  # Kept for backwards naming compatibility
+# Type definitions needed for mypy compatibility with PEP 695 syntax
 TIn = TypeVar("TIn")
 TOut = TypeVar("TOut")
 FromNodeName = str
 Outcome = str
 RouteKey = tuple[FromNodeName, Outcome]
+
+
+class NodeBase(Protocol):
+    """Non-generic base protocol for all nodes.
+
+    Provides the common interface without type parameters,
+    allowing heterogeneous collections of nodes.
+    """
+
+    name: str
 
 
 @dataclass(frozen=True)
@@ -29,27 +38,28 @@ class NodeResult[T]:
     outcome: Outcome
 
 
-@dataclass(frozen=True, kw_only=True)
-class Node[TIn, TOut = TIn](ABC):
-    """Async node that transforms state from TIn to TOut.
+# Type alias for NodeResult with unknown state type
+AnyNodeResult = NodeResult[Any]
 
-    For non-transforming nodes, use Node[T] which defaults to Node[T, T].
-    For transforming nodes, use Node[TIn, TOut] explicitly.
+
+@dataclass(frozen=True, kw_only=True)
+class Node[TIn, TOut = TIn](ABC, NodeBase):
+    """Abstract base for workflow nodes.
+
+    Subclass and implement async exec() to process state and return outcomes for routing.
+    Supports optional prep() and post() hooks for setup and cleanup.
+
+    Type parameters:
+        TIn: Input state type
+        TOut: Output state type (defaults to TIn for non-transforming nodes)
 
     Examples:
         Node[State]           # Non-transforming: State -> State
-        Node[State, State]    # Explicit non-transforming
         Node[Input, Output]   # Transforming: Input -> Output
 
     """
 
-    name: str = field(default="")
-
-    def __post_init__(self) -> None:
-        """Set name from class if not provided."""
-        if not self.name:
-            # Use object.__setattr__ to bypass frozen dataclass restriction
-            object.__setattr__(self, "name", self.__class__.__name__)
+    name: str  # Required - subclasses must provide at construction
 
     async def __call__(self, state: TIn) -> NodeResult[TOut]:
         """Execute node lifecycle."""
@@ -81,130 +91,150 @@ class _Flow[TIn, TOut = TIn](Node[TIn, TOut]):
     TIn→TOut transformation through construction-time validation.
     """
 
-    start_node: object  # clearflow: ignore[ARCH009] - Runtime routing requires object type; types validated at build time
-    routes: Mapping[
-        RouteKey, object | None
-    ]  # clearflow: ignore[ARCH009] - Runtime routing table; node types vary by route
+    start_node: NodeBase
+    routes: Mapping[RouteKey, NodeBase | None]
 
     @override
     async def exec(self, state: TIn) -> NodeResult[TOut]:
-        current_node: object = self.start_node  # clearflow: ignore[ARCH009] - Runtime dispatch; actual types tracked at build
-        current_state: object = state  # clearflow: ignore[ARCH009] - State transforms through pipeline; type varies per node
+        current_node = self.start_node
+        current_state: object = state
 
-        # Execution loop
         while True:
-            # Execute current node
-            result = await current_node(current_state)  # type: ignore[operator]
+            # Execute node
+            result = await current_node(current_state)
+            key = (current_node.name, result.outcome)
 
-            # Find next node in routes based on outcome
-            key: RouteKey = (current_node.name, result.outcome)  # type: ignore[attr-defined]
-
-            # Check if route exists
+            # Return if no route defined
             if key not in self.routes:
-                # No route defined - for nested flows, bubble up the outcome
-                # For top-level flows, this is an error
-                if not self.routes:
-                    # Flow has no routes at all - it's a single-node flow
-                    # Return the result as-is
-                    return cast("NodeResult[TOut]", result)
-                # Flow has some routes but not for this outcome
-                # This means the flow should terminate with this outcome
                 return cast("NodeResult[TOut]", result)
 
+            # Check next node
             next_node = self.routes[key]
-
             if next_node is None:
-                # Explicit termination - cast is safe due to build-time validation
                 return cast("NodeResult[TOut]", result)
-            # Continue to next node
+
+            # Continue
             current_node = next_node
             current_state = result.state  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
 
 @dataclass(frozen=True)
-class _FlowBuilder[TIn, TCurrent]:
-    """Private: Flow builder tracking current output type.
+class _FlowBuilder[TIn]:
+    """Flow builder for composing node routes.
 
-    TIn: The input type the flow starts with
-    TCurrent: The current output type at this stage of building
+    TIn: The input type the flow accepts
+
+    This builder creates an incomplete flow. Call terminate() to specify
+    the termination node and get a _TerminatedFlowBuilder that can be built.
     """
 
     _name: str
-    _start: Node[TIn, TCurrent]  # Starting node with tracked types
-    _routes: MappingProxyType[
-        RouteKey, object | None
-    ]  # clearflow: ignore[ARCH009] - Dynamic routing table holds heterogeneous node types
+    _start: NodeBase  # Starting node (type-erased)
+    _routes: MappingProxyType[RouteKey, NodeBase | None]  # Heterogeneous node types
 
     def route(
         self,
-        from_node: object,  # clearflow: ignore[ARCH009] - Nodes have varying types; validated at build
+        from_node: NodeBase,
         outcome: Outcome,
-        to_node: object
-        | None,  # clearflow: ignore[ARCH009] - Nodes have varying types; validated at build
-    ) -> (
-        "_FlowBuilder[TIn, object]"
-    ):  # clearflow: ignore[ARCH009] - Return type tracks build progress
+        to_node: NodeBase,  # Note: No longer accepts None
+    ) -> "_FlowBuilder[TIn]":
         """Connect nodes: from_node --outcome--> to_node.
 
-        Type checking is performed at runtime during build.
-        We use 'object' here because Python cannot track types through
-        dynamic routing at compile time.
+        Args:
+            from_node: Source node
+            outcome: Outcome string that triggers this route
+            to_node: Destination node (use terminate() for flow termination)
+
+        Returns:
+            New FlowBuilder with added route
+
         """
-        if not hasattr(from_node, "name") or not from_node.name:  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
-            msg = f"from_node must have a name: {from_node}"
+        if not from_node.name:
+            msg = f"from_node must have a non-empty name: {from_node}"
             raise ValueError(msg)
 
         # Create new dict with existing routes plus new route
-        route_key: RouteKey = (from_node.name, outcome)  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownVariableType]
+        route_key: RouteKey = (from_node.name, outcome)
         new_routes = {**self._routes, route_key: to_node}
 
-        return _FlowBuilder[
-            TIn, object
-        ](  # clearflow: ignore[ARCH009] - Build-time type tracking
+        return _FlowBuilder[TIn](
             _name=self._name,
-            _start=cast(
-                "Node[TIn, object]", self._start
-            ),  # clearflow: ignore[ARCH009] - Cast after branching loses type tracking
+            _start=self._start,
             _routes=MappingProxyType(new_routes),
         )
 
-    def build(
+    def terminate[TOut](
         self,
-    ) -> Node[
-        TIn, object
-    ]:  # clearflow: ignore[ARCH009] - Returns flow with runtime dispatch
-        """Build and return the flow as a Node.
+        node: Node[TAny, TOut],  # Any input, specific output
+        outcome: Outcome,
+    ) -> "_TerminatedFlowBuilder[TIn, TOut]":
+        """Specify the termination node and outcome.
 
-        The output type is 'object' because it depends on runtime routing.
-        Type safety is maintained at the API boundary.
+        This creates a complete flow that can be built. The output type
+        of the flow is determined by the termination node's output type.
+
+        Args:
+            node: The node that terminates the flow
+            outcome: The outcome from this node that ends the flow
+
+        Returns:
+            A TerminatedFlowBuilder that can be built into a flow
+
         """
-        # Validate single termination
-        none_routes = [
-            (from_node, outcome)
-            for (from_node, outcome), to_node in self._routes.items()
-            if to_node is None
-        ]
-
-        if len(none_routes) > 1:
-            msg = (
-                f"Flow '{self._name}' has multiple termination points "
-                f"(routes to None): {none_routes}. "
-                f"Flows must have exactly one termination point."
-            )
+        if not node.name:
+            msg = f"Termination node must have a non-empty name: {node}"
             raise ValueError(msg)
 
-        return _Flow[
-            TIn, object
-        ](  # clearflow: ignore[ARCH009] - Flow with runtime type dispatch
+        # Check if there's already a termination (None route)
+        for (from_node, _), to_node in self._routes.items():
+            if to_node is None:
+                msg = (
+                    f"Flow '{self._name}' already has a termination from "
+                    f"node '{from_node}'. Only one termination is allowed."
+                )
+                raise ValueError(msg)
+
+        # Add the termination route
+        route_key: RouteKey = (node.name, outcome)
+        new_routes = {**self._routes, route_key: None}
+
+        return _TerminatedFlowBuilder[TIn, TOut](
+            _name=self._name,
+            _start=self._start,
+            _routes=MappingProxyType(new_routes),
+            _termination_node=node,
+        )
+
+
+@dataclass(frozen=True)
+class _TerminatedFlowBuilder[TIn, TOut]:
+    """A flow builder with a defined termination point.
+
+    This builder represents a complete flow that can be built.
+    The flow transforms TIn to TOut, where TOut is determined
+    by the termination node's output type.
+    """
+
+    _name: str
+    _start: NodeBase
+    _routes: MappingProxyType[RouteKey, NodeBase | None]
+    _termination_node: Node[TAny, TOut]  # Tracks the output type
+
+    def build(self) -> Node[TIn, TOut]:
+        """Build and return the flow as a Node.
+
+        Returns:
+            A flow node that transforms TIn to TOut
+
+        """
+        return _Flow[TIn, TOut](
             name=self._name,
-            start_node=cast(
-                "object", self._start
-            ),  # clearflow: ignore[ARCH009] - Cast for runtime dispatch
+            start_node=self._start,
             routes=self._routes,
         )
 
 
-def flow[TIn, TOut](name: str, start: Node[TIn, TOut]) -> _FlowBuilder[TIn, TOut]:
+def flow[TIn, TOut](name: str, start: Node[TIn, TOut]) -> _FlowBuilder[TIn]:
     """Create a flow with the given name and starting node.
 
     Args:
@@ -222,8 +252,8 @@ def flow[TIn, TOut](name: str, start: Node[TIn, TOut]) -> _FlowBuilder[TIn, TOut
         msg = "Flow name must be a non-empty string"
         raise ValueError(msg)
 
-    return _FlowBuilder[TIn, TOut](
+    return _FlowBuilder[TIn](
         _name=name,
-        _start=start,
-        _routes=MappingProxyType({}),  # Explicit empty immutable mapping
+        _start=start,  # Will be treated as NodeBase
+        _routes=MappingProxyType({}),  # Empty immutable mapping
     )
