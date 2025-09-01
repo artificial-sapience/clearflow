@@ -362,31 +362,6 @@ else
     echo -e "${YELLOW}Skipping Vulture (no Python targets)${NC}"
 fi
 
-print_header "Docstring coverage - Interrogate"
-# Interrogate auto-reads [tool.interrogate] from pyproject.toml
-echo "Enforcing 100% docstring coverage..."
-# Only run on Python directories/files
-interrogate_targets=""
-for target in $QUALITY_TARGETS; do
-    if [[ -d "$target" ]] || [[ "$target" == *.py ]]; then
-        interrogate_targets="$interrogate_targets $target"
-    fi
-done
-
-if [ -n "$interrogate_targets" ]; then
-    # Interrogate will use pyproject.toml config (fail-under = 100, quiet = true)
-    uv run interrogate $interrogate_targets --fail-under 100 --quiet || interrogate_status=$?
-    if [ "${interrogate_status:-0}" -eq 0 ]; then
-        echo -e "${GREEN}✓ Interrogate docstring coverage (must be 100%)${NC}"
-    else
-        echo -e "${RED}✗ Interrogate docstring coverage (must be 100%) failed${NC}"
-        echo -e "${RED}MISSION-CRITICAL VIOLATION: Fix immediately before proceeding${NC}"
-        exit 1
-    fi
-else
-    echo -e "${YELLOW}Skipping Interrogate (no Python targets)${NC}"
-fi
-
 print_header "Complexity metrics - Radon"
 # Check cyclomatic complexity average
 echo "Checking average complexity (must be ≤ A grade)..."

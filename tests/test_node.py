@@ -13,7 +13,6 @@ from typing import override
 from clearflow import Node, NodeResult
 from tests.conftest import AgentState, Message, ValidationState
 
-
 # Module-level test nodes to reduce complexity
 
 
@@ -68,7 +67,8 @@ class PromptEngineeringNode(Node[PromptState]):
 
     @override
     async def post(
-        self, result: NodeResult[PromptState]
+        self,
+        result: NodeResult[PromptState],
     ) -> NodeResult[PromptState]:
         # Enhance prompt in post phase
         new_state = replace(result.state, enhanced=True)
@@ -86,20 +86,8 @@ class LLMRouterNode(Node[AgentState]):
         # Analyze last user message for intent (simulating LLM classification)
         last_msg = state.messages[-1] if state.messages else None
 
-        if not last_msg or last_msg.role != "user":
-            outcome = "no_input"
-            response = Message(role="assistant", content="Please provide input.")
-        elif "weather" in last_msg.content.lower():
-            outcome = "tool_required"  # Route to tool use flow
-            response = Message(
-                role="assistant", content="I'll check the weather for you."
-            )
-        elif "code" in last_msg.content.lower():
-            outcome = "code_generation"  # Route to code gen flow
-            response = Message(role="assistant", content="I'll help you write code.")
-        else:
-            outcome = "direct_response"  # Simple Q&A path
-            response = Message(role="assistant", content="I understand your request.")
+        # Determine outcome and response based on message content
+        outcome, response = self._classify_intent(last_msg)
 
         # Immutable state update
         new_state = AgentState(
@@ -108,6 +96,30 @@ class LLMRouterNode(Node[AgentState]):
             temperature=0.3 if outcome == "code_generation" else state.temperature,
         )
         return NodeResult(new_state, outcome=outcome)
+
+    def _classify_intent(self, msg: Message | None) -> tuple[str, Message]:
+        """Classify user intent from message."""
+        if not msg or msg.role != "user":
+            return "no_input", Message(
+                role="assistant", content="Please provide input."
+            )
+
+        content_lower = msg.content.lower()
+        if "weather" in content_lower:
+            return "tool_required", Message(
+                role="assistant",
+                content="I'll check the weather for you.",
+            )
+        if "code" in content_lower:
+            return "code_generation", Message(
+                role="assistant",
+                content="I'll help you write code.",
+            )
+
+        return "direct_response", Message(
+            role="assistant",
+            content="I understand your request.",
+        )
 
 
 class TestNode:

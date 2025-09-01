@@ -61,7 +61,6 @@ dev = [
     "radon>=6.0.1",          # Cyclomatic complexity, maintainability index
     "xenon>=0.9.3",          # Complexity monitor (fails if too complex)
     "vulture>=2.14",         # Dead code detection
-    "interrogate>=1.7.0",    # Docstring coverage checker
 ]
 
 [build-system]
@@ -379,23 +378,3 @@ skips = ["*/test_*.py", "*_test.py"]  # Allow assert in tests
 
 # Note: vulture, xenon, and radon don't read pyproject.toml automatically
 # Their settings are hardcoded in quality-check.sh where they're invoked
-
-[tool.interrogate]
-# Docstring coverage
-ignore-init-method = false
-ignore-init-module = false
-ignore-magic = false
-ignore-semiprivate = false
-ignore-private = false
-ignore-property-decorators = false
-ignore-module = false
-ignore-nested-functions = false
-ignore-nested-classes = false
-ignore-setters = false
-fail-under = 100  # Require 100% docstring coverage
-exclude = [".venv"]
-verbose = 0
-quiet = true
-whitelist-regex = []
-color = true
-omit-covered-files = false

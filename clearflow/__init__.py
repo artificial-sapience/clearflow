@@ -35,7 +35,8 @@ class NodeBase(Protocol):
     name: str
 
     async def __call__(
-        self, state: object
+        self,
+        state: object,
     ) -> "NodeResult[object]":  # clearflow: ignore[ARCH009]
         """Execute the node with any state type.
 
@@ -213,7 +214,8 @@ class _FlowBuilder[TStartIn, TStartOut]:
 
 
 def flow[TIn, TStartOut](
-    name: str, start: Node[TIn, TStartOut]
+    name: str,
+    start: Node[TIn, TStartOut],
 ) -> _FlowBuilder[TIn, TStartOut]:
     """Create a flow with the given name and starting node.
 
