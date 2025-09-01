@@ -344,7 +344,8 @@ done
 
 if [ -n "$vulture_targets" ]; then
     vulture_output=$(uv run vulture $vulture_targets --min-confidence 80 2>&1)
-    vulture_count=$(echo "$vulture_output" | grep -c "unused" || echo "0")
+    # Use grep -c without fallback since it always returns a count
+    vulture_count=$(echo "$vulture_output" | grep -c "unused")
     if [ "$vulture_count" -gt 0 ]; then
         echo -e "${RED}✗ Found $vulture_count dead code issues${NC}"
         echo "$vulture_output"

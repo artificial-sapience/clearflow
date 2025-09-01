@@ -29,8 +29,14 @@ class NodeBase(Protocol):
 
     name: str
 
-    async def __call__(self, state: object) -> "NodeResult[object]":
-        """Execute the node with any state type."""
+    async def __call__(
+        self, state: object
+    ) -> "NodeResult[object]":  # clearflow: ignore[ARCH009]
+        """Execute the node with any state type.
+
+        Note: We intentionally use 'object' here for type erasure. This protocol
+        represents the type-erased interface for heterogeneous node collections.
+        """
         ...
 
 
@@ -62,7 +68,7 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
     name: str
 
     @override
-    async def __call__(self, state: TIn) -> NodeResult[TOut]:  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def __call__(self, state: TIn) -> NodeResult[TOut]:  # type: ignore[override]
         """Execute node lifecycle."""
         state = await self.prep(state)
         result = await self.exec(state)
@@ -98,7 +104,9 @@ class _Flow[TIn, TOut = TIn](Node[TIn, TOut]):
     @override
     async def exec(self, state: TIn) -> NodeResult[TOut]:
         current_node = self.start_node
-        current_state: object = state
+        current_state: object = (
+            state  # clearflow: ignore[ARCH009] - Type erasure for dynamic routing
+        )
 
         while True:
             # Execute node
@@ -199,7 +207,9 @@ class _FlowBuilder[TStartIn, TStartOut]:
         )
 
 
-def flow[TIn, TStartOut](name: str, start: Node[TIn, TStartOut]) -> _FlowBuilder[TIn, TStartOut]:
+def flow[TIn, TStartOut](
+    name: str, start: Node[TIn, TStartOut]
+) -> _FlowBuilder[TIn, TStartOut]:
     """Create a flow with the given name and starting node.
 
     Args:
