@@ -18,7 +18,6 @@ __all__ = [
     "flow",
 ]
 
-# Type definitions needed for mypy compatibility with PEP 695 syntax
 TIn = TypeVar("TIn")
 TOut = TypeVar("TOut")
 FromNodeName = str
