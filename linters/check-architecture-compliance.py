@@ -49,11 +49,23 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
     if line_num <= 0 or line_num > len(lines):
         return False
 
-    line = lines[line_num - 1]  # Convert to 0-indexed
-
     # Check for # clearflow: ignore[CODE] pattern
     pattern = rf"#\s*clearflow:\s*ignore\[{code}\]"
-    return bool(re.search(pattern, line, re.IGNORECASE))
+    
+    # Check the violation line itself
+    line = lines[line_num - 1]  # Convert to 0-indexed
+    if re.search(pattern, line, re.IGNORECASE):
+        return True
+    
+    # For multi-line annotations, check the next 2 lines
+    # (handles cases where object is in a type annotation that spans lines)
+    for offset in range(1, 3):
+        if line_num - 1 + offset < len(lines):
+            next_line = lines[line_num - 1 + offset]
+            if re.search(pattern, next_line, re.IGNORECASE):
+                return True
+    
+    return False
 
 
 def check_file_imports(file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -163,16 +175,18 @@ def check_file_imports(file_path: Path, content: str) -> tuple[Violation, ...]:
                         isinstance(arg.annotation, ast.Name)
                         and arg.annotation.id == "object"
                     ):
-                        violations.append(
-                            Violation(
-                                file=file_path,
-                                line=arg.annotation.lineno,
-                                column=arg.annotation.col_offset,
-                                code="ARCH009",
-                                message=f"Parameter '{arg.arg}' uses 'object' type - use proper types or protocols",
-                                requirement="REQ-ARCH-009",
+                        # Check if this line has a suppression for ARCH009
+                        if not has_suppression(content, arg.annotation.lineno, "ARCH009"):
+                            violations.append(
+                                Violation(
+                                    file=file_path,
+                                    line=arg.annotation.lineno,
+                                    column=arg.annotation.col_offset,
+                                    code="ARCH009",
+                                    message=f"Parameter '{arg.arg}' uses 'object' type - use proper types or protocols",
+                                    requirement="REQ-ARCH-009",
+                                )
                             )
-                        )
 
         # Check for 'object' type usage in type annotations only
         # Skip object.__setattr__ which is needed for frozen dataclasses
