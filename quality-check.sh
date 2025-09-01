@@ -266,7 +266,9 @@ if [[ "$QUALITY_TARGETS" == *"clearflow"* ]] && [[ "$QUALITY_TARGETS" != *"test"
     echo -e "${YELLOW}Skipping CVE scan (clearflow has zero dependencies)${NC}"
 else
     echo "Checking for known CVE vulnerabilities in dependencies..."
-    if ! uv run pip-audit --fix --desc 2>/dev/null; then
+    # PYSEC-2022-42969: py library ReDoS vulnerability - approved suppression for test dependency
+    # The py library is a pytest dependency only used in testing, not in production code
+    if ! uv run pip-audit --fix --desc --ignore-vuln PYSEC-2022-42969 2>/dev/null; then
         echo -e "${RED}✗ CVE vulnerabilities detected in dependencies${NC}"
         echo -e "${RED}MISSION-CRITICAL: Security vulnerabilities found${NC}"
         echo -e "${YELLOW}⚠️  Update vulnerable dependencies immediately${NC}"

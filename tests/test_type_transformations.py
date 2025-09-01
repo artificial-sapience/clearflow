@@ -13,120 +13,132 @@ from clearflow import Node, NodeResult
 from tests.conftest import Document
 
 
+# RAG pipeline types
+@dc(frozen=True)
+class Query:
+    """User query for RAG system."""
+    text: str
+    max_results: int = 5
+
+
+@dc(frozen=True)
+class SearchResults:
+    """Retrieved documents with scores."""
+    query: Query
+    documents: tuple[tuple[Document, float], ...]  # (doc, relevance_score)
+
+
+@dc(frozen=True)
+class Context:
+    """Prepared context for generation."""
+    query: Query
+    relevant_texts: tuple[str, ...]
+    total_tokens: int
+
+
+@dc(frozen=True)
+class Response:
+    """Final generated response."""
+    query: Query
+    answer: str
+    sources: tuple[str, ...]
+
+
+@dc(frozen=True)
+class RetrievalNode(Node[Query, SearchResults]):
+    """Retrieves relevant documents."""
+    name: str = "retriever"
+
+    @override
+    async def exec(self, state: Query) -> NodeResult[SearchResults]:
+        # Simulate retrieval
+        mock_docs = (
+            (Document("AI is transforming industries", "doc1.pdf"), 0.95),
+            (Document("Machine learning applications", "doc2.pdf"), 0.87),
+        )
+        results = SearchResults(
+            query=state, documents=mock_docs[: state.max_results]
+        )
+        return NodeResult(results, outcome="retrieved")
+
+
+@dc(frozen=True)
+class ContextBuilder(Node[SearchResults, Context]):
+    """Builds context from search results."""
+    name: str = "context_builder"
+
+    @override
+    async def exec(self, state: SearchResults) -> NodeResult[Context]:
+        texts = tuple(doc.content for doc, _ in state.documents)
+        tokens = sum(len(text.split()) for text in texts)
+        context = Context(
+            query=state.query, relevant_texts=texts, total_tokens=tokens
+        )
+        outcome = "context_ready" if tokens < 1000 else "context_too_long"
+        return NodeResult(context, outcome=outcome)
+
+
+@dc(frozen=True)
+class GenerationNode(Node[Context, Response]):
+    """Generates response from context."""
+    name: str = "generator"
+
+    @override
+    async def exec(self, state: Context) -> NodeResult[Response]:
+        # Simulate generation
+        answer = (
+            f"Based on {len(state.relevant_texts)} sources: "
+            + state.relevant_texts[0][:50]
+        )
+        sources = tuple(
+            f"doc{i + 1}.pdf" for i in range(len(state.relevant_texts))
+        )
+        response = Response(query=state.query, answer=answer, sources=sources)
+        return NodeResult(response, outcome="generated")
+
+
 class TestTypeTransformations:
     """Test Node[TIn, TOut] type transformations for real AI pipelines."""
 
     @staticmethod
-    async def test_rag_pipeline_transformations() -> None:
-        """Test a complete RAG pipeline with multiple type transformations."""
-
-        @dc(frozen=True)
-        class Query:
-            """User query for RAG system."""
-
-            text: str
-            max_results: int = 5
-
-        @dc(frozen=True)
-        class SearchResults:
-            """Retrieved documents with scores."""
-
-            query: Query
-            documents: tuple[tuple[Document, float], ...]  # (doc, relevance_score)
-
-        @dc(frozen=True)
-        class Context:
-            """Prepared context for generation."""
-
-            query: Query
-            relevant_texts: tuple[str, ...]
-            total_tokens: int
-
-        @dc(frozen=True)
-        class Response:
-            """Final generated response."""
-
-            query: Query
-            answer: str
-            sources: tuple[str, ...]
-
-        # Node 1: Query → SearchResults
-        @dc(frozen=True)
-        class RetrievalNode(Node[Query, SearchResults]):
-            """Retrieves relevant documents."""
-
-            name: str = "retriever"
-
-            @override
-            async def exec(self, state: Query) -> NodeResult[SearchResults]:
-                # Simulate retrieval
-                mock_docs = (
-                    (Document("AI is transforming industries", "doc1.pdf"), 0.95),
-                    (Document("Machine learning applications", "doc2.pdf"), 0.87),
-                )
-                results = SearchResults(
-                    query=state, documents=mock_docs[: state.max_results]
-                )
-                return NodeResult(results, outcome="retrieved")
-
-        # Node 2: SearchResults → Context
-        @dc(frozen=True)
-        class ContextBuilder(Node[SearchResults, Context]):
-            """Builds context from search results."""
-
-            name: str = "context_builder"
-
-            @override
-            async def exec(self, state: SearchResults) -> NodeResult[Context]:
-                texts = tuple(doc.content for doc, _ in state.documents)
-                tokens = sum(len(text.split()) for text in texts)
-                context = Context(
-                    query=state.query, relevant_texts=texts, total_tokens=tokens
-                )
-                outcome = "context_ready" if tokens < 1000 else "context_too_long"
-                return NodeResult(context, outcome=outcome)
-
-        # Node 3: Context → Response
-        @dc(frozen=True)
-        class GenerationNode(Node[Context, Response]):
-            """Generates response from context."""
-
-            name: str = "generator"
-
-            @override
-            async def exec(self, state: Context) -> NodeResult[Response]:
-                # Simulate generation
-                answer = (
-                    f"Based on {len(state.relevant_texts)} sources: "
-                    + state.relevant_texts[0][:50]
-                )
-                sources = tuple(
-                    f"doc{i + 1}.pdf" for i in range(len(state.relevant_texts))
-                )
-                response = Response(query=state.query, answer=answer, sources=sources)
-                return NodeResult(response, outcome="generated")
-
-        # Test the pipeline transformations
+    async def test_rag_retrieval_transformation() -> None:
+        """Test Query to SearchResults transformation."""
         query = Query(text="How is AI transforming industries?", max_results=2)
-
-        # Query → SearchResults
         retrieval = RetrievalNode()
-        search_result = await retrieval(query)
-        assert isinstance(search_result.state, SearchResults)
-        assert len(search_result.state.documents) == 2
+        result = await retrieval(query)
+        assert isinstance(result.state, SearchResults)
+        assert len(result.state.documents) == 2
 
-        # SearchResults → Context
-        context_builder = ContextBuilder()
-        context_result = await context_builder(search_result.state)
-        assert isinstance(context_result.state, Context)
-        assert context_result.state.total_tokens > 0
+    @staticmethod
+    async def test_rag_context_building() -> None:
+        """Test SearchResults to Context transformation."""
+        query = Query(text="AI query", max_results=2)
+        mock_results = SearchResults(
+            query=query,
+            documents=(
+                (Document("AI content", "doc1.pdf"), 0.95),
+                (Document("ML content", "doc2.pdf"), 0.87),
+            )
+        )
+        builder = ContextBuilder()
+        result = await builder(mock_results)
+        assert isinstance(result.state, Context)
+        assert result.state.total_tokens > 0
 
-        # Context → Response
+    @staticmethod
+    async def test_rag_generation() -> None:
+        """Test Context to Response transformation."""
+        query = Query(text="test", max_results=1)
+        context = Context(
+            query=query,
+            relevant_texts=("Test content",),
+            total_tokens=2
+        )
         generator = GenerationNode()
-        final_result = await generator(context_result.state)
-        assert isinstance(final_result.state, Response)
-        assert final_result.state.query == query  # Original query preserved
-        assert len(final_result.state.sources) > 0
+        result = await generator(context)
+        assert isinstance(result.state, Response)
+        assert result.state.query == query
+        assert len(result.state.sources) > 0
 
     @staticmethod
     async def test_tool_use_transformation() -> None:
