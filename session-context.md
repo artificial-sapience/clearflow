@@ -3,91 +3,81 @@
 ## Current Branch
 `support-state-type-transformations`
 
-## Session Achievement: Major Builder Pattern Redesign ✅
+## Major Accomplishments This Session
 
-This session achieved a fundamental redesign of the ClearFlow builder pattern that solves the type tracking problem and dramatically improves API ergonomics.
+### 1. Quality Check Script Fixes ✅
+Fixed all issues with quality-check.sh:
+- **Vulture hanging**: Added `|| true` to grep command (line 348)
+- **Interrogate hanging**: Capture exit status instead of letting script exit (line 375)
+- **Examples scoping**: Only check examples when explicitly in QUALITY_TARGETS (line 432)
+- **Duplicate script**: Removed clearflow/quality-check.sh, kept root version
+- **Pyright update**: Force latest version with PYRIGHT_PYTHON_FORCE_VERSION=latest
 
-## The Critical Discovery
+### 2. Core Library Improvements ✅
+- **Node name validation**: Added `__post_init__` to Node class for centralized validation
+- **Removed duplicate validation**: Cleaned up redundant checks in flow() and route()
+- **Module docstring**: Added to clearflow/__init__.py for interrogate
+- **Method docstring**: Added to _Flow.exec() for 100% coverage
 
-We realized that the "single termination" rule means we can know the output type statically! The termination node's output type IS the flow's output type. This led to a complete redesign.
+### 3. Documentation Enhancements ✅
+- **Consistent AI examples**: All examples now use RAG workflow (retriever, generator, etc.)
+- **User-friendly returns**: Removed internal type references (FlowBuilder) from public docs
+- **Meaningful names**: Changed from generic "Pipeline", "ok", "done" to AI-specific terms
 
-## API Evolution
+### 4. Test Updates (In Progress)
+Started updating tests to new builder API with AI-focused examples:
+- **test_flow.py**: 
+  - Linear flow test now uses RAG indexing pipeline
+  - Branching flow test now uses AI chat routing with intent classification
+  - Still need to complete remaining tests in file
 
-### Old API (problematic)
-```python
-Flow[T]("name")
-    .start_with(node)
-    .route(a, "x", b)
-    .route(b, "done", None)  # Manual None routing
-    .build()  # Returns Node[T, object] - type lost!
-```
+## Key Technical Decisions
 
-### New API (elegant)
-```python
-flow("name", start_node)
-    .route(a, "x", b)
-    .end(b, "done")  # Returns Node[TIn, TOut] directly!
-```
+### Node Name Validation
+- Centralized in Node.__post_init__() 
+- Validates non-empty and non-whitespace names
+- Applies to all nodes including flows (since _Flow is a Node)
 
-## Key Design Changes
+### Documentation Philosophy
+- Only expose Node, NodeResult, and flow in __all__
+- Hide internal types (_FlowBuilder, NodeBase) from public docs
+- Use behavior descriptions instead of type names
 
-### 1. Type Tracking Solution
-- `_FlowBuilder[TStartIn, TStartOut]` tracks both input type and start node's output
-- `end[TTermIn, TTermOut]()` method captures termination node's output type
-- Final flow type is `Node[TStartIn, TTermOut]` - perfect type preservation!
+### Test Design Principles
+- Use realistic AI workflows (RAG, chat routing, document indexing)
+- Demonstrate actual patterns users will implement
+- Keep tests simple but meaningful
 
-### 2. Simplified Builder Pattern
-- Removed `_TerminatedFlowBuilder` class entirely
-- `end()` directly returns the built flow (no separate `build()` step needed)
-- Single termination enforced by API design (can't call `end()` twice)
+## Current State
 
-### 3. NodeBase Protocol
-```python
-class NodeBase(Protocol):
-    name: str
-    async def __call__(self, state: object) -> "NodeResult[object]": ...
-```
-Enables heterogeneous node collections with intentional type erasure.
+### What Works ✅
+- clearflow/ passes ALL quality checks at 100%
+- Node name validation is centralized and consistent
+- Documentation uses meaningful AI examples
+- Quality-check.sh is fully functional
 
-## Technical Implementation
+### What Needs Completion
+- Finish updating all test files to new API (see plan.md)
+- Run full test suite with coverage
+- Ensure all tests pass with new builder pattern
 
-### Core Changes in clearflow/__init__.py
+## File Status
 
-1. **_FlowBuilder** now tracks `[TStartIn, TStartOut]`
-2. **route()** no longer accepts `None` as destination
-3. **end()** method replaces routing to `None`:
-   - Takes `Node[TTermIn, TTermOut]` and outcome
-   - Returns `Node[TStartIn, TTermOut]` directly
-   - No intermediate builder needed
+### Core Library (clearflow/__init__.py)
+- ✅ All quality checks pass
+- ✅ 100% docstring coverage
+- ✅ Type-safe with mypy & pyright strict
+- ✅ Zero dead code
+- ✅ Complexity grade A
 
-### Type Suppressions (All Justified)
-- Line 32: NodeBase protocol uses `object` for type erasure
-- Line 71: Node.__call__ intentionally refines NodeBase signature
-- Line 105: _Flow.exec uses `object` for dynamic routing
+### Tests
+- 🔄 test_flow.py - Partially updated (30%)
+- ❌ test_real_world_scenarios.py - Needs update
+- ❌ test_error_handling.py - Needs update  
+- ❓ Other test files - Need to check if they use old API
 
-## Quality Status
-
-### Passing ✅
-- Architecture compliance (with justified suppressions)
-- Immutability compliance
-- Test suite compliance
-- Linting & formatting (ruff)
-- Type checking (mypy & pyright)
-- Security (bandit)
-- Complexity (xenon) - Grade A (2.0)
-- Dead code (vulture) - None
-
-### Failing ❌
-- **Docstring coverage (interrogate)** - Exit code 1, blocking quality-check.sh completion
-
-## Critical Issue
-
-The interrogate tool fails with exit code 1, preventing the quality-check.sh script from completing. This needs immediate investigation.
-
-## Next Session Priority
-
-1. **Fix interrogate issue** - Investigate missing docstrings
-2. **Update all tests** to use new `flow()` → `route()` → `end()` API
-3. **Ensure 100% test coverage** with new code paths
-
-See plan.md for detailed task breakdown.
+## Next Steps
+See plan.md for detailed task list. Primary focus:
+1. Complete test updates to new flow() → route() → end() API
+2. Ensure all tests pass
+3. Verify 100% coverage maintained

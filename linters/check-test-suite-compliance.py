@@ -8,7 +8,6 @@ Requirements enforced:
 - TEST001: Tests SHALL NOT use asyncio.run() (use @pytest.mark.asyncio)
 - TEST002: Tests SHALL NOT create event loops without proper cleanup
 - TEST003: Tests SHALL NOT use asyncio.get_event_loop() (let pytest-asyncio manage)
-- TEST004: Async test functions SHALL have @pytest.mark.asyncio decorator
 - TEST005: Tests SHALL properly close all resources (files, sockets, connections)
 
 Why these matter:
@@ -182,63 +181,8 @@ def check_event_loop_creation(file_path: Path, content: str) -> tuple[Violation,
     return tuple(violations)
 
 
-def check_async_test_decorators(file_path: Path, content: str) -> tuple[Violation, ...]:
-    """Check that async test functions have proper decorators.
-
-    Returns:
-        List of violations for missing decorators.
-
-    """
-    violations = []
-
-    if not is_test_file(file_path):
-        return tuple(violations)
-
-    try:
-        tree = ast.parse(content, filename=str(file_path))
-    except SyntaxError:
-        return tuple(violations)
-
-    for node in ast.walk(tree):
-        # Check async functions that start with test_
-        if isinstance(node, ast.AsyncFunctionDef):
-            if node.name.startswith("test_"):
-                # Check if it has @pytest.mark.asyncio decorator
-                has_asyncio_mark = False
-
-                for decorator in node.decorator_list:
-                    # Check for @pytest.mark.asyncio
-                    if isinstance(decorator, ast.Attribute):
-                        if (
-                            isinstance(decorator.value, ast.Attribute)
-                            and isinstance(decorator.value.value, ast.Name)
-                            and decorator.value.value.id == "pytest"
-                            and decorator.value.attr == "mark"
-                            and decorator.attr == "asyncio"
-                        ):
-                            has_asyncio_mark = True
-                    # Also check for direct @mark.asyncio
-                    elif isinstance(decorator, ast.Attribute):
-                        if (
-                            isinstance(decorator.value, ast.Name)
-                            and decorator.value.id == "mark"
-                            and decorator.attr == "asyncio"
-                        ):
-                            has_asyncio_mark = True
-
-                if not has_asyncio_mark:
-                    violations.append(
-                        Violation(
-                            file=file_path,
-                            line=node.lineno,
-                            column=node.col_offset,
-                            code="TEST004",
-                            message=f"Async test '{node.name}' missing @pytest.mark.asyncio",
-                            suggestion="Add @pytest.mark.asyncio decorator",
-                        )
-                    )
-
-    return tuple(violations)
+# TEST004 check removed - we use asyncio_mode="auto" in pyproject.toml
+# which automatically detects async tests without needing explicit decorators
 
 
 def check_resource_management(file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -316,7 +260,7 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
     # Run all checks
     violations.extend(check_asyncio_run(file_path, content))
     violations.extend(check_event_loop_creation(file_path, content))
-    violations.extend(check_async_test_decorators(file_path, content))
+    # TEST004 removed - asyncio_mode="auto" handles this
     violations.extend(check_resource_management(file_path, content))
 
     return tuple(violations)
@@ -361,7 +305,6 @@ def print_report(violations: tuple[Violation, ...]) -> None:
         "TEST001": "asyncio.run() in tests (causes resource leaks)",
         "TEST002": "Manual event loop creation without cleanup",
         "TEST003": "Using asyncio.get_event_loop() in tests",
-        "TEST004": "Async test missing @pytest.mark.asyncio",
         "TEST005": "Potential resource leak (unclosed file/socket)",
     }
 

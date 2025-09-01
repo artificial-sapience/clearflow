@@ -6,10 +6,9 @@ lifecycle hooks, and routing patterns for mission-critical AI orchestration.
 Copyright (c) 2025 ClearFlow Contributors
 """
 
-from dataclasses import dataclass as dc, replace
+from dataclasses import dataclass as dc
+from dataclasses import replace
 from typing import override
-
-import pytest
 
 from clearflow import Node, NodeResult
 from tests.conftest import AgentState, Message, ValidationState
@@ -26,19 +25,21 @@ class TestNode:
         class TokenCountNode(Node[ValidationState]):
             """Pure function for token counting in LLM validation."""
 
+            name: str = "token_counter"
+
             @override
             async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
                 # Pure transformation: count tokens (simplified)
                 token_count = len(state.input_text.split())
-                
+
                 if token_count > 100:
-                    errors = state.errors + (f"Token count {token_count} exceeds limit",)
+                    errors = (*state.errors, f"Token count {token_count} exceeds limit")
                     new_state = replace(state, errors=errors, validated=False)
                     outcome = "too_long"
                 else:
                     new_state = replace(state, validated=True)
                     outcome = "valid_length"
-                
+
                 return NodeResult(new_state, outcome=outcome)
 
         node = TokenCountNode()
@@ -52,7 +53,7 @@ class TestNode:
         assert result1.outcome == result2.outcome
         assert result1.state.validated is True
         assert result1.outcome == "valid_length"
-        
+
         # Verify immutability
         assert initial.validated is False
 
@@ -63,6 +64,7 @@ class TestNode:
         @dc(frozen=True)
         class PromptState:
             """Immutable state for prompt engineering pipeline."""
+
             raw_prompt: str
             sanitized: bool = False
             validated: bool = False
@@ -71,6 +73,8 @@ class TestNode:
         @dc(frozen=True)
         class PromptEngineeringNode(Node[PromptState]):
             """Node demonstrating lifecycle hooks for prompt engineering."""
+
+            name: str = "prompt_engineer"
 
             @override
             async def prep(self, state: PromptState) -> PromptState:
@@ -84,7 +88,9 @@ class TestNode:
                 return NodeResult(new_state, outcome="validated")
 
             @override
-            async def post(self, result: NodeResult[PromptState]) -> NodeResult[PromptState]:
+            async def post(
+                self, result: NodeResult[PromptState]
+            ) -> NodeResult[PromptState]:
                 # Enhance prompt in post phase
                 new_state = replace(result.state, enhanced=True)
                 return NodeResult(new_state, outcome=result.outcome)
@@ -106,29 +112,41 @@ class TestNode:
         class LLMRouterNode(Node[AgentState]):
             """Routes to different paths based on LLM analysis."""
 
+            name: str = "llm_router"
+
             @override
             async def exec(self, state: AgentState) -> NodeResult[AgentState]:
                 # Analyze last user message for intent (simulating LLM classification)
                 last_msg = state.messages[-1] if state.messages else None
-                
+
                 if not last_msg or last_msg.role != "user":
                     outcome = "no_input"
-                    response = Message(role="assistant", content="Please provide input.")
+                    response = Message(
+                        role="assistant", content="Please provide input."
+                    )
                 elif "weather" in last_msg.content.lower():
                     outcome = "tool_required"  # Route to tool use flow
-                    response = Message(role="assistant", content="I'll check the weather for you.")
+                    response = Message(
+                        role="assistant", content="I'll check the weather for you."
+                    )
                 elif "code" in last_msg.content.lower():
                     outcome = "code_generation"  # Route to code gen flow
-                    response = Message(role="assistant", content="I'll help you write code.")
+                    response = Message(
+                        role="assistant", content="I'll help you write code."
+                    )
                 else:
                     outcome = "direct_response"  # Simple Q&A path
-                    response = Message(role="assistant", content="I understand your request.")
-                
+                    response = Message(
+                        role="assistant", content="I understand your request."
+                    )
+
                 # Immutable state update
                 new_state = AgentState(
-                    messages=state.messages + (response,),
+                    messages=(*state.messages, response),
                     context=state.context,
-                    temperature=0.3 if outcome == "code_generation" else state.temperature
+                    temperature=0.3
+                    if outcome == "code_generation"
+                    else state.temperature,
                 )
                 return NodeResult(new_state, outcome=outcome)
 
@@ -137,7 +155,7 @@ class TestNode:
         # Test tool-required path
         weather_state = AgentState(
             messages=(Message(role="user", content="What's the weather in NYC?"),),
-            context="weather_assistant"
+            context="weather_assistant",
         )
         result = await node(weather_state)
         assert result.outcome == "tool_required"
@@ -148,7 +166,7 @@ class TestNode:
         code_state = AgentState(
             messages=(Message(role="user", content="Help me write Python code"),),
             context="coding_assistant",
-            temperature=0.7
+            temperature=0.7,
         )
         result = await node(code_state)
         assert result.outcome == "code_generation"

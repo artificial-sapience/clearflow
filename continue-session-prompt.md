@@ -1,37 +1,48 @@
 # Continue ClearFlow Session
 
-Please continue working on ClearFlow improvements.
+Please continue working on ClearFlow test updates.
 
-## Context
-- Review **session-context.md** for the major builder pattern redesign we completed
+## Context Files
+- Review **session-context.md** for what was accomplished and key decisions
 - Review **plan.md** for remaining tasks
 
-## Critical Issue to Fix First
+## Current Priority Task
 
-The interrogate tool is failing and blocking quality checks:
+Continue updating test files to use the new builder API:
+```python
+# Old pattern to replace:
+Flow[T]("name").start_with(node).route(...).route(..., None).build()
 
-```bash
-uv run interrogate clearflow/ --quiet --fail-under 100
-# Returns exit code 1
+# New pattern to use:
+flow("name", node).route(...).end(final_node, "outcome")
 ```
 
-This prevents quality-check.sh from completing. Fix missing docstrings immediately.
+## Specific Next Steps
 
-## Then Update Tests to New API
+1. **Complete test_flow.py updates**
+   - The file is partially updated (linear flow and branching flow done)
+   - Check for any remaining tests that need updating
 
-We completely redesigned the builder pattern:
-- Old: `Flow[T]("name").start_with(node).route(...).route(..., None).build()`  
-- New: `flow("name", node).route(...).end(final_node, "outcome")`
+2. **Update test_real_world_scenarios.py and test_error_handling.py**
+   - These files definitely use the old Flow API
+   - Update to new builder pattern with AI-focused examples
 
-All test files need updating to this new pattern.
+3. **Check remaining test files**
+   - Verify which other test files need updates
+   - Update any that use the old Flow[T]().start_with() pattern
 
-## Key Achievement from Last Session
+## Important Guidelines
 
-We solved the type tracking problem! The termination node's output type IS the flow's output type. The new `end()` method captures this and returns the built flow directly with proper types: `Node[TStartIn, TTermOut]`.
+- Use realistic AI workflows in tests (RAG, chat routing, embeddings, etc.)
+- Ensure node names are meaningful (e.g., "retriever", "classifier", not "node1")
+- Tests should serve as examples for users
+- Maintain 100% test coverage
 
-## Success Metrics
-1. `./quality-check.sh clearflow/` completes successfully
-2. All tests pass with new API
-3. 100% test coverage maintained
+## Success Criteria
+- All tests use the new flow() → route() → end() API
+- All tests pass
+- Quality check passes at 100%: `./quality-check.sh`
 
-Start by fixing the interrogate issue to unblock quality checks.
+Start by running the quality checks against tests/
+
+The quality checks must pass first and then the tests themselves.

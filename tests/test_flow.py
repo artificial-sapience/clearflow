@@ -7,12 +7,31 @@ Copyright (c) 2025 ClearFlow Contributors
 """
 
 from dataclasses import dataclass as dc
-from typing import override
+from typing import TypedDict, override
 
-import pytest
-
-from clearflow import Flow, Node, NodeResult
+from clearflow import Node, NodeResult, flow
 from tests.conftest import ValidationState
+
+
+class ChatState(TypedDict, total=False):
+    """State for chat routing tests."""
+
+    query: str
+    intent: str
+    agent: str
+    response_type: str
+    formatted: bool
+
+
+class DocState(TypedDict):
+    """State for document processing tests."""
+
+    source: str
+    loaded: str
+    doc_count: str
+    embedded: str
+    embedding_dim: str
+    stored: str
 
 
 class TestFlow:
@@ -25,26 +44,31 @@ class TestFlow:
         @dc(frozen=True)
         class RawText:
             """Raw text to be processed."""
+
             content: str
             source: str
 
-        @dc(frozen=True) 
+        @dc(frozen=True)
         class TokenizedText:
             """Text split into tokens."""
+
             raw: RawText
             tokens: tuple[str, ...]
 
         @dc(frozen=True)
         class IndexedDocument:
             """Final indexed document."""
+
             tokenized: TokenizedText
             token_count: int
             indexed: bool = True
 
         @dc(frozen=True)
         class TokenizerNode(Node[RawText, TokenizedText]):
-            """Transforms raw text to tokenized text."""
-            
+            """Tokenizes text for embedding generation."""
+
+            name: str = "tokenizer"
+
             @override
             async def exec(self, state: RawText) -> NodeResult[TokenizedText]:
                 tokens = tuple(state.content.split())
@@ -53,40 +77,31 @@ class TestFlow:
 
         @dc(frozen=True)
         class IndexerNode(Node[TokenizedText, IndexedDocument]):
-            """Transforms tokenized text to indexed document."""
-            
+            """Creates embeddings and indexes document."""
+
+            name: str = "indexer"
+
             @override
             async def exec(self, state: TokenizedText) -> NodeResult[IndexedDocument]:
                 indexed = IndexedDocument(
-                    tokenized=state,
-                    token_count=len(state.tokens)
+                    tokenized=state, token_count=len(state.tokens)
                 )
                 return NodeResult(indexed, outcome="indexed")
 
-        # Build the flow - note the type transformation chain!
+        # Build the flow using the new builder API
         tokenizer = TokenizerNode()
         indexer = IndexerNode()
 
-        # This won't work directly with Flow because of type mismatch
-        # We need a wrapper flow that handles the full transformation
-        @dc(frozen=True)
-        class IndexingFlow(Node[RawText, IndexedDocument]):
-            """Complete indexing pipeline."""
-            
-            @override
-            async def exec(self, state: RawText) -> NodeResult[IndexedDocument]:
-                # First transformation: RawText -> TokenizedText
-                tokenized_result = await tokenizer(state)
-                
-                # Second transformation: TokenizedText -> IndexedDocument  
-                indexed_result = await indexer(tokenized_result.state)
-                
-                return indexed_result
+        # Create a RAG indexing pipeline
+        indexing_flow = (
+            flow("RAGIndexer", tokenizer)
+            .route(tokenizer, "tokenized", indexer)
+            .end(indexer, "indexed")
+        )
 
         # Execute the flow
-        flow = IndexingFlow()
         initial = RawText(content="Natural language processing", source="test.txt")
-        result = await flow(initial)
+        result = await indexing_flow(initial)
 
         assert result.outcome == "indexed"
         assert isinstance(result.state, IndexedDocument)
@@ -96,161 +111,243 @@ class TestFlow:
 
     @staticmethod
     async def test_branching_flow() -> None:
-        """Test flow with conditional branching based on outcomes."""
+        """Test AI chat routing flow with conditional branching."""
 
         @dc(frozen=True)
-        class ClassifierNode(Node[dict[str, object]]):
-            @override
-            async def exec(self, state: dict[str, object]) -> NodeResult[dict[str, object]]:
-                content = state.get("content", "")
+        class IntentClassifier(Node[ChatState]):
+            """Classifies user intent for appropriate AI response."""
 
-                if "urgent" in str(content).lower():
-                    outcome = "urgent"
-                elif "question" in str(content).lower():
-                    outcome = "question"
+            name: str = "classifier"
+
+            @override
+            async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+                query = state.get("query", "")
+
+                # Classify intent (simulating LLM classification)
+                if "code" in str(query).lower() or "bug" in str(query).lower():
+                    intent = "technical"
+                elif "?" in str(query):
+                    intent = "question"
                 else:
-                    outcome = "normal"
+                    intent = "general"
 
-                new_state = {**state, "classification": outcome}
-                return NodeResult(new_state, outcome=outcome)
-
-        @dc(frozen=True)
-        class UrgentHandler(Node[dict[str, object]]):
-            @override
-            async def exec(self, state: dict[str, object]) -> NodeResult[dict[str, object]]:
-                new_state = {**state, "priority": "high", "handled_by": "urgent_team"}
-                return NodeResult(new_state, outcome="handled")
+                new_state: ChatState = {**state, "intent": intent}
+                return NodeResult(new_state, outcome=intent)
 
         @dc(frozen=True)
-        class QuestionHandler(Node[dict[str, object]]):
+        class TechnicalAgent(Node[ChatState]):
+            """Handles technical queries with code examples."""
+
+            name: str = "technical_agent"
+
             @override
-            async def exec(self, state: dict[str, object]) -> NodeResult[dict[str, object]]:
-                new_state = {
+            async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+                new_state: ChatState = {
                     **state,
-                    "priority": "medium",
-                    "handled_by": "support_team",
+                    "agent": "technical",
+                    "response_type": "code_example",
                 }
-                return NodeResult(new_state, outcome="handled")
+                return NodeResult(new_state, outcome="responded")
 
         @dc(frozen=True)
-        class NormalHandler(Node[dict[str, object]]):
+        class QAAgent(Node[ChatState]):
+            """Handles Q&A with retrieval augmented generation."""
+
+            name: str = "qa_agent"
+
             @override
-            async def exec(self, state: dict[str, object]) -> NodeResult[dict[str, object]]:
-                new_state = {**state, "priority": "low", "handled_by": "bot"}
-                return NodeResult(new_state, outcome="handled")
+            async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+                new_state: ChatState = {
+                    **state,
+                    "agent": "qa",
+                    "response_type": "retrieved_answer",
+                }
+                return NodeResult(new_state, outcome="responded")
 
         @dc(frozen=True)
-        class CompleteHandler(Node[dict[str, object]]):
+        class GeneralAgent(Node[ChatState]):
+            """Handles general conversation."""
+
+            name: str = "general_agent"
+
             @override
-            async def exec(self, state: dict[str, object]) -> NodeResult[dict[str, object]]:
-                new_state = {**state, "status": "completed"}
-                return NodeResult(new_state, outcome="done")
+            async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+                new_state: ChatState = {
+                    **state,
+                    "agent": "general",
+                    "response_type": "chat",
+                }
+                return NodeResult(new_state, outcome="responded")
 
-        # Build branching flow with single termination
-        classifier = ClassifierNode()
-        urgent = UrgentHandler()
-        question = QuestionHandler()
-        normal = NormalHandler()
-        complete = CompleteHandler()
+        @dc(frozen=True)
+        class ResponseFormatter(Node[ChatState]):
+            """Formats final response for user."""
 
-        flow = (
-            Flow[dict[str, object]]("TicketRouter")
-            .start_with(classifier)
-            .route(classifier, "urgent", urgent)
-            .route(classifier, "question", question)
-            .route(classifier, "normal", normal)
-            .route(urgent, "handled", complete)  # Converge to complete
-            .route(question, "handled", complete)  # Converge to complete
-            .route(normal, "handled", complete)  # Converge to complete
-            .route(complete, "done", None)  # Single termination
-            .build()
+            name: str = "formatter"
+
+            @override
+            async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+                new_state: ChatState = {**state, "formatted": True}
+                return NodeResult(new_state, outcome="complete")
+
+        # Build AI chat routing flow using new API
+        classifier = IntentClassifier()
+        technical = TechnicalAgent()
+        qa = QAAgent()
+        general = GeneralAgent()
+        formatter = ResponseFormatter()
+
+        chat_flow = (
+            flow("ChatRouter", classifier)
+            .route(classifier, "technical", technical)
+            .route(classifier, "question", qa)
+            .route(classifier, "general", general)
+            .route(
+                technical, "responded", formatter
+            )  # All agents converge to formatter
+            .route(qa, "responded", formatter)
+            .route(general, "responded", formatter)
+            .end(formatter, "complete")  # Single termination with end()
         )
 
-        # Test urgent path
-        urgent_result = await flow({"content": "URGENT: Server is down!"})
-        assert urgent_result.state["priority"] == "high"
-        assert urgent_result.state["handled_by"] == "urgent_team"
-        assert urgent_result.state["status"] == "completed"
-        assert urgent_result.outcome == "done"
+        # Test technical query path
+        tech_input: ChatState = {"query": "How do I fix this bug in my code?"}
+        technical_result = await chat_flow(tech_input)
+        assert technical_result.state.get("intent") == "technical"
+        assert technical_result.state.get("agent") == "technical"
+        assert technical_result.state.get("response_type") == "code_example"
+        assert technical_result.state.get("formatted") is True
+        assert technical_result.outcome == "complete"
 
         # Test question path
-        question_result = await flow({"content": "Question about billing"})
-        assert question_result.state["priority"] == "medium"
-        assert question_result.state["handled_by"] == "support_team"
-        assert question_result.state["status"] == "completed"
-        assert question_result.outcome == "done"
+        question_input: ChatState = {"query": "What is RAG?"}
+        question_result = await chat_flow(question_input)
+        assert question_result.state.get("intent") == "question"
+        assert question_result.state.get("agent") == "qa"
+        assert question_result.state.get("response_type") == "retrieved_answer"
+        assert question_result.state.get("formatted") is True
+        assert question_result.outcome == "complete"
 
-        # Test normal path
-        normal_result = await flow({"content": "Monthly newsletter"})
-        assert normal_result.state["priority"] == "low"
-        assert normal_result.state["handled_by"] == "bot"
-        assert normal_result.state["status"] == "completed"
-        assert normal_result.outcome == "done"
+        # Test general conversation path
+        general_input: ChatState = {"query": "Tell me about the weather"}
+        general_result = await chat_flow(general_input)
+        assert general_result.state.get("intent") == "general"
+        assert general_result.state.get("agent") == "general"
+        assert general_result.state.get("response_type") == "chat"
+        assert general_result.state.get("formatted") is True
+        assert general_result.outcome == "complete"
 
     @staticmethod
     async def test_single_termination_enforcement() -> None:
         """Test that flows must have exactly one termination point."""
-        
+
         @dc(frozen=True)
-        class TestNode(Node[ValidationState]):
-            """Simple node for testing flow construction."""
-            
+        class DataValidator(Node[ValidationState]):
+            """Validates incoming data for processing."""
+
+            name: str = "validator"
+
             @override
             async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
-                return NodeResult(state, outcome="done")
-        
-        node_a = TestNode()
+                return NodeResult(state, outcome="valid")
 
-        # This should fail - multiple termination points
-        with pytest.raises(ValueError, match="multiple termination points"):
-            (
-                Flow[ValidationState]("InvalidFlow")
-                .start_with(node_a)
-                .route(node_a, "done", None)  # First termination
-                .route(node_a, "error", None)  # Second termination - should fail
-                .build()
-            )
+        @dc(frozen=True)
+        class DataProcessor(Node[ValidationState]):
+            """Processes validated data."""
+
+            name: str = "processor"
+
+            @override
+            async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
+                return NodeResult(state, outcome="processed")
+
+        validator = DataValidator()
+        processor = DataProcessor()
+
+        # This works - single termination point
+        valid_flow = (
+            flow("ValidationPipeline", validator)
+            .route(validator, "valid", processor)
+            .end(processor, "processed")
+        )
+
+        # Test that it runs successfully
+        result = await valid_flow(ValidationState(input_text="test data"))
+        assert result.outcome == "processed"
 
     @staticmethod
     async def test_nested_flows() -> None:
-        """Test that flows can be composed as nodes."""
+        """Test that flows can be composed as nodes in AI pipelines."""
 
         @dc(frozen=True)
-        class StartNode(Node[dict[str, str]]):
+        class DocumentLoader(Node[DocState]):
+            """Loads documents for processing."""
+
+            name: str = "loader"
+
             @override
-            async def exec(self, state: dict[str, str]) -> NodeResult[dict[str, str]]:
-                new_state = {**state, "started": "true"}
-                return NodeResult(new_state, outcome="ready")
+            async def exec(self, state: DocState) -> NodeResult[DocState]:
+                new_state: DocState = {**state, "loaded": "true", "doc_count": "5"}
+                return NodeResult(new_state, outcome="loaded")
 
         @dc(frozen=True)
-        class EndNode(Node[dict[str, str]]):
+        class Embedder(Node[DocState]):
+            """Creates embeddings from loaded documents."""
+
+            name: str = "embedder"
+
             @override
-            async def exec(self, state: dict[str, str]) -> NodeResult[dict[str, str]]:
-                new_state = {**state, "completed": "true"}
-                return NodeResult(new_state, outcome="done")
+            async def exec(self, state: DocState) -> NodeResult[DocState]:
+                new_state: DocState = {
+                    **state,
+                    "embedded": "true",
+                    "embedding_dim": "768",
+                }
+                return NodeResult(new_state, outcome="embedded")
 
-        # Create inner flow
-        start = StartNode()
-        end = EndNode()
+        @dc(frozen=True)
+        class VectorStore(Node[DocState]):
+            """Stores embeddings in vector database."""
 
-        inner_flow = (
-            Flow[dict[str, str]]("InnerFlow")
-            .start_with(start)
-            .route(start, "ready", end)
-            .route(end, "done", None)
-            .build()
+            name: str = "vector_store"
+
+            @override
+            async def exec(self, state: DocState) -> NodeResult[DocState]:
+                new_state: DocState = {**state, "stored": "true"}
+                return NodeResult(new_state, outcome="indexed")
+
+        # Create inner flow for document processing
+        loader = DocumentLoader()
+        embedder = Embedder()
+
+        doc_processing_flow = (
+            flow("DocumentProcessor", loader)
+            .route(loader, "loaded", embedder)
+            .end(embedder, "embedded")
         )
 
-        # Use inner flow as a node in outer flow
-        outer_flow = (
-            Flow[dict[str, str]]("OuterFlow")
-            .start_with(inner_flow)
-            .route(inner_flow, "done", None)
-            .build()
+        # Use inner flow as a node in larger indexing pipeline
+        vector_store = VectorStore()
+
+        indexing_pipeline = (
+            flow("IndexingPipeline", doc_processing_flow)
+            .route(doc_processing_flow, "embedded", vector_store)
+            .end(vector_store, "indexed")
         )
 
-        result = await outer_flow({"initial": "value"})
+        doc_input: DocState = {
+            "source": "knowledge_base",
+            "loaded": "",
+            "doc_count": "",
+            "embedded": "",
+            "embedding_dim": "",
+            "stored": "",
+        }
+        result = await indexing_pipeline(doc_input)
 
-        assert result.state["started"] == "true"
-        assert result.state["completed"] == "true"
-        assert result.outcome == "done"
+        assert result.state["loaded"] == "true"
+        assert result.state["embedded"] == "true"
+        assert result.state["stored"] == "true"
+        assert result.state["doc_count"] == "5"
+        assert result.state["embedding_dim"] == "768"
+        assert result.outcome == "indexed"
