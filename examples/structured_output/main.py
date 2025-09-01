@@ -21,7 +21,7 @@ def load_resume_text(file_path: str = "data.txt") -> str:
         sys.exit(1)
 
 
-def display_errors(errors: list[str]) -> None:
+def display_errors(errors: tuple[str, ...]) -> None:
     """Display validation or extraction errors."""
     print("\n❌ Errors encountered:")
     for error in errors:
@@ -33,7 +33,7 @@ def display_result(state: ExtractorState, outcome: str) -> None:
     print(f"\nFlow completed with outcome: {outcome}")
 
     # Check for errors
-    errors = state.get("validation_errors", [])
+    errors = state.get("validation_errors", ())
     if errors:
         display_errors(errors)
         return

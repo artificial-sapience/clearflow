@@ -24,7 +24,7 @@ class ExtractorNode(Node[ExtractorState]):
             print("  ⚠️  No input text provided")
             error_state: ExtractorState = {
                 **state,
-                "validation_errors": ["No input text provided"],
+                "validation_errors": ("No input text provided",),
             }
             return NodeResult(error_state, outcome="no_input")
 
@@ -62,7 +62,7 @@ class ExtractorNode(Node[ExtractorState]):
                 success_state: ExtractorState = {
                     **state,
                     "extracted_data": parsed_data,
-                    "validation_errors": [],
+                    "validation_errors": (),
                 }
                 return NodeResult(success_state, outcome="extracted")
             # Handle refusal or parsing failure
@@ -71,7 +71,7 @@ class ExtractorNode(Node[ExtractorState]):
             )
             refusal_state: ExtractorState = {
                 **state,
-                "validation_errors": [f"Extraction failed: {refusal_msg}"],
+                "validation_errors": (f"Extraction failed: {refusal_msg}",),
             }
             return NodeResult(refusal_state, outcome="failed")
 
@@ -79,7 +79,7 @@ class ExtractorNode(Node[ExtractorState]):
             error_msg = f"API error: {exc!s}"
             exception_state: ExtractorState = {
                 **state,
-                "validation_errors": [error_msg],
+                "validation_errors": (error_msg,),
             }
             return NodeResult(exception_state, outcome="failed")
 
@@ -96,26 +96,34 @@ class ValidatorNode(Node[ExtractorState]):
         """Validate the extracted data meets minimum requirements."""
         print("→ Validating extracted data...")
         extracted_data = state.get("extracted_data")
-        errors: list[str] = []
+        errors: tuple[str, ...] = ()
 
         if not extracted_data:
-            errors.append("No extracted data to validate")
+            errors = ("No extracted data to validate",)
             no_data_state: ExtractorState = {**state, "validation_errors": errors}
             return NodeResult(no_data_state, outcome="invalid")
 
-        # Validate required fields
-        if not extracted_data.name:
-            errors.append("Name is required")
-        if not extracted_data.email or "@" not in extracted_data.email:
-            errors.append("Valid email is required")
+        # Validate required fields - build tuple of errors
+        name_error = ("Name is required",) if not extracted_data.name else ()
+        email_error = (
+            ("Valid email is required",)
+            if not extracted_data.email or "@" not in extracted_data.email
+            else ()
+        )
 
         # Validate minimum requirements
-        if len(extracted_data.experiences) < self.min_experiences:
-            errors.append(
-                f"At least {self.min_experiences} work experience(s) required"
-            )
-        if len(extracted_data.skills) < self.min_skills:
-            errors.append(f"At least {self.min_skills} skill(s) required")
+        exp_error = (
+            (f"At least {self.min_experiences} work experience(s) required",)
+            if len(extracted_data.experiences) < self.min_experiences
+            else ()
+        )
+        skill_error = (
+            (f"At least {self.min_skills} skill(s) required",)
+            if len(extracted_data.skills) < self.min_skills
+            else ()
+        )
+
+        errors = name_error + email_error + exp_error + skill_error
 
         if errors:
             print(f"  ❌ Validation failed: {len(errors)} error(s)")
@@ -124,7 +132,7 @@ class ValidatorNode(Node[ExtractorState]):
 
         # Valid data
         print("  ✅ Validation passed")
-        valid_state: ExtractorState = {**state, "validation_errors": []}
+        valid_state: ExtractorState = {**state, "validation_errors": ()}
         return NodeResult(valid_state, outcome="valid")
 
 
@@ -141,39 +149,62 @@ class FormatterNode(Node[ExtractorState]):
         if not extracted_data:
             return NodeResult(state, outcome="no_data")
 
-        # Build formatted output
-        lines = [
+        # Build formatted output using immutable patterns
+        header_lines = (
             "=" * 60,
             f"Name: {extracted_data.name}",
             f"Email: {extracted_data.email}",
-        ]
+        )
 
-        if extracted_data.phone:
-            lines.append(f"Phone: {extracted_data.phone}")
+        phone_lines = (
+            (f"Phone: {extracted_data.phone}",) if extracted_data.phone else ()
+        )
 
-        if extracted_data.summary:
-            lines.extend(["", "SUMMARY:", extracted_data.summary])
+        summary_lines = (
+            ("", "SUMMARY:", extracted_data.summary) if extracted_data.summary else ()
+        )
 
+        experience_lines = ()
         if extracted_data.experiences:
-            lines.extend(["", "WORK EXPERIENCE:"])
-            for exp in extracted_data.experiences:
-                lines.extend([
-                    f"  • {exp.role} at {exp.company} ({exp.duration})",
-                ])
-                if exp.description:
-                    lines.append(f"    {exp.description}")
+            exp_header = ("", "WORK EXPERIENCE:")
+            exp_items = tuple(
+                (f"  • {exp.role} at {exp.company} ({exp.duration})",)
+                + ((f"    {exp.description}",) if exp.description else ())
+                for exp in extracted_data.experiences
+            )
+            # Flatten the nested tuples
+            exp_flat = ()
+            for item in exp_items:
+                exp_flat = exp_flat + item
+            experience_lines = exp_header + exp_flat
 
+        education_lines = ()
         if extracted_data.education:
-            lines.extend(["", "EDUCATION:"])
-            lines.extend(
+            edu_header = ("", "EDUCATION:")
+            edu_items = tuple(
                 f"  • {edu.degree} from {edu.institution} ({edu.year})"
                 for edu in extracted_data.education
             )
+            education_lines = edu_header + edu_items
 
-        if extracted_data.skills:
-            lines.extend(["", f"SKILLS: {', '.join(extracted_data.skills)}"])
+        skill_lines = (
+            ("", f"SKILLS: {', '.join(extracted_data.skills)}")
+            if extracted_data.skills
+            else ()
+        )
 
-        lines.append("=" * 60)
+        footer_lines = ("=" * 60,)
+
+        # Combine all lines
+        lines = (
+            header_lines
+            + phone_lines
+            + summary_lines
+            + experience_lines
+            + education_lines
+            + skill_lines
+            + footer_lines
+        )
         formatted = "\n".join(lines)
 
         print("  ✅ Formatting complete")

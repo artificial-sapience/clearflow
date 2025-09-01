@@ -51,12 +51,12 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
 
     # Check for # clearflow: ignore[CODE] pattern
     pattern = rf"#\s*clearflow:\s*ignore\[{code}\]"
-    
+
     # Check the violation line itself
     line = lines[line_num - 1]  # Convert to 0-indexed
     if re.search(pattern, line, re.IGNORECASE):
         return True
-    
+
     # For multi-line annotations, check the next 2 lines
     # (handles cases where object is in a type annotation that spans lines)
     for offset in range(1, 3):
@@ -64,7 +64,7 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
             next_line = lines[line_num - 1 + offset]
             if re.search(pattern, next_line, re.IGNORECASE):
                 return True
-    
+
     return False
 
 
@@ -197,7 +197,7 @@ def check_file_imports(file_path: Path, content: str) -> tuple[Violation, ...]:
                 line = lines[node.lineno - 1]
                 if "object.__setattr__" in line:
                     continue  # This is the frozen dataclass pattern, skip it
-            
+
             # Check if this line has a suppression for ARCH009
             if not has_suppression(content, node.lineno, "ARCH009"):
                 # Otherwise it's a type usage that should be reported

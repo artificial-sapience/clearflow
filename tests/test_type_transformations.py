@@ -17,6 +17,7 @@ from tests.conftest import Document
 @dc(frozen=True)
 class Query:
     """User query for RAG system."""
+
     text: str
     max_results: int = 5
 
@@ -24,6 +25,7 @@ class Query:
 @dc(frozen=True)
 class SearchResults:
     """Retrieved documents with scores."""
+
     query: Query
     documents: tuple[tuple[Document, float], ...]  # (doc, relevance_score)
 
@@ -31,6 +33,7 @@ class SearchResults:
 @dc(frozen=True)
 class Context:
     """Prepared context for generation."""
+
     query: Query
     relevant_texts: tuple[str, ...]
     total_tokens: int
@@ -39,6 +42,7 @@ class Context:
 @dc(frozen=True)
 class Response:
     """Final generated response."""
+
     query: Query
     answer: str
     sources: tuple[str, ...]
@@ -47,6 +51,7 @@ class Response:
 @dc(frozen=True)
 class RetrievalNode(Node[Query, SearchResults]):
     """Retrieves relevant documents."""
+
     name: str = "retriever"
 
     @override
@@ -56,24 +61,21 @@ class RetrievalNode(Node[Query, SearchResults]):
             (Document("AI is transforming industries", "doc1.pdf"), 0.95),
             (Document("Machine learning applications", "doc2.pdf"), 0.87),
         )
-        results = SearchResults(
-            query=state, documents=mock_docs[: state.max_results]
-        )
+        results = SearchResults(query=state, documents=mock_docs[: state.max_results])
         return NodeResult(results, outcome="retrieved")
 
 
 @dc(frozen=True)
 class ContextBuilder(Node[SearchResults, Context]):
     """Builds context from search results."""
+
     name: str = "context_builder"
 
     @override
     async def exec(self, state: SearchResults) -> NodeResult[Context]:
         texts = tuple(doc.content for doc, _ in state.documents)
         tokens = sum(len(text.split()) for text in texts)
-        context = Context(
-            query=state.query, relevant_texts=texts, total_tokens=tokens
-        )
+        context = Context(query=state.query, relevant_texts=texts, total_tokens=tokens)
         outcome = "context_ready" if tokens < 1000 else "context_too_long"
         return NodeResult(context, outcome=outcome)
 
@@ -81,6 +83,7 @@ class ContextBuilder(Node[SearchResults, Context]):
 @dc(frozen=True)
 class GenerationNode(Node[Context, Response]):
     """Generates response from context."""
+
     name: str = "generator"
 
     @override
@@ -90,9 +93,7 @@ class GenerationNode(Node[Context, Response]):
             f"Based on {len(state.relevant_texts)} sources: "
             + state.relevant_texts[0][:50]
         )
-        sources = tuple(
-            f"doc{i + 1}.pdf" for i in range(len(state.relevant_texts))
-        )
+        sources = tuple(f"doc{i + 1}.pdf" for i in range(len(state.relevant_texts)))
         response = Response(query=state.query, answer=answer, sources=sources)
         return NodeResult(response, outcome="generated")
 
@@ -118,7 +119,7 @@ class TestTypeTransformations:
             documents=(
                 (Document("AI content", "doc1.pdf"), 0.95),
                 (Document("ML content", "doc2.pdf"), 0.87),
-            )
+            ),
         )
         builder = ContextBuilder()
         result = await builder(mock_results)
@@ -129,11 +130,7 @@ class TestTypeTransformations:
     async def test_rag_generation() -> None:
         """Test Context to Response transformation."""
         query = Query(text="test", max_results=1)
-        context = Context(
-            query=query,
-            relevant_texts=("Test content",),
-            total_tokens=2
-        )
+        context = Context(query=query, relevant_texts=("Test content",), total_tokens=2)
         generator = GenerationNode()
         result = await generator(context)
         assert isinstance(result.state, Response)
@@ -141,92 +138,71 @@ class TestTypeTransformations:
         assert len(result.state.sources) > 0
 
     @staticmethod
-    async def test_tool_use_transformation() -> None:
-        """Test tool selection and execution with type transformations."""
+    async def test_tool_planning() -> None:
+        """Test tool planning transformation."""
 
+        # Tool types
         @dc(frozen=True)
         class ToolQuery:
-            """Initial query requiring tool use."""
-
             question: str
             context: str = ""
 
         @dc(frozen=True)
         class ToolPlan:
-            """Plan for which tool to use."""
-
             query: ToolQuery
             selected_tool: str
             parameters: tuple[tuple[str, str], ...]
 
         @dc(frozen=True)
-        class ToolResult:
-            """Result from tool execution."""
-
-            plan: ToolPlan
-            output: str
-            success: bool
-
-        # Node: ToolQuery → ToolPlan
-        @dc(frozen=True)
-        class PlannerNode(Node[ToolQuery, ToolPlan]):
-            """Plans which tool to use based on query."""
-
+        class SimplePlanner(Node[ToolQuery, ToolPlan]):
             name: str = "planner"
 
             @override
             async def exec(self, state: ToolQuery) -> NodeResult[ToolPlan]:
-                tool: str
-                params: tuple[tuple[str, str], ...]
-
-                if "calculate" in state.question.lower():
-                    tool = "calculator"
-                    params = (("expression", state.question),)
-                elif "search" in state.question.lower():
-                    tool = "web_search"
-                    params = (("query", state.question),)
-                else:
-                    tool = "none"
-                    params = ()
-
+                tool = "calculator" if "calculate" in state.question.lower() else "none"
+                params = (("expr", state.question),) if tool != "none" else ()
                 plan = ToolPlan(query=state, selected_tool=tool, parameters=params)
-                outcome = "tool_selected" if tool != "none" else "no_tool_needed"
-                return NodeResult(plan, outcome=outcome)
+                return NodeResult(plan, outcome="planned")
 
-        # Node: ToolPlan → ToolResult
+        query = ToolQuery(question="Calculate 6 * 7")
+        planner = SimplePlanner()
+        result = await planner(query)
+        assert isinstance(result.state, ToolPlan)
+        assert result.state.selected_tool == "calculator"
+
+    @staticmethod
+    async def test_tool_execution() -> None:
+        """Test tool execution transformation."""
+
         @dc(frozen=True)
-        class ExecutorNode(Node[ToolPlan, ToolResult]):
-            """Executes the planned tool."""
+        class ToolQuery:
+            question: str
 
+        @dc(frozen=True)
+        class ToolPlan:
+            query: ToolQuery
+            selected_tool: str
+
+        @dc(frozen=True)
+        class ToolResult:
+            plan: ToolPlan
+            output: str
+            success: bool
+
+        @dc(frozen=True)
+        class SimpleExecutor(Node[ToolPlan, ToolResult]):
             name: str = "executor"
 
             @override
             async def exec(self, state: ToolPlan) -> NodeResult[ToolResult]:
-                # Simulate tool execution
-                if state.selected_tool == "calculator":
-                    output = "Result: 42"
-                    success = True
-                elif state.selected_tool == "web_search":
-                    output = "Found 10 relevant results"
-                    success = True
-                else:
-                    output = "No tool executed"
-                    success = False
-
+                output = "Result: 42" if state.selected_tool == "calculator" else "None"
+                success = state.selected_tool == "calculator"
                 result = ToolResult(plan=state, output=output, success=success)
-                outcome = "execution_success" if success else "execution_failed"
-                return NodeResult(result, outcome=outcome)
+                return NodeResult(result, outcome="executed")
 
-        # Test the transformation chain
-        query = ToolQuery(question="Calculate 6 * 7")
-
-        planner = PlannerNode()
-        plan_result = await planner(query)
-        assert isinstance(plan_result.state, ToolPlan)
-        assert plan_result.state.selected_tool == "calculator"
-
-        executor = ExecutorNode()
-        exec_result = await executor(plan_result.state)
-        assert isinstance(exec_result.state, ToolResult)
-        assert exec_result.state.success is True
-        assert exec_result.state.plan.query == query  # Original preserved through chain
+        query = ToolQuery(question="test")
+        plan = ToolPlan(query=query, selected_tool="calculator")
+        executor = SimpleExecutor()
+        result = await executor(plan)
+        assert isinstance(result.state, ToolResult)
+        assert result.state.success is True

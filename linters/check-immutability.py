@@ -64,7 +64,7 @@ def check_list_annotations(file_path: Path, content: str) -> tuple[Violation, ..
 
     """
     violations = []
-    
+
     # Skip this check for test files - they often need mutable collections
     # for tracking test state and assertions
     if "tests/" in str(file_path) or str(file_path).startswith("test_"):

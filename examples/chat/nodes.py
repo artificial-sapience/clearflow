@@ -10,17 +10,19 @@ from clearflow import Node, NodeResult
 
 class ChatMessage(TypedDict):
     """OpenAI chat message structure."""
-    role: Literal['system', 'user', 'assistant']
+
+    role: Literal["system", "user", "assistant"]
     content: str
 
 
 class ChatState(TypedDict, total=False):
     """Chat application state with proper types.
-    
+
     total=False means all fields are optional, which matches
     our usage pattern where state builds up over time.
     """
-    messages: list[ChatMessage]
+
+    messages: tuple[ChatMessage, ...]
     last_response: str
     user_input: str | None
 
@@ -44,13 +46,13 @@ class ChatNode(Node[ChatState]):
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
         """Process user input and generate language model response."""
         # Get conversation history and current user input
-        messages: list[ChatMessage] = state.get("messages", [])
+        messages = state.get("messages", ())
         user_input: str | None = state.get("user_input")
 
         # Initialize with system message if needed
         if not messages:
             system_msg: ChatMessage = {"role": "system", "content": self.system_prompt}
-            messages = [system_msg]
+            messages = (system_msg,)
 
         # If no user input provided, this is just initialization
         if user_input is None:
@@ -59,7 +61,7 @@ class ChatNode(Node[ChatState]):
 
         # Add user message to conversation
         user_msg: ChatMessage = {"role": "user", "content": user_input}
-        messages = [*messages, user_msg]
+        messages = (*messages, user_msg)
 
         # Call OpenAI API - messages type matches what OpenAI expects
         client = AsyncOpenAI()
@@ -74,8 +76,11 @@ class ChatNode(Node[ChatState]):
             assistant_response = ""
 
         # Add assistant message to conversation
-        assistant_msg: ChatMessage = {"role": "assistant", "content": assistant_response}
-        messages = [*messages, assistant_msg]
+        assistant_msg: ChatMessage = {
+            "role": "assistant",
+            "content": assistant_response,
+        }
+        messages = (*messages, assistant_msg)
 
         # Return updated state with full conversation
         new_state: ChatState = {

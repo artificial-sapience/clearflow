@@ -164,9 +164,7 @@ class IndexerNode(Node[TokenizedText, IndexedDocument]):
 
     @override
     async def exec(self, state: TokenizedText) -> NodeResult[IndexedDocument]:
-        indexed = IndexedDocument(
-            tokenized=state, token_count=len(state.tokens)
-        )
+        indexed = IndexedDocument(tokenized=state, token_count=len(state.tokens))
         return NodeResult(indexed, outcome="indexed")
 
 
