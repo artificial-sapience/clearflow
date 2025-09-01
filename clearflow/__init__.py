@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any, Protocol, TypeVar, cast, override
+from typing import Protocol, TypeVar, cast, override
 
 __all__ = [
     "Node",
@@ -29,6 +29,10 @@ class NodeBase(Protocol):
 
     name: str
 
+    async def __call__(self, state: object) -> "NodeResult[object]":
+        """Execute the node with any state type."""
+        ...
+
 
 @dataclass(frozen=True)
 class NodeResult[T]:
@@ -36,10 +40,6 @@ class NodeResult[T]:
 
     state: T
     outcome: Outcome
-
-
-# Type alias for NodeResult with unknown state type
-AnyNodeResult = NodeResult[Any]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -59,9 +59,10 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
 
     """
 
-    name: str  # Required - subclasses must provide at construction
+    name: str
 
-    async def __call__(self, state: TIn) -> NodeResult[TOut]:
+    @override
+    async def __call__(self, state: TIn) -> NodeResult[TOut]:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Execute node lifecycle."""
         state = await self.prep(state)
         result = await self.exec(state)
@@ -115,35 +116,37 @@ class _Flow[TIn, TOut = TIn](Node[TIn, TOut]):
 
             # Continue
             current_node = next_node
-            current_state = result.state  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            current_state = result.state
 
 
 @dataclass(frozen=True)
-class _FlowBuilder[TIn]:
+class _FlowBuilder[TStartIn, TStartOut]:
     """Flow builder for composing node routes.
 
-    TIn: The input type the flow accepts
+    Type parameters:
+        TStartIn: The input type the flow accepts (from start node)
+        TStartOut: The output type of the start node
 
-    This builder creates an incomplete flow. Call terminate() to specify
-    the termination node and get a _TerminatedFlowBuilder that can be built.
+    This builder creates an incomplete flow. Call end() to specify
+    where the flow ends and get the completed flow.
     """
 
     _name: str
-    _start: NodeBase  # Starting node (type-erased)
-    _routes: MappingProxyType[RouteKey, NodeBase | None]  # Heterogeneous node types
+    _start: Node[TStartIn, TStartOut]
+    _routes: MappingProxyType[RouteKey, NodeBase | None]
 
     def route(
         self,
         from_node: NodeBase,
         outcome: Outcome,
-        to_node: NodeBase,  # Note: No longer accepts None
-    ) -> "_FlowBuilder[TIn]":
+        to_node: NodeBase,
+    ) -> "_FlowBuilder[TStartIn, TStartOut]":
         """Connect nodes: from_node --outcome--> to_node.
 
         Args:
             from_node: Source node
             outcome: Outcome string that triggers this route
-            to_node: Destination node (use terminate() for flow termination)
+            to_node: Destination node (use end() for flow completion)
 
         Returns:
             New FlowBuilder with added route
@@ -157,84 +160,46 @@ class _FlowBuilder[TIn]:
         route_key: RouteKey = (from_node.name, outcome)
         new_routes = {**self._routes, route_key: to_node}
 
-        return _FlowBuilder[TIn](
+        return _FlowBuilder[TStartIn, TStartOut](
             _name=self._name,
             _start=self._start,
             _routes=MappingProxyType(new_routes),
         )
 
-    def terminate[TOut](
+    def end[TTermIn, TTermOut](
         self,
-        node: Node[TAny, TOut],  # Any input, specific output
+        final_node: Node[TTermIn, TTermOut],
         outcome: Outcome,
-    ) -> "_TerminatedFlowBuilder[TIn, TOut]":
-        """Specify the termination node and outcome.
+    ) -> Node[TStartIn, TTermOut]:
+        """End the flow at the specified node and outcome.
 
-        This creates a complete flow that can be built. The output type
-        of the flow is determined by the termination node's output type.
+        This completes the flow definition by specifying where it ends.
+        The flow's output type is determined by the final node's output type.
 
         Args:
-            node: The node that terminates the flow
-            outcome: The outcome from this node that ends the flow
+            final_node: The node where the flow ends
+            outcome: The outcome from this node that completes the flow
 
         Returns:
-            A TerminatedFlowBuilder that can be built into a flow
+            A flow node that transforms TStartIn to TTermOut
+
+        Example:
+            flow("Pipeline", start).route(a, "ok", b).end(b, "done")
 
         """
-        if not node.name:
-            msg = f"Termination node must have a non-empty name: {node}"
-            raise ValueError(msg)
-
-        # Check if there's already a termination (None route)
-        for (from_node, _), to_node in self._routes.items():
-            if to_node is None:
-                msg = (
-                    f"Flow '{self._name}' already has a termination from "
-                    f"node '{from_node}'. Only one termination is allowed."
-                )
-                raise ValueError(msg)
-
-        # Add the termination route
-        route_key: RouteKey = (node.name, outcome)
+        # Add the ending route (node -> None)
+        route_key: RouteKey = (final_node.name, outcome)
         new_routes = {**self._routes, route_key: None}
 
-        return _TerminatedFlowBuilder[TIn, TOut](
-            _name=self._name,
-            _start=self._start,
-            _routes=MappingProxyType(new_routes),
-            _termination_node=node,
-        )
-
-
-@dataclass(frozen=True)
-class _TerminatedFlowBuilder[TIn, TOut]:
-    """A flow builder with a defined termination point.
-
-    This builder represents a complete flow that can be built.
-    The flow transforms TIn to TOut, where TOut is determined
-    by the termination node's output type.
-    """
-
-    _name: str
-    _start: NodeBase
-    _routes: MappingProxyType[RouteKey, NodeBase | None]
-    _termination_node: Node[TAny, TOut]  # Tracks the output type
-
-    def build(self) -> Node[TIn, TOut]:
-        """Build and return the flow as a Node.
-
-        Returns:
-            A flow node that transforms TIn to TOut
-
-        """
-        return _Flow[TIn, TOut](
+        # Build and return the flow directly
+        return _Flow[TStartIn, TTermOut](
             name=self._name,
             start_node=self._start,
-            routes=self._routes,
+            routes=MappingProxyType(new_routes),
         )
 
 
-def flow[TIn, TOut](name: str, start: Node[TIn, TOut]) -> _FlowBuilder[TIn]:
+def flow[TIn, TStartOut](name: str, start: Node[TIn, TStartOut]) -> _FlowBuilder[TIn, TStartOut]:
     """Create a flow with the given name and starting node.
 
     Args:
@@ -245,15 +210,15 @@ def flow[TIn, TOut](name: str, start: Node[TIn, TOut]) -> _FlowBuilder[TIn]:
         A flow builder for chaining route definitions
 
     Example:
-        flow("Pipeline", my_node).route(...).build()
+        flow("Pipeline", my_node).route(...).end(final_node, "done")
 
     """
     if not name or not name.strip():
         msg = "Flow name must be a non-empty string"
         raise ValueError(msg)
 
-    return _FlowBuilder[TIn](
+    return _FlowBuilder[TIn, TStartOut](
         _name=name,
-        _start=start,  # Will be treated as NodeBase
-        _routes=MappingProxyType({}),  # Empty immutable mapping
+        _start=start,
+        _routes=MappingProxyType({}),
     )
