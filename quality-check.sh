@@ -364,7 +364,7 @@ fi
 
 print_header "Complexity metrics - Radon"
 # Check cyclomatic complexity average
-echo "Checking average complexity (must be ≤ A grade)..."
+echo "Checking cyclomatic complexity..."
 # Only run on Python directories/files
 radon_targets=""
 for target in $QUALITY_TARGETS; do
@@ -374,33 +374,31 @@ for target in $QUALITY_TARGETS; do
 done
 
 if [ -n "$radon_targets" ]; then
-    # Run radon on each target and aggregate results
-    total_complexity=0
-    total_items=0
-    for target in $radon_targets; do
-        if [[ -d "$target" ]] || [[ -f "$target" ]]; then
-            result=$(uv run radon cc "$target" -a -j 2>/dev/null || echo "{}")
-            # Extract average complexity for this target
-            target_name=$(basename "$target")
-            avg=$(echo "$result" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('$target_name', {}).get('average_complexity', 0))" 2>/dev/null || echo "0")
-            if [ "$avg" != "0" ]; then
-                total_complexity=$(echo "$total_complexity + $avg" | bc)
-                total_items=$((total_items + 1))
-            fi
-        fi
-    done
+    # Run radon with average complexity output
+    radon_output=$(uv run radon cc $radon_targets -a 2>&1)
     
-    if [ "$total_items" -gt 0 ]; then
-        avg_cc=$(echo "scale=2; $total_complexity / $total_items" | bc)
-        # Check if avg_cc is greater than 5 (A grade threshold)
-        if python3 -c "import sys; sys.exit(0 if float('$avg_cc') <= 5 else 1)" 2>/dev/null; then
-            echo -e "${GREEN}✓ Radon complexity check passed (avg: $avg_cc)${NC}"
+    # Check if radon found any code to analyze
+    if echo "$radon_output" | grep -q "Average complexity: "; then
+        # Extract the average complexity and grade
+        avg_line=$(echo "$radon_output" | grep "Average complexity: ")
+        avg_grade=$(echo "$avg_line" | sed -n 's/.*Average complexity: \([A-F]\).*/\1/p')
+        avg_value=$(echo "$avg_line" | sed -n 's/.*Average complexity: [A-F] (\([0-9.]*\)).*/\1/p')
+        
+        echo "$radon_output"
+        
+        # Check if grade is A (complexity <= 5)
+        if [[ "$avg_grade" == "A" ]]; then
+            echo -e "${GREEN}✓ Radon complexity check passed (Grade $avg_grade, avg: $avg_value)${NC}"
         else
-            echo -e "${RED}✗ Average complexity $avg_cc exceeds A grade (max 5)${NC}"
+            echo -e "${RED}✗ Average complexity Grade $avg_grade (avg: $avg_value) exceeds maximum allowed Grade A${NC}"
+            echo -e "${RED}MISSION-CRITICAL: Refactor complex functions${NC}"
+            echo -e "${GREEN}✅ FIX: Break down functions with high complexity${NC}"
             exit 1
         fi
     else
-        echo -e "${GREEN}✓ Radon complexity check passed (no measurable code)${NC}"
+        # No analyzable code found
+        echo -e "${YELLOW}No Python code to analyze in $radon_targets${NC}"
+        echo -e "${GREEN}✓ Radon complexity check passed${NC}"
     fi
 else
     echo -e "${YELLOW}Skipping Radon (no Python targets)${NC}"
