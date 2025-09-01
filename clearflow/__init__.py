@@ -169,7 +169,7 @@ class _FlowBuilder[TStartIn, TStartOut]:
             to_node: Destination node (use end() for flow completion)
 
         Returns:
-            New FlowBuilder with added route
+            Builder for continued route definition and flow completion
 
         """
         route_key: RouteKey = (from_node.name, outcome)
@@ -222,7 +222,7 @@ def flow[TIn, TStartOut](
         start: The starting node that accepts TIn and outputs TOut
 
     Returns:
-        A flow builder for chaining route definitions
+        Builder for route definition and flow completion
 
     Example:
         flow("RAG", retriever).route(...).end(generator, "answered")
