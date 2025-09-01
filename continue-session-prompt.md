@@ -1,46 +1,37 @@
-# Continue Session Prompt
+# Continue ClearFlow Session
 
-Please continue implementing the ClearFlow improvements to achieve 100% quality check pass.
+Please continue working on ClearFlow improvements.
 
-## Context Files to Review
-1. **session-context.md** - Complete summary of accomplishments and current state
-2. **plan.md** - Detailed tasks in priority order
+## Context
+- Review **session-context.md** for the major builder pattern redesign we completed
+- Review **plan.md** for remaining tasks
 
-## Immediate Priority: Fix _Flow.exec() Complexity
-The core library is nearly perfect, but `_Flow.exec()` has complexity rank B (needs A).
+## Critical Issue to Fix First
 
-## Your Tasks (in order)
-1. **Simplify _FlowBuilder design**
-   - Keep OOP pattern but reduce lines of code
-   - Remove redundant type annotations
-   - Maintain the clean `.route().build()` API
+The interrogate tool is failing and blocking quality checks:
 
-2. **Fix _Flow.exec() complexity**
-   - Currently rank B according to Xenon
-   - Refactor the execution loop
-   - Extract complex conditions into helper methods
-   - Must maintain 100% test coverage
+```bash
+uv run interrogate clearflow/ --quiet --fail-under 100
+# Returns exit code 1
+```
 
-3. **Update tests to new API**
-   - Change from `Flow[T]("name").start_with(node)` to `flow("name", node)`
-   - Start with test_flow.py, then test_real_world_scenarios.py
-   - Replace all `dict[str, object]` with proper educational types
+This prevents quality-check.sh from completing. Fix missing docstrings immediately.
 
-4. **Run quality check after each major change**
-   - Use: `./quality-check.sh clearflow/` for core library
-   - Use: `./quality-check.sh` for full project
-   - Goal: All tools pass with 0 violations
+## Then Update Tests to New API
 
-## Key Context
-- We replaced the Flow class with a simpler flow() function
-- The quality-check.sh script now properly respects argument scope
-- Architecture linter supports multi-line suppressions
-- Core library passes everything except complexity check
+We completely redesigned the builder pattern:
+- Old: `Flow[T]("name").start_with(node).route(...).route(..., None).build()`  
+- New: `flow("name", node).route(...).end(final_node, "outcome")`
 
-## Success Criteria
-✅ _Flow.exec() achieves complexity rank A
-✅ All tests updated to new API with proper types
-✅ 100% test coverage maintained
-✅ 0 violations in quality check
+All test files need updating to this new pattern.
 
-Start by reviewing the context files, then tackle the _Flow.exec() complexity issue.
+## Key Achievement from Last Session
+
+We solved the type tracking problem! The termination node's output type IS the flow's output type. The new `end()` method captures this and returns the built flow directly with proper types: `Node[TStartIn, TTermOut]`.
+
+## Success Metrics
+1. `./quality-check.sh clearflow/` completes successfully
+2. All tests pass with new API
+3. 100% test coverage maintained
+
+Start by fixing the interrogate issue to unblock quality checks.

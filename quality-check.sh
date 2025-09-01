@@ -171,7 +171,8 @@ if [ $# -gt 0 ]; then
 else
     PYRIGHT_ARGS=""  # Let pyright use its configured include paths
 fi
-if ! uv run pyright $PYRIGHT_ARGS; then
+# Force pyright to use latest version to avoid version warnings
+if ! PYRIGHT_PYTHON_FORCE_VERSION=latest uv run pyright $PYRIGHT_ARGS; then
     echo -e "${RED}✗ Pyright type checking violations detected${NC}"
     echo -e "${YELLOW}⚠️  DO NOT suppress with # type: ignore or # pyright: ignore comments${NC}"
     echo -e "${YELLOW}⚠️  DO NOT weaken pyproject.toml settings${NC}"
@@ -344,8 +345,8 @@ done
 
 if [ -n "$vulture_targets" ]; then
     vulture_output=$(uv run vulture $vulture_targets --min-confidence 80 2>&1)
-    # Use grep -c without fallback since it always returns a count
-    vulture_count=$(echo "$vulture_output" | grep -c "unused")
+    # Use grep -c but handle the case when it returns exit code 1 for no matches
+    vulture_count=$(echo "$vulture_output" | grep -c "unused" || true)
     if [ "$vulture_count" -gt 0 ]; then
         echo -e "${RED}✗ Found $vulture_count dead code issues${NC}"
         echo "$vulture_output"
@@ -372,8 +373,14 @@ done
 
 if [ -n "$interrogate_targets" ]; then
     # Interrogate will use pyproject.toml config (fail-under = 100, quiet = true)
-    uv run interrogate $interrogate_targets
-    check_step "Interrogate docstring coverage (must be 100%)"
+    uv run interrogate $interrogate_targets --fail-under 100 --quiet || interrogate_status=$?
+    if [ "${interrogate_status:-0}" -eq 0 ]; then
+        echo -e "${GREEN}✓ Interrogate docstring coverage (must be 100%)${NC}"
+    else
+        echo -e "${RED}✗ Interrogate docstring coverage (must be 100%) failed${NC}"
+        echo -e "${RED}MISSION-CRITICAL VIOLATION: Fix immediately before proceeding${NC}"
+        exit 1
+    fi
 else
     echo -e "${YELLOW}Skipping Interrogate (no Python targets)${NC}"
 fi
@@ -422,24 +429,25 @@ else
     echo -e "${YELLOW}Skipping Radon (no Python targets)${NC}"
 fi
 
-# Check examples if they exist
-if [ -d "examples" ]; then
-    print_header "Checking examples"
-    echo "Running quality checks on examples..."
-    
-    # Run minimal checks on examples (they're allowed more flexibility)
-    uv run ruff check examples/
-    if [ $? -ne 0 ]; then
-        echo -e "${YELLOW}⚠️  Examples have linting issues - consider fixing${NC}"
+# Check examples only if they're in QUALITY_TARGETS
+if [[ "$QUALITY_TARGETS" == *"examples"* ]]; then
+    if [ -d "examples" ]; then
+        print_header "Checking examples"
+        echo "Running quality checks on examples..."
+        
+        # Run minimal checks on examples (they're allowed more flexibility)
+        uv run ruff check examples/
+        if [ $? -ne 0 ]; then
+            echo -e "${YELLOW}⚠️  Examples have linting issues - consider fixing${NC}"
+        fi
+        
+        uv run mypy examples/ || true  # Don't fail on example type issues
+        echo -e "${GREEN}✓ Example checks complete${NC}"
+    else
+        echo -e "${YELLOW}Examples directory not found${NC}"
     fi
-    
-    uv run mypy examples/ || true  # Don't fail on example type issues
-    echo -e "${GREEN}✓ Example checks complete${NC}"
-else
-    echo -e "${YELLOW}No examples directory found, skipping example checks${NC}"
 fi
 
 echo -e "\n${GREEN}════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  MISSION-CRITICAL QUALITY CHECKS PASSED! 🚀✨🎯  ${NC}"
-echo -e "${GREEN}  Aerospace/Healthcare/Financial standards met     ${NC}"
 echo -e "${GREEN}════════════════════════════════════════════════════${NC}"

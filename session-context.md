@@ -1,87 +1,93 @@
-# Session Context: ClearFlow API Simplification & Quality Improvements
+# ClearFlow Session Context
 
-## Major Accomplishments This Session
+## Current Branch
+`support-state-type-transformations`
 
-### 1. Simplified API Design ✅
-- **Replaced Flow class with flow() function**: Eliminated unnecessary abstraction
-- **Signature**: `def flow[TIn, TOut](name: str, start: Node[TIn, TOut]) -> _FlowBuilder[TIn, TOut]`
-- **Type inference**: TOut correctly infers from the node (no need for default in flow function)
-- **Cleaner usage**: `flow("Pipeline", my_node).route(...).build()` instead of `Flow[T]("name").start_with(node)`
+## Session Achievement: Major Builder Pattern Redesign ✅
 
-### 2. Improved Type System ✅
-- **Better generic tracking**: `_FlowBuilder[TIn, TCurrent]` tracks current type during building
-- **Node defaults**: `Node[TIn, TOut = TIn]` - TOut defaults to TIn for non-transforming nodes
-- **Reduced object usage**: Eliminated many `object` types during build phase (from 12 to 8 violations)
+This session achieved a fundamental redesign of the ClearFlow builder pattern that solves the type tracking problem and dramatically improves API ergonomics.
 
-### 3. Fixed Architecture Linter ✅
-- **Multi-line suppression support**: Linter now checks next 2 lines for suppressions
-- **Handles complex annotations**: Works with multi-line type annotations like `Node[TIn, object]`
-- **Better suppression detection**: Fixed both parameter and general `object` type suppressions
+## The Critical Discovery
 
-### 4. Fixed quality-check.sh Script ✅
-- **All tools respect arguments**: Fixed pip-audit, Bandit, Xenon, Vulture, Interrogate, Radon
-- **Scope-aware CVE scanning**: Skips pip-audit for clearflow/ (zero dependencies)
-- **Dynamic target handling**: All tools now use `$QUALITY_TARGETS` instead of hardcoded paths
-- **Proper aggregation**: Radon correctly aggregates complexity across multiple targets
+We realized that the "single termination" rule means we can know the output type statically! The termination node's output type IS the flow's output type. This led to a complete redesign.
 
-## Current State
+## API Evolution
 
-### Core Library Status
-- **Architecture compliance**: ✅ PASSING (0 violations with suppressions)
-- **Immutability compliance**: ✅ PASSING  
-- **Test suite compliance**: ✅ PASSING
-- **Linting (Ruff)**: ✅ PASSING
-- **Type checking (mypy)**: ✅ PASSING
-- **Type checking (pyright)**: ✅ PASSING (with necessary ignores)
-- **Complexity (Xenon)**: ❌ FAILING (_Flow.exec has rank B, needs A)
-- **Other tools**: ✅ PASSING (Bandit, Vulture, Interrogate, Radon)
+### Old API (problematic)
+```python
+Flow[T]("name")
+    .start_with(node)
+    .route(a, "x", b)
+    .route(b, "done", None)  # Manual None routing
+    .build()  # Returns Node[T, object] - type lost!
+```
 
-### Remaining Issues
-1. **_Flow.exec() complexity**: Rank B, needs refactoring to achieve rank A
-2. **Tests need updating**: Still using old `Flow` class API
-3. **Test types need fixing**: 45 violations for using `dict[str, object]` instead of proper types
+### New API (elegant)
+```python
+flow("name", start_node)
+    .route(a, "x", b)
+    .end(b, "done")  # Returns Node[TIn, TOut] directly!
+```
 
-## Key Technical Decisions
+## Key Design Changes
 
-### Why flow() function over Flow class?
-- Less ceremony, cleaner API
-- Type inference works better (both TIn and TOut from node)
-- One less abstraction to understand
-- Follows "make simple things simple" principle
+### 1. Type Tracking Solution
+- `_FlowBuilder[TStartIn, TStartOut]` tracks both input type and start node's output
+- `end[TTermIn, TTermOut]()` method captures termination node's output type
+- Final flow type is `Node[TStartIn, TTermOut]` - perfect type preservation!
 
-### Why keep OOP for _FlowBuilder?
-- Method chaining is idiomatic in Python: `.route().route().build()`
-- Encapsulation keeps related operations together
-- Already functional in nature (immutable, returns new instances)
-- Reduction in lines with functional approach would be minimal
+### 2. Simplified Builder Pattern
+- Removed `_TerminatedFlowBuilder` class entirely
+- `end()` directly returns the built flow (no separate `build()` step needed)
+- Single termination enforced by API design (can't call `end()` twice)
 
-### Why TOut doesn't default in flow()?
-- Node already has the default: `Node[TIn, TOut = TIn]`
-- flow() infers types from the node passed to it
-- Avoids redundant defaults that could get out of sync
-- Cleaner, simpler signature
+### 3. NodeBase Protocol
+```python
+class NodeBase(Protocol):
+    name: str
+    async def __call__(self, state: object) -> "NodeResult[object]": ...
+```
+Enables heterogeneous node collections with intentional type erasure.
 
-## Files Modified This Session
+## Technical Implementation
 
-### Core Library
-- `clearflow/__init__.py`: Replaced Flow class with flow() function, improved type tracking
-- `linters/check-architecture-compliance.py`: Added multi-line suppression support
+### Core Changes in clearflow/__init__.py
 
-### Infrastructure
-- `quality-check.sh`: Fixed all tools to respect argument scope
-- `pyproject.toml`: No changes (already optimized)
+1. **_FlowBuilder** now tracks `[TStartIn, TStartOut]`
+2. **route()** no longer accepts `None` as destination
+3. **end()** method replaces routing to `None`:
+   - Takes `Node[TTermIn, TTermOut]` and outcome
+   - Returns `Node[TStartIn, TTermOut]` directly
+   - No intermediate builder needed
 
-### Documentation
-- `plan.md`: Updated with clear next steps
-- `session-context.md`: This file (complete session summary)
-- `continue-session-prompt.md`: To be created with continuation prompt
+### Type Suppressions (All Justified)
+- Line 32: NodeBase protocol uses `object` for type erasure
+- Line 71: Node.__call__ intentionally refines NodeBase signature
+- Line 105: _Flow.exec uses `object` for dynamic routing
 
-## Next Session Focus
+## Quality Status
 
-See `plan.md` for detailed tasks. Priority order:
-1. **Simplify _FlowBuilder**: Keep OOP but reduce complexity
-2. **Fix _Flow.exec() complexity**: Refactor to achieve rank A
-3. **Update all tests**: Convert to new flow() API
-4. **Fix test types**: Replace `dict[str, object]` with educational types
+### Passing ✅
+- Architecture compliance (with justified suppressions)
+- Immutability compliance
+- Test suite compliance
+- Linting & formatting (ruff)
+- Type checking (mypy & pyright)
+- Security (bandit)
+- Complexity (xenon) - Grade A (2.0)
+- Dead code (vulture) - None
 
-The goal is a simpler, cleaner ClearFlow that maintains its type safety guarantees while being easier to understand and use.
+### Failing ❌
+- **Docstring coverage (interrogate)** - Exit code 1, blocking quality-check.sh completion
+
+## Critical Issue
+
+The interrogate tool fails with exit code 1, preventing the quality-check.sh script from completing. This needs immediate investigation.
+
+## Next Session Priority
+
+1. **Fix interrogate issue** - Investigate missing docstrings
+2. **Update all tests** to use new `flow()` → `route()` → `end()` API
+3. **Ensure 100% test coverage** with new code paths
+
+See plan.md for detailed task breakdown.

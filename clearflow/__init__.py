@@ -1,5 +1,11 @@
 # Copyright (c) 2025 ClearFlow Contributors
 
+"""ClearFlow: Zero-dependency async workflow orchestration framework.
+
+Provides type-safe workflow composition with explicit routing and single termination.
+Built for mission-critical AI orchestration with 100% test coverage requirement.
+"""
+
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -103,6 +109,7 @@ class _Flow[TIn, TOut = TIn](Node[TIn, TOut]):
 
     @override
     async def exec(self, state: TIn) -> NodeResult[TOut]:
+        """Execute the flow by routing through nodes based on outcomes."""
         current_node = self.start_node
         current_state: object = (
             state  # clearflow: ignore[ARCH009] - Type erasure for dynamic routing
