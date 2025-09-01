@@ -65,8 +65,8 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
         TOut: Output state type (defaults to TIn for non-transforming nodes)
 
     Examples:
-        Node[State]           # Non-transforming: State -> State
-        Node[Input, Output]   # Transforming: Input -> Output
+        Node[Query]                    # Non-transforming: Query -> Query
+        Node[Query, SearchResults]     # Transforming: Query -> SearchResults
 
     """
 
@@ -199,7 +199,7 @@ class _FlowBuilder[TStartIn, TStartOut]:
             A flow node that transforms TStartIn to TTermOut
 
         Example:
-            flow("Pipeline", start).route(a, "ok", b).end(b, "done")
+            flow("RAG", retriever).route(retriever, "found", generator).end(generator, "answered")
 
         """
         route_key: RouteKey = (final_node.name, outcome)
@@ -225,7 +225,7 @@ def flow[TIn, TStartOut](
         A flow builder for chaining route definitions
 
     Example:
-        flow("Pipeline", my_node).route(...).end(final_node, "done")
+        flow("RAG", retriever).route(...).end(generator, "answered")
 
     """
     return _FlowBuilder[TIn, TStartOut](
