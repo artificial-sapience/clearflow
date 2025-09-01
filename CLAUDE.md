@@ -21,7 +21,12 @@ uv sync                    # Install runtime dependencies
 uv sync --group dev        # Install with dev dependencies
 
 # Run quality checks (enforced before commits)
-./quality-check.sh         # Runs all checks: lint, format, type check, tests
+./quality-check.sh         # Runs all checks: custom linters, lint, format, type check, tests
+
+# Custom linters (mission-critical compliance)
+python3 linters/check-architecture-compliance.py  # Architecture violations (zero tolerance)
+python3 linters/check-immutability.py            # Deep immutability enforcement
+python3 linters/check-test-suite-compliance.py   # Test isolation and resource management
 
 # Individual quality commands
 uv run ruff check --fix clearflow tests                 # Auto-fix linting (no unsafe fixes)
@@ -111,6 +116,30 @@ flow = (
 - No `type: ignore` comments in core library code
 - No `Any` types where proper types can be used
 - Prefer boring, obvious code over clever solutions
+
+#### Custom Linters
+
+ClearFlow uses three custom linters to enforce mission-critical standards:
+
+1. **Architecture Compliance** (`linters/check-architecture-compliance.py`)
+   - No patching/mocking of internal components in tests
+   - No imports from private modules (`_internal`)
+   - No use of `TYPE_CHECKING` (indicates circular dependencies)
+   - No `object` or `Any` types in parameters
+
+2. **Immutability Compliance** (`linters/check-immutability.py`)
+   - All dataclasses must have `frozen=True`
+   - No `list` in type annotations (use `tuple[T, ...]`)
+   - No mutable default arguments
+   - No list building with `.append()` in production code
+
+3. **Test Suite Compliance** (`linters/check-test-suite-compliance.py`)
+   - No `asyncio.run()` in tests (use `@pytest.mark.asyncio`)
+   - No manual event loop creation without cleanup
+   - All async tests must have `@pytest.mark.asyncio`
+   - All resources must use context managers
+
+These linters run automatically as part of `./quality-check.sh` and enforce zero-tolerance policies for violations.
 
 ### Contributing Guidelines
 

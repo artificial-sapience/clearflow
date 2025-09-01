@@ -38,14 +38,30 @@ Inspiration = "https://github.com/The-Pocket/PocketFlow"
 
 [dependency-groups]
 dev = [
-    "mypy>=1.15.0",
-    "ruff>=0.8.0",
-    "pytest>=8.0.0",
-    "pytest-cov>=5.0.0",
-    "pyright>=1.1.390", # Additional type checking
-    "safety>=3.2", # CVE scanner for lock file
-    "typeguard>=4.3.0", # optional runtime type‑checker (use in e2e tests)
+    # Testing
+    "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+    
+    # Type checking
+    "mypy>=1.17.1",
+    "pyright>=1.1.0",
+    "typeguard>=4.4.0",  # Runtime type-checker
+    
+    # Linting & formatting
+    "ruff>=0.12.0",
+    "flake8-bugbear>=24.12.12",
+    
+    # Security & vulnerability scanning
+    "pip-audit>=2.9.0",      # CVE scanner for dependencies
+    "bandit[toml]>=1.8.6",   # AST security analyzer
+    "semgrep>=1.134.0",       # Pattern-based security analysis
+    
+    # Code quality & complexity
+    "radon>=6.0.1",          # Cyclomatic complexity, maintainability index
+    "xenon>=0.9.3",          # Complexity monitor (fails if too complex)
+    "vulture>=2.14",         # Dead code detection
+    "interrogate>=1.7.0",    # Docstring coverage checker
 ]
 
 [build-system]
@@ -60,6 +76,8 @@ exclude = [
   "*.sh",
   "session-*.md",
   "continue-*.md",
+  "plan.md",
+  "design-*.md",
   "CLAUDE.md",
   "GEMINI.md",
   ".env*",
@@ -77,6 +95,7 @@ include = [
   "/tests",
   "/examples",
   "/docs",
+  "/linters",
   "README.md",
   "LICENSE",
   "pyproject.toml",
@@ -90,50 +109,151 @@ target-version = "py313"
 indent-width = 4
 preview = true
 fix = false
-extend-exclude = ["*.ipynb"]  # Notebooks checked separately with relaxed rules
+extend-exclude = ["*.ipynb"]  # Exclude notebooks
 unsafe-fixes = false
 
+[tool.ruff.format]
+# Drop-in replacement for Black with same defaults
+preview = true
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
 [tool.ruff.lint]
-select = ["ALL"]  # Maximum strictness for mission-critical code
-# Pragmatic ignores focused on productivity while maintaining quality:
+select = [
+  "ALL",  # Maximum strictness for mission-critical code
+  # Explicitly list key rule sets for mission-critical quality
+  "F",    # Pyflakes - basic error detection
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "C90",  # mccabe complexity
+  "I",    # isort - import sorting
+  "N",    # pep8-naming
+  "D",    # pydocstyle - docstring checking
+  "UP",   # pyupgrade - Python version upgrade suggestions
+  "YTT",  # flake8-2020 - misuse of sys.version
+  "ANN",  # flake8-annotations - type annotation enforcement
+  "S",    # flake8-bandit - security rules
+  "B",    # flake8-bugbear - bug detection
+  "A",    # flake8-builtins - builtin shadowing
+  "C4",   # flake8-comprehensions - comprehension optimization
+  "DTZ",  # flake8-datetimez - timezone aware datetime
+  "EM",   # flake8-errmsg - error message formatting
+  "EXE",  # flake8-executable - shebang issues
+  "ISC",  # flake8-implicit-str-concat
+  "ICN",  # flake8-import-conventions
+  "LOG",  # flake8-logging
+  "PIE",  # flake8-pie - misc lints
+  "PT",   # flake8-pytest-style - pytest rules
+  "Q",    # flake8-quotes
+  "RET",  # flake8-return - return consistency
+  "SLF",  # flake8-self - private member access
+  "SIM",  # flake8-simplify - simplification suggestions
+  "TID",  # flake8-tidy-imports - import restrictions
+  "TCH",  # flake8-type-checking - type checking imports
+  "ARG",  # flake8-unused-arguments - unused arguments
+  "PTH",  # flake8-use-pathlib - prefer pathlib
+  "ERA",  # eradicate - commented out code detection
+  "PL",   # Pylint rules
+  "TRY",  # tryceratops - exception handling
+  "FLY",  # flynt - f-string conversion
+  "PERF", # Perflint - performance lints
+  "RUF",  # Ruff-specific rules
+]
+# Minimal ignores only for true conflicts:
 ignore = [
-    # Docstring conflicts
-    "D104",    # Missing docstring in public package (let classes document themselves)
-    "D203",    # 1 blank line required before class docstring (conflicts with D211)
-    "D213",    # Multi-line docstring summary should start at the second line (conflicts with D212)
-    # Formatter conflicts
-    "COM812",  # Missing trailing comma (conflicts with formatter)
-    # Documentation style
-    "DOC201",  # Return not documented - we prefer succinct docstrings
-    # Design choices
-    "PLR6301", # Methods could be static - needed for subclassing pattern
-    "D401",    # First line imperative mood - clearer as descriptions
-    "DOC501",  # Missing raises in docstring - we document inline
+  # Docstring conflicts (must choose one)
+  "D203",    # 1 blank line required before class docstring (conflicts with D211)
+  "D213",    # Multi-line docstring summary should start at the second line (conflicts with D212)
+  # Formatter conflicts that cannot be resolved
+  "COM812",  # Missing trailing comma (conflicts with formatter)
+  "ISC001",  # Implicitly concatenated string literals (conflicts with formatter)
+  # Line length - let formatter handle this
+  "E501",    # Line too long (trust formatter's judgment)
+  # Copyright headers not standard in Python ecosystem
+  "CPY001",  # Missing copyright notice at top of file
+  # Design choices
+  "PLR6301", # Methods could be static - needed for subclassing pattern
+  "D401",    # First line imperative mood - clearer as descriptions
+  "DOC501",  # Missing raises in docstring - we document inline
+  "DOC201",  # Return not documented - we prefer succinct docstrings
+  "D104",    # Missing docstring in public package
+  
+  # MISSION-CRITICAL: NO SUPPRESSIONS FOR SAFETY/CLARITY
+  # All code must be safe and unambiguous
 ]
 # Never allow fixes for imports that may change execution order
-unfixable = ["F401", "E402", "T201", "PERF401", "C408"]
+unfixable = [
+  "F401",
+  "E402", 
+  "C408",
+]  # T201 and PERF401 should be fixed, not unfixable
+
+[tool.ruff.lint.pycodestyle]
+# More lenient line length for edge cases (URLs, long strings, etc.)
+max-line-length = 120
+
+[tool.ruff.lint.mccabe]
+# Mission-critical: Enforce low complexity
+max-complexity = 7  # A grade maximum
 
 [tool.ruff.lint.per-file-ignores]
+# Package initialization files
+"__init__.py" = ["F401", "D104"]  # Allow unused imports and missing docstrings
 # Test files have different requirements
-"**/tests/**/*.py" = [
-    "S101",    # Use of assert (required for pytest)
-    "T201",    # Print statements allowed in tests
-    "PLR2004", # Magic values common in test data
-    "RUF029",  # Async functions without await (intentional for flow functions)
-    "C901",    # Complex test scenarios are acceptable in tests
-    "DOC201",  # Return documentation not needed for test functions
-    "PERF401", # Explicit loops needed for pyright type checking
-    "PLR6301", # Methods that could be static (needed for inheritance)
-    "FBT003",  # Boolean literals in function calls (clear in tests)
+"tests/**/*.py" = [
+  "S101",    # Use of assert (required for pytest)
+  "D",       # Allow missing docstrings in tests
+  "PLR2004", # Magic values in assertions are expected values
+  "RUF029",  # Async functions without await (intentional for flow functions)
+  "C901",    # Complex test scenarios are acceptable
+  "PERF401", # Explicit loops needed for type checking
+  "PLR6301", # Methods that could be static (needed for inheritance)
+  "FBT003",  # Boolean literals in function calls (clear in tests)
+  # REMOVED for mission-critical quality:
+  # T201 - No print statements, use proper logging/assertions
 ]
-# Example files are meant to be educational and practical
-"**/examples/**/*.py" = [
-    "T201",    # Print statements are needed for user interaction
-    "CPY001",  # Copyright notice not required for examples
-    "INP001",  # Examples don't need to be packages
-    "EXE001",  # Shebang presence is fine without executable bit
+# Main package can use internal imports
+"clearflow/**/*.py" = [
+  "TID251",  # Allow imports from internal modules within the package itself
+  "TID252",  # Allow relative imports within the package
+]
+# Example files are meant to be educational
+"examples/**/*.py" = [
+  "T201",    # Print statements are needed for user interaction
+  "CPY001",  # Copyright notice not required for examples
+  "INP001",  # Examples don't need to be packages
+  "EXE001",  # Shebang presence is fine without executable bit
+  "D",       # Allow missing docstrings in examples
 ]
 
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+parametrize-names-type = "tuple"
+parametrize-values-row-type = "tuple"
+parametrize-values-type = "tuple"
+raises-require-match-for = ["ValueError", "TypeError", "RuntimeError"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"  # Force absolute imports
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# Architecture enforcement
+"typing.Any" = { msg = "Avoid Any type. Use proper types or object with documented justification." }
+# Ban mocking/patching for mission-critical testing
+"unittest.mock.patch" = { msg = "patch() violates testing principles. Use explicit test doubles." }
+"unittest.mock.MagicMock" = { msg = "MagicMock hides bugs. Use explicit test doubles." }
+"unittest.mock.Mock" = { msg = "Mock hides bugs. Use explicit test doubles." }
+
+[tool.ruff.lint.flake8-bugbear]
+# Immutable calls configuration
+extend-immutable-calls = ["tuple", "frozenset"]
+
+[tool.ruff.lint.flake8-bandit]
+# Enable security-focused rules
+check-typed-exception = true
 
 #################################### Mypy Configuration ####################################
 [tool.mypy]
@@ -156,32 +276,40 @@ warn_redundant_casts = true
 warn_no_return = true
 implicit_reexport = false
 strict_equality = true
-strict_concatenate = true      # forbid back‑propagation of *args / **kwargs types :contentReference[oaicite:1]{index=1}
+strict_concatenate = true  # forbid back-propagation of *args / **kwargs types
 # Treat specific warning categories as errors
 enable_error_code = [
-  "redundant-expr",             # dead‑code expression
-  "truthy-bool",                # implicit truthiness conversion
-  "ignore-without-code",        # type: ignore without error code
-  "unused-awaitable",           # unused awaitable value
+  "redundant-expr",      # dead-code expression
+  "truthy-bool",         # implicit truthiness conversion
+  "ignore-without-code", # type: ignore without error code
+  "unused-awaitable",    # unused awaitable value
 ]
 
 # Type-ignore overrides for external dependencies
 [[tool.mypy.overrides]]
 module = "tests.*"
-disallow_untyped_defs = false  # Tests can be less strict
+disallow_untyped_defs = true  # Mission-critical: Tests must be fully typed
 
 [[tool.mypy.overrides]]
 module = "examples.*"
-ignore_missing_imports = true  # Examples may use external libraries
+# Mission-critical: Examples must demonstrate best practices
+disallow_untyped_defs = true
+disallow_any_unimported = true  # No Any from imports
+disallow_any_expr = true        # No Any in expressions
+disallow_any_decorated = true   # No Any in decorators
+disallow_any_explicit = true    # No explicit Any
+disallow_any_generics = true    # No Any in generics
+disallow_subclassing_any = true # No subclassing Any
 
 #################################### Pyright Configuration ####################################
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-reportMissingTypeStubs = "error"
-strictListInference       = true  # list[...] inferred as precise union instead of Any :contentReference[oaicite:2]{index=2}
-strictDictionaryInference = true  #     "        dict[…]
-strictSetInference        = true  #     "        set[…]
+include = ["clearflow", "tests", "examples"]
+exclude = ["**/__pycache__", ".venv"]
+strictListInference = true        # list[...] inferred as precise union instead of Any
+strictDictionaryInference = true  # dict[...] inferred as precise union
+strictSetInference = true         # set[...] inferred as precise union
 analyzeUnannotatedFunctions = true
 # Treat all reportable issues as errors instead of warnings
 reportUnnecessaryTypeIgnoreComment = "error"
@@ -194,12 +322,29 @@ reportUndefinedVariable = "error"
 reportAssertAlwaysTrue = "error"
 reportSelfClsParameterName = "error"
 reportImplicitOverride = "error"
-exclude = ["**/__pycache__", ".venv"]
+reportImportCycles = "error"  # Do not allow import cycles
+reportMissingTypeStubs = "error"  # External libraries must have stubs
 
-# Test-specific overrides
-[tool.pyright.overrides]
-"tests/**/*.py" = { reportUnknownVariableType = "none" }
-"examples/**/*.py" = { reportMissingTypeStubs = "none" }
+#################################### Coverage Configuration ####################################
+[tool.coverage.run]
+source = ["clearflow"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+  "def __repr__",
+  "if self\\.debug:",
+  "if settings\\.DEBUG",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if 0:",
+  "if __name__ == .__main__.:",
+  "\\.\\.\\.,"  # Exclude ellipsis in Protocol methods
+]
+ignore_errors = false  # Mission-critical: We need to know about ALL coverage errors
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 #################################### Pytest Configuration ####################################
 [tool.pytest.ini_options]
@@ -209,8 +354,77 @@ python_files = ["test_*.py"]
 addopts = [
   "--cov=clearflow",
   "--cov-report=term-missing", 
-  "--cov-fail-under=100",
+  "--cov-fail-under=100",  # Require 100% coverage minimum
   "--strict-config",
   "--strict-markers",
-  "-Werror"
+  "-Werror",  # Treat warnings as errors
+  "--tb=short",
 ]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+  "ignore::PendingDeprecationWarning",
+]
+
+#################################### Security & Quality Tools ####################################
+[tool.bandit]
+# Security analysis configuration
+targets = ["clearflow", "examples"]
+exclude_dirs = ["tests", ".venv"]
+skips = []  # No skips - check everything
+severity = "low"  # Report all severity levels
+
+[tool.bandit.assert_used]
+skips = ["*/test_*.py", "*_test.py"]  # Allow assert in tests
+
+[tool.vulture]
+# Dead code detection
+min_confidence = 80  # Minimum confidence to report as unused
+paths = ["clearflow", "tests", "examples", "linters"]
+exclude = [".venv/", "__pycache__/", "*.pyc"]
+ignore_names = ["_*"]  # Ignore private names (they're often hooks)
+ignore_decorators = [
+  "@property",
+  "@staticmethod", 
+  "@classmethod",
+  "@abstractmethod",
+  "@override",
+]
+make_whitelist = false
+
+[tool.xenon]
+# Complexity monitoring - A grade requirement
+max_average = "A"
+max_modules = "A"
+max_absolute = "A"
+exclude = [".venv/*"]
+
+[tool.radon]
+# Cyclomatic Complexity thresholds
+cc_min = "A"
+mi_min = 40  # Maintainability Index minimum (A grade starts at 20)
+exclude = ".venv/*"
+show_complexity = true
+average = true
+order = "SCORE"  # Order by complexity score
+show_closures = false
+no_assert = false
+
+[tool.interrogate]
+# Docstring coverage
+ignore-init-method = false
+ignore-init-module = false
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = false
+ignore-property-decorators = false
+ignore-module = false
+ignore-nested-functions = false
+ignore-nested-classes = false
+ignore-setters = false
+fail-under = 100  # Require 100% docstring coverage
+exclude = [".venv"]
+verbose = 0
+quiet = true
+whitelist-regex = []
+color = true
+omit-covered-files = false
