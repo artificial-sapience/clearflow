@@ -4,14 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Philosophy
 
-ClearFlow provides reliable language model orchestration with type safety and 100% test coverage. Focus on what's guaranteed:
-- **100% test coverage** is non-negotiable
-- **Type safety** with mypy/pyright strict mode is mandatory
-- **Immutability** is enforced
-- **Explicit routing** - given an outcome, the next step is always the same (NOT deterministic execution)
-- **Zero dependencies**
+ClearFlow provides mission-critical AI orchestration for functional programming practitioners. Built for Python engineers who demand:
+- **Deep immutability** - All state transformations create new immutable data structures
+- **Functional purity** - Side effects isolated, transformations are pure functions
+- **Type safety** - Full static typing with mypy/pyright strict mode
+- **100% test coverage** - Every path tested, no exceptions
+- **Explicit routing** - Given an outcome, the next step is always the same
+- **Zero dependencies** - Stdlib only for maximum reliability
 
-Target audience: Developers building multi-step language model workflows who need type-safe state management and testable orchestration.
+Target audience: Python engineers building mission-critical AI systems who embrace functional programming patterns and require provably correct orchestration.
 
 ## Development Commands
 
@@ -103,9 +104,11 @@ flow = (
 ### Testing Requirements
 
 - **100% coverage**: No exceptions, ever
-- **Test all outcomes**: Every node outcome must have a test
-- **Verify immutability**: Test that state transformations don't mutate
-- **Domain-relevant**: Use real language model scenarios, not foo/bar
+- **Deep immutability**: Use frozen dataclasses or tuples for all test state
+- **Real AI scenarios**: Model actual AI orchestration patterns (RAG, agents, tool use)
+- **Functional purity**: Test that transformations are pure with no side effects
+- **Precise types**: Every test knows exact TIn and TOut types
+- **Educational tests**: Tests should demonstrate best practices for mission-critical AI
 
 ### Code Quality Standards
 

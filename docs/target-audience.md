@@ -2,11 +2,13 @@
 
 ## Who Uses ClearFlow
 
-Developers building multi-step language model workflows who need:
+Python engineers building mission-critical AI orchestration who:
 
-- Type-safe state management between async operations
-- Explicit routing regardless of model outputs
-- Testable orchestration logic
+- **Embrace functional programming** - Pure functions, immutable data, explicit effects
+- **Demand type safety** - Full static typing, no runtime surprises
+- **Build critical systems** - Healthcare, finance, aerospace AI applications
+- **Practice deep immutability** - Frozen dataclasses, tuples, never mutate
+- **Require provable correctness** - 100% test coverage, all paths verified
 
 ## Contributing
 

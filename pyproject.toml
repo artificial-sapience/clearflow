@@ -339,7 +339,8 @@ exclude_lines = [
   "raise NotImplementedError",
   "if 0:",
   "if __name__ == .__main__.:",
-  "\\.\\.\\.,"  # Exclude ellipsis in Protocol methods
+  "pragma: no cover",
+  "\\.\\.\\.",  # Exclude ellipsis in abstract/protocol methods
 ]
 ignore_errors = false  # Mission-critical: We need to know about ALL coverage errors
 
