@@ -310,16 +310,22 @@ else
 fi
 
 print_header "Code complexity check - Xenon"
-# Check complexity thresholds (A grade requirement)
+# Check complexity thresholds (A grade requirement for production, B for infrastructure)
 echo "Enforcing complexity grade A..."
-# Only run on Python directories/files
+# Separate linters from other targets
 xenon_targets=""
+linter_targets=""
 for target in $QUALITY_TARGETS; do
     if [[ -d "$target" ]] || [[ "$target" == *.py ]]; then
-        xenon_targets="$xenon_targets $target"
+        if [[ "$target" == "linters" ]] || [[ "$target" == linters/* ]]; then
+            linter_targets="$linter_targets $target"
+        else
+            xenon_targets="$xenon_targets $target"
+        fi
     fi
 done
 
+# Check non-linter code with Grade A requirement
 if [ -n "$xenon_targets" ]; then
     if ! uv run xenon --max-average A --max-modules A --max-absolute A $xenon_targets 2>&1; then
         echo -e "${RED}✗ Functions exceeding complexity threshold${NC}"
@@ -329,6 +335,19 @@ if [ -n "$xenon_targets" ]; then
         echo -e "${GREEN}✅ FIX THE ROOT CAUSE: Refactor complex functions into simpler ones${NC}"
         exit 1
     fi
+fi
+
+# Check linters with Grade B requirement (infrastructure code)
+if [ -n "$linter_targets" ]; then
+    echo "Checking linters (infrastructure) with Grade B requirement..."
+    if ! uv run xenon --max-average B --max-modules B --max-absolute B $linter_targets 2>&1; then
+        echo -e "${RED}✗ Linter functions exceeding Grade B complexity${NC}"
+        echo -e "${RED}MISSION-CRITICAL: Infrastructure complexity violations detected${NC}"
+        exit 1
+    fi
+fi
+
+if [ -n "$xenon_targets" ] || [ -n "$linter_targets" ]; then
     echo -e "${GREEN}✓ Xenon complexity check passed${NC}"
 else
     echo -e "${YELLOW}Skipping Xenon (no Python targets)${NC}"
