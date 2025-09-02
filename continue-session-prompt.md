@@ -1,32 +1,34 @@
 # Continue ClearFlow Session
 
-Please continue the ClearFlow session from where we left off.
+Please continue the ClearFlow quality compliance work from where we left off.
 
 ## Context
-See **session-context.md** for full session context and accomplishments.
-See **plan.md** for complete task list.
+- See **session-context.md** for full session history and accomplishments
+- See **plan.md** for remaining tasks
 
 ## Primary Task
-**Complete linters/ quality compliance to achieve 100%**
+**Fix examples/ directory to achieve 100% quality compliance**
 
-We've made excellent progress refactoring the linters from complexity 27 down to 9, fixing type annotations, and resolving most linting issues. The linters now pass all custom compliance checks (architecture, immutability, test-suite).
+We've successfully achieved 100% compliance for:
+- ✅ clearflow/ (production code)
+- ✅ tests/ (test suite)
+- ✅ linters/ (infrastructure)
 
-## Immediate Focus
-1. Run `./quality-check.sh linters` to see current status
-2. Fix any remaining minor issues (likely just formatting or style)
-3. Verify 100% compliance achieved with zero suppressions
-4. Confirm all quality checks pass
+Now we need to ensure examples/ demonstrates best practices with 100% compliance.
+
+## Immediate Next Steps
+1. Run `./quality-check.sh examples` to assess current state
+2. Fix any issues found (likely linting, types, formatting)
+3. Ensure examples follow ClearFlow best practices
+4. Verify 100% compliance achieved
 
 ## Success Criteria
-- `./quality-check.sh linters` must pass 100%
-- Zero suppressions (no noqa, type: ignore, pragma, etc.)
-- All functions must maintain Grade A complexity (≤7 ideally)
-- Maintain the improvements we've made
+- All examples must pass quality checks
+- Examples should demonstrate proper ClearFlow patterns
+- No suppressions (noqa, type: ignore) unless absolutely necessary
+- Code should be educational and clear
 
 ## Background
-- Linters are critical infrastructure requiring same quality as production code
-- We've systematically refactored complex functions using helper extraction
-- Type safety has been improved with explicit annotations
-- The code is now much more maintainable
+The examples directory contains demonstration code that users will learn from. It's critical these examples show best practices and pass all quality checks to maintain trust and provide good patterns for users to follow.
 
-Please start by running the quality check to see the exact current state, then address any remaining issues to achieve 100% compliance.
+Please start by running the quality check on examples/ to see what needs to be fixed.

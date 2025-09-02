@@ -140,6 +140,35 @@ class ValidatorNode(Node[ExtractorState]):
 class FormatterNode(Node[ExtractorState]):
     """Formats extracted resume data for display."""
 
+    def _format_experiences(self, experiences: tuple) -> tuple[str, ...]:
+        """Format work experiences section."""
+        if not experiences:
+            return ()
+
+        exp_header = ("", "WORK EXPERIENCE:")
+        exp_items = tuple(
+            (f"  • {exp.role} at {exp.company} ({exp.duration})",)
+            + ((f"    {exp.description}",) if exp.description else ())
+            for exp in experiences
+        )
+        # Flatten the nested tuples
+        exp_flat = ()
+        for item in exp_items:
+            exp_flat += item
+        return exp_header + exp_flat
+
+    def _format_education(self, education: tuple) -> tuple[str, ...]:
+        """Format education section."""
+        if not education:
+            return ()
+
+        edu_header = ("", "EDUCATION:")
+        edu_items = tuple(
+            f"  • {edu.degree} from {edu.institution} ({edu.year})"
+            for edu in education
+        )
+        return edu_header + edu_items
+
     @override
     async def exec(self, state: ExtractorState) -> NodeResult[ExtractorState]:
         """Format the extracted data into a readable string."""
@@ -164,28 +193,8 @@ class FormatterNode(Node[ExtractorState]):
             ("", "SUMMARY:", extracted_data.summary) if extracted_data.summary else ()
         )
 
-        experience_lines = ()
-        if extracted_data.experiences:
-            exp_header = ("", "WORK EXPERIENCE:")
-            exp_items = tuple(
-                (f"  • {exp.role} at {exp.company} ({exp.duration})",)
-                + ((f"    {exp.description}",) if exp.description else ())
-                for exp in extracted_data.experiences
-            )
-            # Flatten the nested tuples
-            exp_flat = ()
-            for item in exp_items:
-                exp_flat = exp_flat + item
-            experience_lines = exp_header + exp_flat
-
-        education_lines = ()
-        if extracted_data.education:
-            edu_header = ("", "EDUCATION:")
-            edu_items = tuple(
-                f"  • {edu.degree} from {edu.institution} ({edu.year})"
-                for edu in extracted_data.education
-            )
-            education_lines = edu_header + edu_items
+        experience_lines = self._format_experiences(extracted_data.experiences)
+        education_lines = self._format_education(extracted_data.education)
 
         skill_lines = (
             ("", f"SKILLS: {', '.join(extracted_data.skills)}")

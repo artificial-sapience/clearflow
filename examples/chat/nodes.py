@@ -1,7 +1,7 @@
 """Chat node implementation - pure business logic."""
 
 from dataclasses import dataclass
-from typing import Literal, NotRequired, TypedDict, override
+from typing import Literal, TypedDict, override
 
 from openai import AsyncOpenAI
 

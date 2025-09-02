@@ -66,7 +66,6 @@ check_step() {
 }
 
 echo -e "${YELLOW}Running MISSION-CRITICAL quality checks for: ${QUALITY_TARGETS}${NC}"
-echo -e "${YELLOW}Standards: Aerospace/Healthcare/Financial grade${NC}"
 echo -e "${RED}════════════════════════════════════════════════════════════════${NC}"
 echo -e "${RED}⚠️  IMPORTANT: ALL violations must be FIXED, not suppressed${NC}"
 echo -e "${RED}⚠️  AI ASSISTANTS: Never use # noqa, # type: ignore, or ignore lists${NC}"

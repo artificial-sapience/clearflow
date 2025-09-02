@@ -7,7 +7,7 @@ import sys
 
 from dotenv import load_dotenv
 from flow import create_chat_flow
-from nodes import ChatState  # Import the properly typed ChatState
+from nodes import ChatState
 
 
 def print_welcome() -> None:
