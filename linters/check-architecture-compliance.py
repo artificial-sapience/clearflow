@@ -31,6 +31,21 @@ class Violation(NamedTuple):
     requirement: str
 
 
+def _check_line_for_suppression(line: str, pattern: str) -> bool:
+    """Check if a single line contains the suppression pattern."""
+    return bool(re.search(pattern, line, re.IGNORECASE))
+
+
+def _get_lines_to_check(lines: list[str], line_num: int) -> list[str]:
+    """Get the current line and next 2 lines for suppression checking."""
+    if line_num <= 0 or line_num > len(lines):
+        return []
+    # Get current line and up to 2 following lines
+    start_idx = line_num - 1
+    end_idx = min(start_idx + 3, len(lines))
+    return lines[start_idx:end_idx]
+
+
 def has_suppression(content: str, line_num: int, code: str) -> bool:
     """Check if a line has a suppression comment for a specific code.
 
@@ -47,26 +62,13 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
 
     """
     lines = content.splitlines()
-    if line_num <= 0 or line_num > len(lines):
+    lines_to_check = _get_lines_to_check(lines, line_num)
+    if not lines_to_check:
         return False
 
     # Check for # clearflow: ignore[CODE] pattern
     pattern = rf"#\s*clearflow:\s*ignore\[{code}\]"
-
-    # Check the violation line itself
-    line = lines[line_num - 1]  # Convert to 0-indexed
-    if re.search(pattern, line, re.IGNORECASE):
-        return True
-
-    # For multi-line annotations, check the next 2 lines
-    # (handles cases where object is in a type annotation that spans lines)
-    for offset in range(1, 3):
-        if line_num - 1 + offset < len(lines):
-            next_line = lines[line_num - 1 + offset]
-            if re.search(pattern, next_line, re.IGNORECASE):
-                return True
-
-    return False
+    return any(_check_line_for_suppression(line, pattern) for line in lines_to_check)
 
 
 def _check_private_imports(
@@ -288,6 +290,22 @@ def _check_name_node(
     return tuple(violations)
 
 
+def _check_if_node(
+    node: ast.If, file_path: Path, content: str
+) -> tuple[Violation, ...]:
+    """Check If node for violations."""
+    violation = _check_type_checking_block(node, file_path, content)
+    return (violation,) if violation else ()
+
+
+def _check_attribute_node(
+    node: ast.Attribute, file_path: Path
+) -> tuple[Violation, ...]:
+    """Check Attribute node for violations."""
+    violation = _check_typing_any_attribute(node, file_path)
+    return (violation,) if violation else ()
+
+
 def _process_node(
     node: ast.AST, file_path: Path, content: str, *, is_internal: bool
 ) -> tuple[Violation, ...]:
@@ -296,21 +314,14 @@ def _process_node(
         return _check_import_from_node(
             node, file_path, content, is_internal=is_internal
         )
-
     if isinstance(node, ast.If):
-        violation = _check_type_checking_block(node, file_path, content)
-        return (violation,) if violation else ()
-
+        return _check_if_node(node, file_path, content)
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         return _check_object_in_params(node, file_path, content)
-
     if isinstance(node, ast.Name):
         return _check_name_node(node, file_path, content)
-
     if isinstance(node, ast.Attribute):
-        violation = _check_typing_any_attribute(node, file_path)
-        return (violation,) if violation else ()
-
+        return _check_attribute_node(node, file_path)
     return ()
 
 

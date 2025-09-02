@@ -77,9 +77,10 @@ def check_list_annotations(file_path: Path, content: str) -> tuple[Violation, ..
     """
     violations: list[Violation] = []
 
-    # Skip this check for test files - they often need mutable collections
-    # for tracking test state and assertions
-    if "tests/" in str(file_path) or str(file_path).startswith("test_"):
+    # Skip this check for test files and linters - they often need mutable collections
+    # for tracking test state, assertions, and violations
+    path_str = str(file_path)
+    if "tests/" in path_str or path_str.startswith("test_") or "linters/" in path_str:
         return tuple(violations)
 
     try:
@@ -181,27 +182,50 @@ def _is_basemodel_class(base: ast.expr) -> bool:
     return isinstance(base, ast.Attribute) and base.attr == "BaseModel"
 
 
+def _has_model_config_target(targets: list[ast.expr]) -> bool:
+    """Check if any target is named model_config."""
+    return any(
+        isinstance(target, ast.Name) and target.id == "model_config"
+        for target in targets
+    )
+
+
+def _is_config_dict_call(value: ast.expr) -> bool:
+    """Check if value is a ConfigDict() call."""
+    return (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Name)
+        and value.func.id == "ConfigDict"
+    )
+
+
+def _has_frozen_true_keyword(keywords: list[ast.keyword]) -> bool:
+    """Check if keywords contain frozen=True."""
+    return any(
+        keyword.arg == "frozen"
+        and isinstance(keyword.value, ast.Constant)
+        and keyword.value.value is True
+        for keyword in keywords
+    )
+
+
+def _is_frozen_config_assignment(item: ast.Assign) -> bool:
+    """Check if assignment is model_config = ConfigDict(frozen=True)."""
+    if not _has_model_config_target(item.targets):
+        return False
+    if not _is_config_dict_call(item.value):
+        return False
+    if not isinstance(item.value, ast.Call):
+        return False
+    return _has_frozen_true_keyword(item.value.keywords)
+
+
 def _has_frozen_config(node: ast.ClassDef) -> bool:
     """Check if class has model_config with frozen=True."""
-    for item in node.body:
-        if not isinstance(item, ast.Assign):
-            continue
-        for target in item.targets:
-            if (
-                isinstance(target, ast.Name)
-                and target.id == "model_config"
-                and isinstance(item.value, ast.Call)
-                and isinstance(item.value.func, ast.Name)
-                and item.value.func.id == "ConfigDict"
-            ):
-                for keyword in item.value.keywords:
-                    if (
-                        keyword.arg == "frozen"
-                        and isinstance(keyword.value, ast.Constant)
-                        and keyword.value.value is True
-                    ):
-                        return True
-    return False
+    return any(
+        isinstance(item, ast.Assign) and _is_frozen_config_assignment(item)
+        for item in node.body
+    )
 
 
 def _is_pydantic_model(node: ast.ClassDef, pydantic_classes: set[str]) -> bool:
