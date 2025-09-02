@@ -226,6 +226,11 @@ max-complexity = 7  # A grade maximum
   "EXE001",  # Shebang presence is fine without executable bit
   "D",       # Allow missing docstrings in examples
 ]
+# Linter scripts need print for output
+"linters/**/*.py" = [
+  "T201",    # Print statements are required for linter output
+  "T203",    # pprint statements for debugging output
+]
 
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false

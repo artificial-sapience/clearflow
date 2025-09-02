@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 ClearFlow Contributors
 """Check test suite compliance for the ClearFlow project.
 
 This script enforces test-specific best practices to ensure proper test isolation
@@ -57,7 +58,7 @@ def check_asyncio_run(file_path: Path, content: str) -> tuple[Violation, ...]:
         List of violations for asyncio.run() usage.
 
     """
-    violations = []
+    violations: list[Violation] = []
 
     if not is_test_file(file_path):
         return tuple(violations)
@@ -67,27 +68,97 @@ def check_asyncio_run(file_path: Path, content: str) -> tuple[Violation, ...]:
     except SyntaxError:
         return tuple(violations)
 
-    for node in ast.walk(tree):
-        # Check for asyncio.run() calls
-        if isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Attribute):
-                if (
-                    isinstance(node.func.value, ast.Name)
-                    and node.func.value.id == "asyncio"
-                    and node.func.attr == "run"
-                ):
-                    violations.append(
-                        Violation(
-                            file=file_path,
-                            line=node.lineno,
-                            column=node.col_offset,
-                            code="TEST001",
-                            message="Using asyncio.run() in tests causes resource leaks",
-                            suggestion="Use @pytest.mark.asyncio and await instead",
-                        )
-                    )
+    violations.extend(
+        Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="TEST001",
+            message="Using asyncio.run() in tests causes resource leaks",
+            suggestion="Use @pytest.mark.asyncio and await instead",
+        )
+        for node in ast.walk(tree)
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "asyncio"
+            and node.func.attr == "run"
+        )
+    )
 
     return tuple(violations)
+
+
+def _check_new_event_loop(
+    node: ast.Call, tree: ast.Module, file_path: Path
+) -> Violation | None:
+    """Check for new_event_loop() calls without cleanup."""
+    if not (
+        isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "asyncio"
+        and node.func.attr == "new_event_loop"
+    ):
+        return None
+
+    # Check if there's proper cleanup (look for try/finally)
+    has_cleanup = _has_cleanup_in_try_finally(node, tree)
+
+    if not has_cleanup:
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="TEST002",
+            message="Creating event loop without proper cleanup",
+            suggestion="Use @pytest.mark.asyncio or ensure try/finally with loop.close()",
+        )
+    return None
+
+
+def _has_cleanup_in_try_finally(node: ast.Call, tree: ast.Module) -> bool:
+    """Check if node is in try block with close() in finally."""
+    for other_node in ast.walk(tree):
+        if isinstance(other_node, ast.Try):
+            # Check if the loop creation is in the try block
+            for stmt in ast.walk(other_node):
+                if stmt == node:
+                    # Check if finally block has close()
+                    return _has_close_in_finally(other_node.finalbody)
+    return False
+
+
+def _has_close_in_finally(finalbody: list[ast.stmt]) -> bool:
+    """Check if finally block contains a close() call."""
+    for final_stmt in finalbody:
+        if (
+            isinstance(final_stmt, ast.Expr)
+            and isinstance(final_stmt.value, ast.Call)
+            and isinstance(final_stmt.value.func, ast.Attribute)
+            and final_stmt.value.func.attr == "close"
+        ):
+            return True
+    return False
+
+
+def _check_get_event_loop(node: ast.Call, file_path: Path) -> Violation | None:
+    """Check for get_event_loop() calls."""
+    if (
+        isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "asyncio"
+        and node.func.attr == "get_event_loop"
+    ):
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="TEST003",
+            message="Using asyncio.get_event_loop() in tests",
+            suggestion="Let pytest-asyncio manage the event loop",
+        )
+    return None
 
 
 def check_event_loop_creation(file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -97,7 +168,7 @@ def check_event_loop_creation(file_path: Path, content: str) -> tuple[Violation,
         List of violations for event loop creation.
 
     """
-    violations = []
+    violations: list[Violation] = []
 
     if not is_test_file(file_path):
         return tuple(violations)
@@ -107,82 +178,53 @@ def check_event_loop_creation(file_path: Path, content: str) -> tuple[Violation,
     except SyntaxError:
         return tuple(violations)
 
-    # Track variables that are event loops
-    loop_vars = set()
-
     for node in ast.walk(tree):
-        # Check for new_event_loop() calls
         if isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Attribute):
-                if (
-                    isinstance(node.func.value, ast.Name)
-                    and node.func.value.id == "asyncio"
-                    and node.func.attr == "new_event_loop"
-                ):
-                    # Check if it's assigned to a variable
-                    parent = getattr(node, "_parent", None)
-                    if isinstance(parent, ast.Assign):
-                        for target in parent.targets:
-                            if isinstance(target, ast.Name):
-                                loop_vars.add(target.id)
+            # Check for new_event_loop() calls
+            violation = _check_new_event_loop(node, tree, file_path)
+            if violation:
+                violations.append(violation)
 
-                    # Check if there's proper cleanup (look for try/finally)
-                    # This is a simplified check - could be more sophisticated
-                    has_cleanup = False
-                    for other_node in ast.walk(tree):
-                        if isinstance(other_node, ast.Try):
-                            # Check if the loop creation is in the try block
-                            for stmt in ast.walk(other_node):
-                                if stmt == node:
-                                    # Check if finally block has close()
-                                    for final_stmt in other_node.finalbody:
-                                        if isinstance(final_stmt, ast.Expr):
-                                            if isinstance(final_stmt.value, ast.Call):
-                                                if isinstance(
-                                                    final_stmt.value.func, ast.Attribute
-                                                ):
-                                                    if (
-                                                        final_stmt.value.func.attr
-                                                        == "close"
-                                                    ):
-                                                        has_cleanup = True
-
-                    if not has_cleanup:
-                        violations.append(
-                            Violation(
-                                file=file_path,
-                                line=node.lineno,
-                                column=node.col_offset,
-                                code="TEST002",
-                                message="Creating event loop without proper cleanup",
-                                suggestion="Use @pytest.mark.asyncio or ensure try/finally with loop.close()",
-                            )
-                        )
-
-        # Check for get_event_loop() calls
-        if isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Attribute):
-                if (
-                    isinstance(node.func.value, ast.Name)
-                    and node.func.value.id == "asyncio"
-                    and node.func.attr == "get_event_loop"
-                ):
-                    violations.append(
-                        Violation(
-                            file=file_path,
-                            line=node.lineno,
-                            column=node.col_offset,
-                            code="TEST003",
-                            message="Using asyncio.get_event_loop() in tests",
-                            suggestion="Let pytest-asyncio manage the event loop",
-                        )
-                    )
+            # Check for get_event_loop() calls
+            violation = _check_get_event_loop(node, file_path)
+            if violation:
+                violations.append(violation)
 
     return tuple(violations)
 
 
 # TEST004 check removed - we use asyncio_mode="auto" in pyproject.toml
 # which automatically detects async tests without needing explicit decorators
+
+
+def _is_in_with_statement(node: ast.Call, tree: ast.Module) -> bool:
+    """Check if a call node is used within a with statement."""
+    for other_node in ast.walk(tree):
+        if isinstance(other_node, ast.With):
+            for item in other_node.items:
+                if item.context_expr == node:
+                    return True
+    return False
+
+
+def _check_open_without_context(
+    node: ast.Call, tree: ast.Module, file_path: Path
+) -> Violation | None:
+    """Check for open() calls without context managers."""
+    if (
+        isinstance(node.func, ast.Name)
+        and node.func.id == "open"
+        and not _is_in_with_statement(node, tree)
+    ):
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="TEST005",
+            message="File opened without context manager may leak resources",
+            suggestion="Use 'with open(...) as f:' pattern",
+        )
+    return None
 
 
 def check_resource_management(file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -192,7 +234,7 @@ def check_resource_management(file_path: Path, content: str) -> tuple[Violation,
         List of violations for resource management issues.
 
     """
-    violations = []
+    violations: list[Violation] = []
 
     if not is_test_file(file_path):
         return tuple(violations)
@@ -205,28 +247,9 @@ def check_resource_management(file_path: Path, content: str) -> tuple[Violation,
     # Track open() calls without context managers
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
-            # Check for open() calls
-            if isinstance(node.func, ast.Name) and node.func.id == "open":
-                # Check if it's in a with statement
-                in_with = False
-                for other_node in ast.walk(tree):
-                    if isinstance(other_node, ast.With):
-                        for item in other_node.items:
-                            if item.context_expr == node:
-                                in_with = True
-                                break
-
-                if not in_with:
-                    violations.append(
-                        Violation(
-                            file=file_path,
-                            line=node.lineno,
-                            column=node.col_offset,
-                            code="TEST005",
-                            message="File opened without context manager may leak resources",
-                            suggestion="Use 'with open(...) as f:' pattern",
-                        )
-                    )
+            violation = _check_open_without_context(node, tree, file_path)
+            if violation:
+                violations.append(violation)
 
     return tuple(violations)
 
@@ -238,7 +261,7 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         List of all violations found in the file.
 
     """
-    violations = []
+    violations: list[Violation] = []
 
     # Only check Python test files
     if file_path.suffix != ".py":
@@ -249,7 +272,7 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
 
     try:
         content = file_path.read_text(encoding="utf-8")
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         print(f"Warning: Could not read {file_path}: {e}", file=sys.stderr)
         return tuple(violations)
 
@@ -273,7 +296,7 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
         List of all violations found in test files within the directory.
 
     """
-    violations = []
+    violations: list[Violation] = []
 
     if not directory.exists():
         return tuple(violations)
@@ -295,7 +318,7 @@ def print_report(violations: tuple[Violation, ...]) -> None:
     print("=" * 70)
 
     # Group by code
-    by_code = {}
+    by_code: dict[str, list[Violation]] = {}
     for v in violations:
         if v.code not in by_code:
             by_code[v.code] = []
@@ -347,7 +370,7 @@ def main() -> None:
     # Get items from command line arguments, or use default
     items = sys.argv[1:] if len(sys.argv) > 1 else ["tests"]
 
-    all_violations = []
+    all_violations: list[Violation] = []
     for item in items:
         path = Path(item)
         if path.is_file() and path.suffix == ".py":
@@ -363,7 +386,7 @@ def main() -> None:
             continue
 
     # Print report
-    print_report(all_violations)
+    print_report(tuple(all_violations))
 
     # Exit with appropriate code
     if all_violations:

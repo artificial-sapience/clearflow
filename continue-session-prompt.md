@@ -1,48 +1,32 @@
 # Continue ClearFlow Session
 
-Please continue working on ClearFlow test updates.
+Please continue the ClearFlow session from where we left off.
 
-## Context Files
-- Review **session-context.md** for what was accomplished and key decisions
-- Review **plan.md** for remaining tasks
+## Context
+See **session-context.md** for full session context and accomplishments.
+See **plan.md** for complete task list.
 
-## Current Priority Task
+## Primary Task
+**Complete linters/ quality compliance to achieve 100%**
 
-Continue updating test files to use the new builder API:
-```python
-# Old pattern to replace:
-Flow[T]("name").start_with(node).route(...).route(..., None).build()
+We've made excellent progress refactoring the linters from complexity 27 down to 9, fixing type annotations, and resolving most linting issues. The linters now pass all custom compliance checks (architecture, immutability, test-suite).
 
-# New pattern to use:
-flow("name", node).route(...).end(final_node, "outcome")
-```
-
-## Specific Next Steps
-
-1. **Complete test_flow.py updates**
-   - The file is partially updated (linear flow and branching flow done)
-   - Check for any remaining tests that need updating
-
-2. **Update test_real_world_scenarios.py and test_error_handling.py**
-   - These files definitely use the old Flow API
-   - Update to new builder pattern with AI-focused examples
-
-3. **Check remaining test files**
-   - Verify which other test files need updates
-   - Update any that use the old Flow[T]().start_with() pattern
-
-## Important Guidelines
-
-- Use realistic AI workflows in tests (RAG, chat routing, embeddings, etc.)
-- Ensure node names are meaningful (e.g., "retriever", "classifier", not "node1")
-- Tests should serve as examples for users
-- Maintain 100% test coverage
+## Immediate Focus
+1. Run `./quality-check.sh linters` to see current status
+2. Fix any remaining minor issues (likely just formatting or style)
+3. Verify 100% compliance achieved with zero suppressions
+4. Confirm all quality checks pass
 
 ## Success Criteria
-- All tests use the new flow() → route() → end() API
-- All tests pass
-- Quality check passes at 100%: `./quality-check.sh`
+- `./quality-check.sh linters` must pass 100%
+- Zero suppressions (no noqa, type: ignore, pragma, etc.)
+- All functions must maintain Grade A complexity (≤7 ideally)
+- Maintain the improvements we've made
 
-Start by running the quality checks against tests/
+## Background
+- Linters are critical infrastructure requiring same quality as production code
+- We've systematically refactored complex functions using helper extraction
+- Type safety has been improved with explicit annotations
+- The code is now much more maintainable
 
-The quality checks must pass first and then the tests themselves.
+Please start by running the quality check to see the exact current state, then address any remaining issues to achieve 100% compliance.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 ClearFlow Contributors
 """Check architecture compliance for the ClearFlow project.
 
 This script enforces architectural requirements for ClearFlow.
@@ -68,6 +69,251 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
     return False
 
 
+def _check_private_imports(
+    node: ast.ImportFrom, file_path: Path, *, is_internal: bool
+) -> Violation | None:
+    """Check for imports from private implementation modules."""
+    if not node.module:
+        return None
+    private_module = "clearflow." + "_internal"
+    if private_module in node.module and not is_internal:
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="ARCH003",
+            message=f"Importing from private module '{node.module}'",
+            requirement="REQ-ARCH-003",
+        )
+    return None
+
+
+def _check_mock_imports(node: ast.ImportFrom, file_path: Path) -> tuple[Violation, ...]:
+    """Check for unittest.mock imports that violate architecture."""
+    violations: list[Violation] = []
+    if node.module == "unittest.mock":
+        for alias in node.names:
+            name = alias.name
+            if name in {"patch", "Mock", "MagicMock"}:
+                violations.append(
+                    Violation(
+                        file=file_path,
+                        line=node.lineno,
+                        column=node.col_offset,
+                        code="ARCH002",
+                        message=f"Using '{name}' violates architecture - mock at boundaries only",
+                        requirement="REQ-ARCH-002",
+                    ),
+                )
+    return tuple(violations)
+
+
+def _check_typing_imports(
+    node: ast.ImportFrom, file_path: Path, content: str
+) -> tuple[Violation, ...]:
+    """Check for TYPE_CHECKING and Any imports from typing module."""
+    violations: list[Violation] = []
+    if not node.module:
+        return tuple(violations)
+
+    if node.module == "typing" or node.module.startswith("typing"):
+        for alias in node.names:
+            if alias.name == "TYPE_CHECKING" and not has_suppression(
+                content, node.lineno, "ARCH008"
+            ):
+                violations.append(
+                    Violation(
+                        file=file_path,
+                        line=node.lineno,
+                        column=node.col_offset,
+                        code="ARCH008",
+                        message="Using TYPE_CHECKING indicates circular dependencies - refactor to use protocols",
+                        requirement="REQ-ARCH-008",
+                    ),
+                )
+            elif alias.name == "Any":
+                violations.append(
+                    Violation(
+                        file=file_path,
+                        line=node.lineno,
+                        column=node.col_offset,
+                        code="ARCH010",
+                        message="Importing 'Any' type defeats type safety - use specific types or protocols",
+                        requirement="REQ-ARCH-010",
+                    ),
+                )
+    return tuple(violations)
+
+
+def _check_type_checking_block(
+    node: ast.If, file_path: Path, content: str
+) -> Violation | None:
+    """Check for if TYPE_CHECKING blocks."""
+    if (
+        isinstance(node.test, ast.Name)
+        and node.test.id == "TYPE_CHECKING"
+        and not has_suppression(content, node.lineno, "ARCH008")
+    ):
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="ARCH008",
+            message="if TYPE_CHECKING block indicates circular dependencies - refactor to use protocols",
+            requirement="REQ-ARCH-008",
+        )
+    return None
+
+
+def _check_object_in_params(
+    node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path, content: str
+) -> tuple[Violation, ...]:
+    """Check for 'object' type annotations in function parameters."""
+    violations = [
+        Violation(
+            file=file_path,
+            line=arg.annotation.lineno,
+            column=arg.annotation.col_offset,
+            code="ARCH009",
+            message=f"Parameter '{arg.arg}' uses 'object' type - use proper types or protocols",
+            requirement="REQ-ARCH-009",
+        )
+        for arg in node.args.args + node.args.posonlyargs + node.args.kwonlyargs
+        if (
+            arg.annotation
+            and isinstance(arg.annotation, ast.Name)
+            and arg.annotation.id == "object"
+            and not has_suppression(content, arg.annotation.lineno, "ARCH009")
+        )
+    ]
+    return tuple(violations)
+
+
+def _check_object_type_usage(
+    node: ast.Name, file_path: Path, content: str
+) -> Violation | None:
+    """Check for 'object' type usage in type annotations."""
+    if node.id != "object":
+        return None
+
+    # Skip object.__setattr__ which is needed for frozen dataclasses
+    lines = content.splitlines()
+    if node.lineno > 0 and node.lineno <= len(lines):
+        line = lines[node.lineno - 1]
+        if "object.__setattr__" in line:
+            return None
+
+    if not has_suppression(content, node.lineno, "ARCH009"):
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="ARCH009",
+            message="Using 'object' type defeats type safety - use proper types or protocols",
+            requirement="REQ-ARCH-009",
+        )
+    return None
+
+
+def _check_any_type_usage(node: ast.Name, file_path: Path) -> Violation | None:
+    """Check for 'Any' type usage anywhere."""
+    if node.id == "Any":
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="ARCH010",
+            message="Using 'Any' type defeats type safety - use specific types or protocols",
+            requirement="REQ-ARCH-010",
+        )
+    return None
+
+
+def _check_typing_any_attribute(
+    node: ast.Attribute, file_path: Path
+) -> Violation | None:
+    """Check for typing.Any in subscripts."""
+    if (
+        isinstance(node.value, ast.Name)
+        and node.value.id == "typing"
+        and node.attr == "Any"
+    ):
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="ARCH010",
+            message="Using 'typing.Any' defeats type safety - use specific types or protocols",
+            requirement="REQ-ARCH-010",
+        )
+    return None
+
+
+def _check_import_from_node(
+    node: ast.ImportFrom, file_path: Path, content: str, *, is_internal: bool
+) -> tuple[Violation, ...]:
+    """Check all violations for ImportFrom nodes."""
+    violations: list[Violation] = []
+
+    # Check private imports
+    violation = _check_private_imports(node, file_path, is_internal=is_internal)
+    if violation:
+        violations.append(violation)
+
+    # Check mock imports
+    violations.extend(_check_mock_imports(node, file_path))
+
+    # Check typing imports
+    violations.extend(_check_typing_imports(node, file_path, content))
+
+    return tuple(violations)
+
+
+def _check_name_node(
+    node: ast.Name, file_path: Path, content: str
+) -> tuple[Violation, ...]:
+    """Check all violations for Name nodes."""
+    violations: list[Violation] = []
+
+    # Check object type usage
+    violation = _check_object_type_usage(node, file_path, content)
+    if violation:
+        violations.append(violation)
+
+    # Check Any type usage
+    violation = _check_any_type_usage(node, file_path)
+    if violation:
+        violations.append(violation)
+
+    return tuple(violations)
+
+
+def _process_node(
+    node: ast.AST, file_path: Path, content: str, *, is_internal: bool
+) -> tuple[Violation, ...]:
+    """Process a single AST node for violations."""
+    if isinstance(node, ast.ImportFrom):
+        return _check_import_from_node(
+            node, file_path, content, is_internal=is_internal
+        )
+
+    if isinstance(node, ast.If):
+        violation = _check_type_checking_block(node, file_path, content)
+        return (violation,) if violation else ()
+
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return _check_object_in_params(node, file_path, content)
+
+    if isinstance(node, ast.Name):
+        return _check_name_node(node, file_path, content)
+
+    if isinstance(node, ast.Attribute):
+        violation = _check_typing_any_attribute(node, file_path)
+        return (violation,) if violation else ()
+
+    return ()
+
+
 def check_file_imports(file_path: Path, content: str) -> tuple[Violation, ...]:
     """Check for private API imports and banned mock usage.
 
@@ -75,173 +321,19 @@ def check_file_imports(file_path: Path, content: str) -> tuple[Violation, ...]:
         List of architecture violations found in imports.
 
     """
-    violations = []
-
     try:
         tree = ast.parse(content, filename=str(file_path))
     except SyntaxError:
-        return tuple(violations)
+        return ()
 
     # Check if this file is inside _internal (internal modules can import from each other)
     is_internal = "_internal" in str(file_path)
 
+    violations: list[Violation] = []
     for node in ast.walk(tree):
-        # Check for imports from private implementation
-        if isinstance(node, ast.ImportFrom):
-            # Only flag imports from _internal if the importing file is NOT itself in _internal
-            # Use join to avoid triggering ARCH-006 when checking for private module
-            private_module = "clearflow." + "_internal"
-            if node.module and private_module in node.module and not is_internal:
-                violations.append(
-                    Violation(
-                        file=file_path,
-                        line=node.lineno,
-                        column=node.col_offset,
-                        code="ARCH003",
-                        message=f"Importing from private module '{node.module}'",
-                        requirement="REQ-ARCH-003",
-                    )
-                )
-
-            # Check for unittest.mock imports
-            if node.module == "unittest.mock":
-                for alias in node.names:
-                    name = alias.name
-                    if name in {"patch", "Mock", "MagicMock"}:
-                        violations.append(
-                            Violation(
-                                file=file_path,
-                                line=node.lineno,
-                                column=node.col_offset,
-                                code="ARCH002",
-                                message=f"Using '{name}' violates architecture - mock at boundaries only",
-                                requirement="REQ-ARCH-002",
-                            )
-                        )
-
-            # Check for TYPE_CHECKING imports (indicates circular dependencies)
-            if node.module == "typing" or (
-                node.module and node.module.startswith("typing")
-            ):
-                for alias in node.names:
-                    if alias.name == "TYPE_CHECKING":
-                        if not has_suppression(content, node.lineno, "ARCH008"):
-                            violations.append(
-                                Violation(
-                                    file=file_path,
-                                    line=node.lineno,
-                                    column=node.col_offset,
-                                    code="ARCH008",
-                                    message="Using TYPE_CHECKING indicates circular dependencies - refactor to use protocols",
-                                    requirement="REQ-ARCH-008",
-                                )
-                            )
-                    # Check for Any imports
-                    if alias.name == "Any":
-                        violations.append(
-                            Violation(
-                                file=file_path,
-                                line=node.lineno,
-                                column=node.col_offset,
-                                code="ARCH010",
-                                message="Importing 'Any' type defeats type safety - use specific types or protocols",
-                                requirement="REQ-ARCH-010",
-                            )
-                        )
-
-        # Check for if TYPE_CHECKING blocks
-        if (
-            isinstance(node, ast.If)
-            and isinstance(node.test, ast.Name)
-            and node.test.id == "TYPE_CHECKING"
-        ):
-            if not has_suppression(content, node.lineno, "ARCH008"):
-                violations.append(
-                    Violation(
-                        file=file_path,
-                        line=node.lineno,
-                        column=node.col_offset,
-                        code="ARCH008",
-                        message="if TYPE_CHECKING block indicates circular dependencies - refactor to use protocols",
-                        requirement="REQ-ARCH-008",
-                    )
-                )
-
-        # Check for 'object' type annotations in function parameters
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            for arg in node.args.args + node.args.posonlyargs + node.args.kwonlyargs:
-                if arg.annotation:
-                    if (
-                        isinstance(arg.annotation, ast.Name)
-                        and arg.annotation.id == "object"
-                    ):
-                        # Check if this line has a suppression for ARCH009
-                        if not has_suppression(content, arg.annotation.lineno, "ARCH009"):
-                            violations.append(
-                                Violation(
-                                    file=file_path,
-                                    line=arg.annotation.lineno,
-                                    column=arg.annotation.col_offset,
-                                    code="ARCH009",
-                                    message=f"Parameter '{arg.arg}' uses 'object' type - use proper types or protocols",
-                                    requirement="REQ-ARCH-009",
-                                )
-                            )
-
-        # Check for 'object' type usage in type annotations only
-        # Skip object.__setattr__ which is needed for frozen dataclasses
-        if isinstance(node, ast.Name) and node.id == "object":
-            # Check if this is object.__setattr__ by looking at the line
-            lines = content.splitlines()
-            if node.lineno > 0 and node.lineno <= len(lines):
-                line = lines[node.lineno - 1]
-                if "object.__setattr__" in line:
-                    continue  # This is the frozen dataclass pattern, skip it
-
-            # Check if this line has a suppression for ARCH009
-            if not has_suppression(content, node.lineno, "ARCH009"):
-                # Otherwise it's a type usage that should be reported
-                violations.append(
-                    Violation(
-                        file=file_path,
-                        line=node.lineno,
-                        column=node.col_offset,
-                        code="ARCH009",
-                        message="Using 'object' type defeats type safety - use proper types or protocols",
-                        requirement="REQ-ARCH-009",
-                    )
-                )
-
-        # Check for 'Any' type usage anywhere (parameters, return types, annotations)
-        if isinstance(node, ast.Name) and node.id == "Any":
-            violations.append(
-                Violation(
-                    file=file_path,
-                    line=node.lineno,
-                    column=node.col_offset,
-                    code="ARCH010",
-                    message="Using 'Any' type defeats type safety - use specific types or protocols",
-                    requirement="REQ-ARCH-010",
-                )
-            )
-
-        # Also check for typing.Any in subscripts (e.g., list[Any], dict[str, Any])
-        if isinstance(node, ast.Attribute):
-            if (
-                isinstance(node.value, ast.Name)
-                and node.value.id == "typing"
-                and node.attr == "Any"
-            ):
-                violations.append(
-                    Violation(
-                        file=file_path,
-                        line=node.lineno,
-                        column=node.col_offset,
-                        code="ARCH010",
-                        message="Using 'typing.Any' defeats type safety - use specific types or protocols",
-                        requirement="REQ-ARCH-010",
-                    )
-                )
+        violations.extend(
+            _process_node(node, file_path, content, is_internal=is_internal)
+        )
 
     return tuple(violations)
 
@@ -253,7 +345,7 @@ def check_patch_decorators(file_path: Path, content: str) -> tuple[Violation, ..
         List of violations for improper @patch usage.
 
     """
-    violations = []
+    violations: list[Violation] = []
     lines = content.splitlines()
 
     # Regex for @patch decorators
@@ -272,7 +364,7 @@ def check_patch_decorators(file_path: Path, content: str) -> tuple[Violation, ..
                         code="ARCH002",
                         message=f"Patching '{target}' violates architecture",
                         requirement="REQ-ARCH-002",
-                    )
+                    ),
                 )
 
     return tuple(violations)
@@ -285,7 +377,7 @@ def check_private_access(file_path: Path, content: str) -> tuple[Violation, ...]
         List of violations for accessing private attributes.
 
     """
-    violations = []
+    violations: list[Violation] = []
     lines = content.splitlines()
 
     # Check if this file is inside _internal (internal modules can access each other)
@@ -309,20 +401,20 @@ def check_private_access(file_path: Path, content: str) -> tuple[Violation, ...]
         matches = private_pattern.finditer(line)
         for match in matches:
             attr_name = match.group(1)
-            # Skip dunder methods
-            if not attr_name.startswith("_"):
-                # Only flag if this is NOT an internal file accessing _internal modules
-                if not (is_internal and attr_name == "internal"):
-                    violations.append(
-                        Violation(
-                            file=file_path,
-                            line=line_num,
-                            column=match.start(),
-                            code="ARCH006",
-                            message=f"Accessing private attribute '._{attr_name}'",
-                            requirement="REQ-ARCH-006",
-                        )
-                    )
+            # Skip dunder methods and internal module access
+            if not attr_name.startswith("_") and not (
+                is_internal and attr_name == "internal"
+            ):
+                violations.append(
+                    Violation(
+                        file=file_path,
+                        line=line_num,
+                        column=match.start(),
+                        code="ARCH006",
+                        message=f"Accessing private attribute '._{attr_name}'",
+                        requirement="REQ-ARCH-006",
+                    ),
+                )
 
     return tuple(violations)
 
@@ -334,11 +426,11 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         List of all architecture violations found in the file.
 
     """
-    violations = []
+    violations: list[Violation] = []
 
     try:
         content = file_path.read_text(encoding="utf-8")
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         print(f"Warning: Could not read {file_path}: {e}", file=sys.stderr)
         return tuple(violations)
 
@@ -361,7 +453,7 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
         List of all violations found in Python files within the directory.
 
     """
-    violations = []
+    violations: list[Violation] = []
 
     if not directory.exists():
         return tuple(violations)
@@ -382,7 +474,7 @@ def print_report(violations: tuple[Violation, ...]) -> None:
     print("=" * 70)
 
     # Group by requirement
-    by_requirement = {}
+    by_requirement: dict[str, list[Violation]] = {}
     for v in violations:
         if v.requirement not in by_requirement:
             by_requirement[v.requirement] = []
@@ -409,7 +501,7 @@ def print_report(violations: tuple[Violation, ...]) -> None:
     print("⚠️  DO NOT disable linting rules")
     print("✅ FIX THE ROOT CAUSE: Refactor code to comply with architecture")
     print(
-        "📝 NOTE TO AI ASSISTANTS: Never suppress lints without explicit user approval"
+        "📝 NOTE TO AI ASSISTANTS: Never suppress lints without explicit user approval",
     )
     print("🚨" * 35)
 
@@ -419,7 +511,7 @@ def main() -> None:
     # Get items from command line arguments, or use defaults
     items = sys.argv[1:] if len(sys.argv) > 1 else ["clearflow", "tests", "examples"]
 
-    all_violations = []
+    all_violations: list[Violation] = []
     for item in items:
         path = Path(item)
         if path.is_file() and path.suffix == ".py":
@@ -435,7 +527,7 @@ def main() -> None:
             continue
 
     # Print report
-    print_report(all_violations)
+    print_report(tuple(all_violations))
 
     # Exit with appropriate code
     if all_violations:
