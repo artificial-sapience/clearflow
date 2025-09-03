@@ -264,7 +264,9 @@ check-typed-exception = true
 [tool.mypy]
 python_version = "3.13"
 strict = true
+mypy_path = "typings"  # Use our DSPy type stubs
 show_error_codes = true
+explicit_package_bases = true
 warn_unreachable = true
 warn_unused_ignores = true
 warn_return_any = true
@@ -312,6 +314,7 @@ typeCheckingMode = "strict"
 pythonVersion = "3.13"
 include = ["clearflow", "tests", "examples"]
 exclude = ["**/__pycache__", ".venv"]
+stubPath = "typings"  # Use our DSPy type stubs
 strictListInference = true        # list[...] inferred as precise union instead of Any
 strictDictionaryInference = true  # dict[...] inferred as precise union
 strictSetInference = true         # set[...] inferred as precise union

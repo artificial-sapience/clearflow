@@ -1,0 +1,6 @@
+from dspy.evaluate import normalize_text as normalize_text
+from dspy.primitives.prediction import Completions as Completions
+from dspy.primitives.prediction import Prediction as Prediction
+
+def default_normalize(s): ...
+def majority(prediction_or_completions, normalize=..., field=None): ...

@@ -6,32 +6,35 @@ branching, single termination enforcement, and flow composition.
 Copyright (c) 2025 ClearFlow Contributors
 """
 
+from dataclasses import dataclass, replace
 from dataclasses import dataclass as dc
-from typing import TypedDict, override
+from typing import override
 
 from clearflow import Node, NodeResult, flow
 from tests.conftest import ValidationState
 
 
-class ChatState(TypedDict, total=False):
+@dataclass(frozen=True)
+class ChatState:
     """State for chat routing tests."""
 
-    query: str
-    intent: str
-    agent: str
-    response_type: str
-    formatted: bool
+    query: str = ""
+    intent: str = ""
+    agent: str = ""
+    response_type: str = ""
+    formatted: bool = False
 
 
-class DocState(TypedDict):
+@dataclass(frozen=True)
+class DocState:
     """State for document processing tests."""
 
     source: str
-    loaded: str
-    doc_count: str
-    embedded: str
-    embedding_dim: str
-    stored: str
+    loaded: str = ""
+    doc_count: str = ""
+    embedded: str = ""
+    embedding_dim: str = ""
+    stored: str = ""
 
 
 # Test nodes for chat routing - defined outside test to reduce complexity
@@ -43,18 +46,19 @@ class IntentClassifier(Node[ChatState]):
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        query = state.get("query", "")
-
-        # Classify intent (simulating LLM classification)
-        if "code" in str(query).lower() or "bug" in str(query).lower():
-            intent = "technical"
-        elif "?" in str(query):
-            intent = "question"
-        else:
-            intent = "general"
-
-        new_state: ChatState = {**state, "intent": intent}
+        query = state.query or ""
+        intent = self._classify_intent(query)
+        new_state = replace(state, intent=intent)
         return NodeResult(new_state, outcome=intent)
+
+    def _classify_intent(self, query: str) -> str:
+        """Classify query intent."""
+        query_lower = str(query).lower()
+        if "code" in query_lower or "bug" in query_lower:
+            return "technical"
+        if "?" in str(query):
+            return "question"
+        return "general"
 
 
 @dc(frozen=True)
@@ -65,11 +69,11 @@ class TechnicalAgent(Node[ChatState]):
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        new_state: ChatState = {
-            **state,
-            "agent": "technical",
-            "response_type": "code_example",
-        }
+        new_state = replace(
+            state,
+            agent="technical",
+            response_type="code_example",
+        )
         return NodeResult(new_state, outcome="responded")
 
 
@@ -81,11 +85,11 @@ class QAAgent(Node[ChatState]):
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        new_state: ChatState = {
-            **state,
-            "agent": "qa",
-            "response_type": "retrieved_answer",
-        }
+        new_state = replace(
+            state,
+            agent="qa",
+            response_type="retrieved_answer",
+        )
         return NodeResult(new_state, outcome="responded")
 
 
@@ -97,11 +101,11 @@ class GeneralAgent(Node[ChatState]):
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        new_state: ChatState = {
-            **state,
-            "agent": "general",
-            "response_type": "chat",
-        }
+        new_state = replace(
+            state,
+            agent="general",
+            response_type="chat",
+        )
         return NodeResult(new_state, outcome="responded")
 
 
@@ -113,7 +117,7 @@ class ResponseFormatter(Node[ChatState]):
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        new_state: ChatState = {**state, "formatted": True}
+        new_state = replace(state, formatted=True)
         return NodeResult(new_state, outcome="complete")
 
 
@@ -177,7 +181,7 @@ class DocumentLoader(Node[DocState]):
 
     @override
     async def exec(self, state: DocState) -> NodeResult[DocState]:
-        new_state: DocState = {**state, "loaded": "true", "doc_count": "5"}
+        new_state = replace(state, loaded="true", doc_count="5")
         return NodeResult(new_state, outcome="loaded")
 
 
@@ -189,11 +193,11 @@ class Embedder(Node[DocState]):
 
     @override
     async def exec(self, state: DocState) -> NodeResult[DocState]:
-        new_state: DocState = {
-            **state,
-            "embedded": "true",
-            "embedding_dim": "768",
-        }
+        new_state = replace(
+            state,
+            embedded="true",
+            embedding_dim="768",
+        )
         return NodeResult(new_state, outcome="embedded")
 
 
@@ -205,7 +209,7 @@ class VectorStore(Node[DocState]):
 
     @override
     async def exec(self, state: DocState) -> NodeResult[DocState]:
-        new_state: DocState = {**state, "stored": "true"}
+        new_state = replace(state, stored="true")
         return NodeResult(new_state, outcome="indexed")
 
 
@@ -283,10 +287,10 @@ class TestFlow:
             .end(formatter, "complete")
         )
 
-        tech_input: ChatState = {"query": "How do I fix this bug in my code?"}
+        tech_input = ChatState(query="How do I fix this bug in my code?")
         result = await chat_flow(tech_input)
-        assert result.state.get("intent") == "technical"
-        assert result.state.get("agent") == "technical"
+        assert result.state.intent == "technical"
+        assert result.state.agent == "technical"
         assert result.outcome == "complete"
 
     @staticmethod
@@ -303,10 +307,10 @@ class TestFlow:
             .end(formatter, "complete")
         )
 
-        question_input: ChatState = {"query": "What is RAG?"}
+        question_input = ChatState(query="What is RAG?")
         result = await chat_flow(question_input)
-        assert result.state.get("intent") == "question"
-        assert result.state.get("agent") == "qa"
+        assert result.state.intent == "question"
+        assert result.state.agent == "qa"
         assert result.outcome == "complete"
 
     @staticmethod
@@ -323,10 +327,10 @@ class TestFlow:
             .end(formatter, "complete")
         )
 
-        input_state: ChatState = {"query": "Hello there"}
+        input_state = ChatState(query="Hello there")
         result = await chat_flow(input_state)
-        assert result.state.get("intent") == "general"
-        assert result.state.get("agent") == "general"
+        assert result.state.intent == "general"
+        assert result.state.agent == "general"
         assert result.outcome == "complete"
 
     @staticmethod
@@ -409,14 +413,14 @@ class TestFlow:
             .end(vector_store, "indexed")
         )
 
-        doc_input: DocState = {
-            "source": "kb",
-            "loaded": "",
-            "doc_count": "",
-            "embedded": "",
-            "embedding_dim": "",
-            "stored": "",
-        }
+        doc_input = DocState(
+            source="kb",
+            loaded="",
+            doc_count="",
+            embedded="",
+            embedding_dim="",
+            stored="",
+        )
         result = await pipeline(doc_input)
         assert result.outcome == "indexed"
-        assert result.state["stored"] == "true"
+        assert result.state.stored == "true"

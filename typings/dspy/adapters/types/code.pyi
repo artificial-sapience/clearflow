@@ -1,0 +1,13 @@
+from typing import Any, ClassVar
+
+from dspy.adapters.types.base_type import Type as Type
+
+class Code(Type):
+    code: str
+    language: ClassVar[str]
+    def format(self): ...
+    def serialize_model(self): ...
+    @classmethod
+    def description(cls) -> str: ...
+    @classmethod
+    def validate_input(cls, data: Any): ...

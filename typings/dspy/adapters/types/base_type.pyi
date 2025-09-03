@@ -1,0 +1,16 @@
+from typing import Any
+
+import pydantic
+
+CUSTOM_TYPE_START_IDENTIFIER: str
+CUSTOM_TYPE_END_IDENTIFIER: str
+
+class Type(pydantic.BaseModel):
+    def format(self) -> list[dict[str, Any]] | str: ...
+    @classmethod
+    def description(cls) -> str: ...
+    @classmethod
+    def extract_custom_type_from_annotation(cls, annotation): ...
+    def serialize_model(self): ...
+
+def split_message_content_for_custom_types(messages: list[dict[str, Any]]) -> list[dict[str, Any]]: ...

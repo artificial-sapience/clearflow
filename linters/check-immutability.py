@@ -387,7 +387,7 @@ def _should_skip_file(file_path: Path) -> bool:
 
 
 def _collect_list_violations(
-    tree: ast.Module, lines: tuple[str, ...], file_path: Path
+    tree: ast.Module, lines: tuple[str, ...], file_path: Path, content: str
 ) -> tuple[Violation, ...]:
     """Collect all list building violations from AST."""
     violations: list[Violation] = []
@@ -395,19 +395,21 @@ def _collect_list_violations(
     for node in ast.walk(tree):
         if isinstance(node, ast.Attribute):
             violation = _check_append_usage(node, lines, file_path)
-            if violation:
+            if violation and not has_suppression(content, violation.line, "IMM005"):
                 violations.append(violation)
         elif isinstance(node, ast.ListComp) and not _should_skip_listcomp(node, lines):
-            violations.append(
-                Violation(
-                    file=file_path,
-                    line=node.lineno,
-                    column=node.col_offset,
-                    code="IMM006",
-                    message="Using list comprehension - wrap in tuple() for immutability",
-                    requirement="REQ-ARCH-004",
-                ),
-            )
+            # Check for suppression comment
+            if not has_suppression(content, node.lineno, "IMM006"):
+                violations.append(
+                    Violation(
+                        file=file_path,
+                        line=node.lineno,
+                        column=node.col_offset,
+                        code="IMM006",
+                        message="Using list comprehension - wrap in tuple() for immutability",
+                        requirement="REQ-ARCH-004",
+                    ),
+                )
 
     return tuple(violations)
 
@@ -434,7 +436,82 @@ def check_list_building(file_path: Path, content: str) -> tuple[Violation, ...]:
     if _has_temporary_markers(lines):
         return ()
 
-    return _collect_list_violations(tree, lines, file_path)
+    return _collect_list_violations(tree, lines, file_path, content)
+
+
+def _check_typeddict_import(
+    node: ast.ImportFrom, file_path: Path
+) -> tuple[Violation, ...]:
+    """Check if node imports TypedDict."""
+    if node.module != "typing":
+        return ()
+
+    violations = [
+        Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="IMM007",
+            message="TypedDict imported - use frozen dataclasses for immutable state",
+            requirement="REQ-ARCH-004",
+        )
+        for alias in node.names
+        if alias.name == "TypedDict"
+    ]
+    return tuple(violations)
+
+
+def _is_typeddict_base(base: ast.expr) -> bool:
+    """Check if a base class is TypedDict."""
+    if isinstance(base, ast.Name) and base.id == "TypedDict":
+        return True
+    return (
+        isinstance(base, ast.Subscript)
+        and isinstance(base.value, ast.Name)
+        and base.value.id == "TypedDict"
+    )
+
+
+def _check_typeddict_inheritance(
+    node: ast.ClassDef, file_path: Path
+) -> tuple[Violation, ...]:
+    """Check if class inherits from TypedDict."""
+    violations = [
+        Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="IMM007",
+            message=f"Class '{node.name}' inherits from TypedDict - use @dataclass(frozen=True) instead",
+            requirement="REQ-ARCH-004",
+        )
+        for base in node.bases
+        if _is_typeddict_base(base)
+    ]
+    return tuple(violations)
+
+
+def check_typeddict_usage(file_path: Path, content: str) -> tuple[Violation, ...]:
+    """Check for TypedDict usage that should be frozen dataclasses.
+
+    Returns:
+        List of violations for TypedDict usage.
+
+    """
+    try:
+        tree = ast.parse(content, filename=str(file_path))
+    except SyntaxError:
+        return ()
+
+    violations: list[Violation] = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            violations.extend(_check_typeddict_import(node, file_path))
+        elif isinstance(node, ast.ClassDef):
+            violations.extend(_check_typeddict_inheritance(node, file_path))
+
+    return tuple(violations)
 
 
 def check_file(file_path: Path) -> tuple[Violation, ...]:
@@ -462,6 +539,7 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
     violations.extend(check_pydantic_frozen(file_path, content))
     violations.extend(check_mutable_defaults(file_path, content))
     violations.extend(check_list_building(file_path, content))
+    violations.extend(check_typeddict_usage(file_path, content))
 
     return tuple(violations)
 
@@ -507,6 +585,7 @@ def print_report(violations: tuple[Violation, ...]) -> None:
         "IMM004": "Mutable default arguments",
         "IMM005": "Mutable list building with append",
         "IMM006": "List comprehensions instead of tuples",
+        "IMM007": "TypedDict usage instead of frozen dataclasses",
     }
 
     for code, code_violations in sorted(by_code.items()):

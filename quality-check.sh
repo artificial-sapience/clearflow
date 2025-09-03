@@ -88,12 +88,32 @@ print_header "Syncing dependencies"
 uv sync --group dev
 check_step "Dependencies synchronization"
 
+# If checking examples, ensure their dependencies are available
+if [[ "$QUALITY_TARGETS" == *"examples"* ]]; then
+    print_header "Installing example dependencies"
+    # Collect all unique dependencies from example requirements
+    if ls examples/*/requirements.txt >/dev/null 2>&1; then
+        echo "Found example requirements files, installing dependencies..."
+        # Install each example's requirements (excluding clearflow itself)
+        for req in examples/*/requirements.txt; do
+            if [ -f "$req" ]; then
+                echo "Installing from $req..."
+                grep -v "^clearflow" "$req" | grep -v "^#" | grep -v "^$" | \
+                    xargs -r uv pip install --quiet
+            fi
+        done
+        check_step "Example dependencies installation"
+    else
+        echo "No example requirements files found"
+    fi
+fi
+
 # ============================================================
 # CRITICAL: Architecture compliance MUST come FIRST
 # This prevents any violations from being introduced
 # ============================================================
 
-print_header "🚨 ARCHITECTURE COMPLIANCE CHECK (ZERO TOLERANCE)"
+print_header "🚨 ARCHITECTURE COMPLIANCE CHECK"
 echo "Enforcing clean architecture principles..."
 python3 linters/check-architecture-compliance.py $QUALITY_TARGETS
 check_step "Architecture compliance check"
@@ -150,7 +170,7 @@ print_header "Running mypy type checks"
 if [ $# -gt 0 ]; then
     MYPY_ARGS="$QUALITY_TARGETS"
 else
-    MYPY_ARGS=""  # Let mypy use its configured include paths
+    MYPY_ARGS="clearflow tests examples linters"  # Default directories
 fi
 if ! uv run mypy $MYPY_ARGS; then
     echo -e "${RED}✗ Type checking violations detected${NC}"
@@ -168,7 +188,7 @@ print_header "Running pyright type checks"
 if [ $# -gt 0 ]; then
     PYRIGHT_ARGS="$QUALITY_TARGETS"
 else
-    PYRIGHT_ARGS=""  # Let pyright use its configured include paths
+    PYRIGHT_ARGS="clearflow tests examples linters"  # Default directories
 fi
 # Force pyright to use latest version to avoid version warnings
 if ! PYRIGHT_PYTHON_FORCE_VERSION=latest uv run pyright $PYRIGHT_ARGS; then
@@ -364,18 +384,22 @@ for target in $QUALITY_TARGETS; do
 done
 
 if [ -n "$vulture_targets" ]; then
-    vulture_output=$(uv run vulture $vulture_targets --min-confidence 80 2>&1)
-    # Use grep -c but handle the case when it returns exit code 1 for no matches
-    vulture_count=$(echo "$vulture_output" | grep -c "unused" || true)
-    if [ "$vulture_count" -gt 0 ]; then
-        echo -e "${RED}✗ Found $vulture_count dead code issues${NC}"
+    # Run vulture and capture the exit code
+    vulture_output=$(uv run vulture $vulture_targets --min-confidence 80 2>&1 || true)
+    
+    # Check if vulture found any issues by looking for the word "unused" in the output
+    if echo "$vulture_output" | grep -q "unused"; then
+        # Count the issues for reporting
+        vulture_count=$(echo "$vulture_output" | grep -c "unused" || echo "0")
+        echo -e "${RED}✗ Found $vulture_count dead code issues:${NC}"
         echo "$vulture_output"
         echo -e "${RED}MISSION-CRITICAL: Dead code detected${NC}"
         echo -e "${YELLOW}⚠️  DO NOT suppress dead code warnings${NC}"
         echo -e "${GREEN}✅ FIX THE ROOT CAUSE: Remove unused code${NC}"
         exit 1
+    else
+        echo -e "${GREEN}✓ Dead code check passed - no unused code${NC}"
     fi
-    echo -e "${GREEN}✓ Dead code check passed - no unused code${NC}"
 else
     echo -e "${YELLOW}Skipping Vulture (no Python targets)${NC}"
 fi
@@ -422,24 +446,8 @@ else
     echo -e "${YELLOW}Skipping Radon (no Python targets)${NC}"
 fi
 
-# Check examples only if they're in QUALITY_TARGETS
-if [[ "$QUALITY_TARGETS" == *"examples"* ]]; then
-    if [ -d "examples" ]; then
-        print_header "Checking examples"
-        echo "Running quality checks on examples..."
-        
-        # Run minimal checks on examples (they're allowed more flexibility)
-        uv run ruff check examples/
-        if [ $? -ne 0 ]; then
-            echo -e "${YELLOW}⚠️  Examples have linting issues - consider fixing${NC}"
-        fi
-        
-        uv run mypy examples/ || true  # Don't fail on example type issues
-        echo -e "${GREEN}✓ Example checks complete${NC}"
-    else
-        echo -e "${YELLOW}Examples directory not found${NC}"
-    fi
-fi
+# Examples are now checked with the same strict standards as all other code
+# No special handling needed - they go through all the quality checks above
 
 echo -e "\n${GREEN}════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  MISSION-CRITICAL QUALITY CHECKS PASSED! 🚀✨🎯  ${NC}"

@@ -25,7 +25,7 @@ uv sync --group dev        # Install with dev dependencies
 ./quality-check.sh         # Runs all checks: custom linters, lint, format, type check, tests
 
 # Custom linters (mission-critical compliance)
-python3 linters/check-architecture-compliance.py  # Architecture violations (zero tolerance)
+python3 linters/check-architecture-compliance.py  # Architecture violations
 python3 linters/check-immutability.py            # Deep immutability enforcement
 python3 linters/check-test-suite-compliance.py   # Test isolation and resource management
 
@@ -119,6 +119,13 @@ flow = (
 - No `type: ignore` comments in core library code
 - No `Any` types where proper types can be used
 - Prefer boring, obvious code over clever solutions
+
+**LINTER SUPPRESSION POLICY**:
+- **NEVER add linter suppressions without explicit user approval**
+- This includes: `# noqa`, `# type: ignore`, `# pyright: ignore`, etc.
+- All approved suppressions MUST include a justification comment
+- Example: `# noqa: C901  # Display function complexity acceptable for UI`
+- Always fix the root cause instead of suppressing when possible
 
 #### Custom Linters
 

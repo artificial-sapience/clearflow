@@ -2,12 +2,14 @@
 """Main entry point for the chat application - handles all UI concerns."""
 
 import asyncio
+import dataclasses
 import os
 import sys
 
 from dotenv import load_dotenv
-from flow import create_chat_flow
-from nodes import ChatState
+
+from examples.chat.chat_flow import create_chat_flow
+from examples.chat.nodes import ChatState
 
 
 def print_welcome() -> None:
@@ -41,8 +43,8 @@ async def run_chat_session() -> None:
     # Initialize flow (business logic component)
     flow = create_chat_flow()
 
-    # Initialize state - let the flow handle conversation initialization
-    state: ChatState = {}
+    # Initialize state with immutable dataclass
+    state = ChatState()
 
     # Display welcome
     print_welcome()
@@ -56,18 +58,16 @@ async def run_chat_session() -> None:
             break
 
         # Pass user input to flow (business logic handles conversation management)
-        # Create new state with user input
-        state = {**state, "user_input": user_input}
+        # Create new state with user input using dataclasses.replace
+        state = dataclasses.replace(state, user_input=user_input)
         result = await flow(state)
 
         # Preserve conversation state for next iteration
         state = result.state
 
         # Display response (pure UI)
-        if result.outcome == "responded":
-            last_response = result.state.get("last_response")
-            if last_response:
-                display_response(last_response)
+        if result.outcome == "responded" and result.state.last_response:
+            display_response(result.state.last_response)
 
 
 async def main() -> None:

@@ -1,30 +1,74 @@
-"""Chat node implementation - pure business logic."""
+"""Chat node implementation - pure business logic with immutable state."""
 
+import dataclasses
 from dataclasses import dataclass
-from typing import Literal, TypedDict, override
+from typing import Literal, override
 
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from clearflow import Node, NodeResult
 
 
-class ChatMessage(TypedDict):
-    """OpenAI chat message structure."""
+@dataclass(frozen=True)
+class ChatMessage:
+    """Immutable chat message structure."""
 
     role: Literal["system", "user", "assistant"]
     content: str
 
 
-class ChatState(TypedDict, total=False):
-    """Chat application state with proper types.
+@dataclass(frozen=True)
+class ChatState:
+    """Immutable chat application state.
 
-    total=False means all fields are optional, which matches
-    our usage pattern where state builds up over time.
+    All fields are required - we use dataclasses.replace() to update.
+    Empty defaults make initialization clean.
     """
 
-    messages: tuple[ChatMessage, ...]
-    last_response: str
-    user_input: str | None
+    messages: tuple[ChatMessage, ...] = ()
+    last_response: str = ""
+    user_input: str = ""
+
+
+def _to_openai_message(msg: ChatMessage) -> ChatCompletionMessageParam:
+    """Convert ChatMessage to OpenAI format with type narrowing.
+
+    OpenAI expects specific role literals for each message type,
+    not a union. This helper provides the type narrowing.
+    """
+    if msg.role == "user":
+        return {"role": "user", "content": msg.content}
+    if msg.role == "assistant":
+        return {"role": "assistant", "content": msg.content}
+    # system
+    return {"role": "system", "content": msg.content}
+
+
+def _ensure_system_message(
+    messages: tuple[ChatMessage, ...], system_prompt: str
+) -> tuple[ChatMessage, ...]:
+    """Ensure conversation has a system message."""
+    if not messages:
+        return (ChatMessage(role="system", content=system_prompt),)
+    return messages
+
+
+async def _get_ai_response(messages: tuple[ChatMessage, ...], model: str) -> str:
+    """Call OpenAI API and get response."""
+    client = AsyncOpenAI()
+    # OpenAI API requires a list, not a tuple - this is outside our control
+    api_messages = [  # clearflow: ignore[IMM006] # OpenAI requires list
+        _to_openai_message(msg) for msg in messages
+    ]
+
+    response = await client.chat.completions.create(
+        model=model,
+        messages=api_messages,
+    )
+
+    content = response.choices[0].message.content
+    return content or ""
 
 
 @dataclass(frozen=True)
@@ -39,55 +83,33 @@ class ChatNode(Node[ChatState]):
     5. Returns updated conversation state
     """
 
-    model: str = "gpt-4o-2024-08-06"
+    model: str = "gpt-5-nano-2025-08-07"
     system_prompt: str = "You are a helpful assistant."
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
         """Process user input and generate language model response."""
-        # Get conversation history and current user input
-        messages = state.get("messages", ())
-        user_input: str | None = state.get("user_input")
+        # Ensure system message exists
+        messages = _ensure_system_message(state.messages, self.system_prompt)
 
-        # Initialize with system message if needed
-        if not messages:
-            system_msg: ChatMessage = {"role": "system", "content": self.system_prompt}
-            messages = (system_msg,)
-
-        # If no user input provided, this is just initialization
-        if user_input is None:
-            init_state: ChatState = {**state, "messages": messages}
+        # Handle initialization without user input
+        if not state.user_input:
+            init_state = dataclasses.replace(state, messages=messages)
             return NodeResult(init_state, outcome="awaiting_input")
 
-        # Add user message to conversation
-        user_msg: ChatMessage = {"role": "user", "content": user_input}
-        messages = (*messages, user_msg)
-
-        # Call OpenAI API - messages type matches what OpenAI expects
-        client = AsyncOpenAI()
-        response = await client.chat.completions.create(
-            model=self.model,
-            messages=messages,  # Type matches OpenAI's expected structure
+        # Add user message and get AI response
+        messages = (*messages, ChatMessage(role="user", content=state.user_input))
+        assistant_response = await _get_ai_response(messages, self.model)
+        messages = (
+            *messages,
+            ChatMessage(role="assistant", content=assistant_response),
         )
 
-        # Extract assistant's response
-        assistant_response = response.choices[0].message.content
-        if not assistant_response:
-            assistant_response = ""
-
-        # Add assistant message to conversation
-        assistant_msg: ChatMessage = {
-            "role": "assistant",
-            "content": assistant_response,
-        }
-        messages = (*messages, assistant_msg)
-
-        # Return updated state with full conversation
-        new_state: ChatState = {
-            **state,
-            "messages": messages,
-            "last_response": assistant_response,
-            "user_input": None,  # Clear user input after processing
-        }
-
+        # Return updated state
+        new_state = dataclasses.replace(
+            state,
+            messages=messages,
+            last_response=assistant_response,
+            user_input="",  # Clear user input after processing
+        )
         return NodeResult(new_state, outcome="responded")

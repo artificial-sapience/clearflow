@@ -1,0 +1,19 @@
+import types
+from collections.abc import Callable
+from typing import Any
+
+from _typeshed import Incomplete
+
+class Unbatchify:
+    batch_fn: Incomplete
+    max_batch_size: Incomplete
+    max_wait_time: Incomplete
+    input_queue: Incomplete
+    stop_event: Incomplete
+    worker_thread: Incomplete
+    def __init__(self, batch_fn: Callable[[list[Any]], list[Any]], max_batch_size: int = 32, max_wait_time: float = 0.1) -> None: ...
+    def __call__(self, input_item: Any) -> Any: ...
+    def close(self) -> None: ...
+    def __enter__(self): ...
+    def __exit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: types.TracebackType | None) -> None: ...
+    def __del__(self) -> None: ...

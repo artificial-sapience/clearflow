@@ -1,0 +1,9 @@
+from typing import Any
+
+from dspy.primitives import Example as Example
+from dspy.primitives import Module as Module
+
+class Teleprompter:
+    def __init__(self) -> None: ...
+    def compile(self, student: Module, *, trainset: list[Example], teacher: Module | None = None, valset: list[Example] | None = None, **kwargs) -> Module: ...
+    def get_params(self) -> dict[str, Any]: ...

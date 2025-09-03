@@ -1,0 +1,23 @@
+from typing import Any
+
+from _typeshed import Incomplete
+from dspy.adapters.base import Adapter as Adapter
+from dspy.adapters.chat_adapter import ChatAdapter as ChatAdapter
+from dspy.adapters.types import ToolCalls as ToolCalls
+from dspy.adapters.utils import (
+    get_field_description_string as get_field_description_string,
+)
+from dspy.clients import LM as LM
+from dspy.signatures.field import InputField as InputField
+from dspy.signatures.signature import Signature as Signature
+from dspy.signatures.signature import make_signature as make_signature
+
+class TwoStepAdapter(Adapter):
+    extraction_model: Incomplete
+    def __init__(self, extraction_model: LM, **kwargs) -> None: ...
+    def format(self, signature: type[Signature], demos: list[dict[str, Any]], inputs: dict[str, Any]) -> list[dict[str, Any]]: ...
+    def parse(self, signature: Signature, completion: str) -> dict[str, Any]: ...
+    async def acall(self, lm: LM, lm_kwargs: dict[str, Any], signature: type[Signature], demos: list[dict[str, Any]], inputs: dict[str, Any]) -> list[dict[str, Any]]: ...
+    def format_task_description(self, signature: Signature) -> str: ...
+    def format_user_message_content(self, signature: type[Signature], inputs: dict[str, Any], prefix: str = "", suffix: str = "") -> str: ...
+    def format_assistant_message_content(self, signature: type[Signature], outputs: dict[str, Any], missing_field_message: str | None = None) -> str: ...

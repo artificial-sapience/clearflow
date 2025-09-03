@@ -6,29 +6,32 @@ to ensure robust behavior in mission-critical scenarios.
 Copyright (c) 2025 ClearFlow Contributors
 """
 
+from dataclasses import dataclass, replace
 from dataclasses import dataclass as dc
-from typing import TypedDict, override
+from typing import override
 
 import pytest
 
 from clearflow import Node, NodeResult, flow
 
 
-class SimpleState(TypedDict):
+@dataclass(frozen=True)
+class SimpleState:
     """Simple typed state for testing."""
 
     test: str
 
 
-class ErrorState(TypedDict):
+@dataclass(frozen=True)
+class ErrorState:
     """State for error handling tests."""
 
     simulate_error: bool
-    error: str
-    response: str
-    handled: bool
-    message: str
-    processed: bool
+    error: str = ""
+    response: str = ""
+    handled: bool = False
+    message: str = ""
+    processed: bool = False
 
 
 class TestErrorHandling:
@@ -125,8 +128,8 @@ class TestErrorHandling:
     async def test_single_node_flow() -> None:
         """Test a flow with a single node that terminates immediately."""
 
-        @dc(frozen=True)
-        class ProcessState(TypedDict):
+        @dataclass(frozen=True)
+        class ProcessState:
             test: str
             processed: bool
 
@@ -136,7 +139,7 @@ class TestErrorHandling:
 
             @override
             async def exec(self, state: ProcessState) -> NodeResult[ProcessState]:
-                new_state: ProcessState = {**state, "processed": True}
+                new_state = replace(state, processed=True)
                 return NodeResult(new_state, outcome="complete")
 
         node = StandaloneNode()
@@ -145,23 +148,24 @@ class TestErrorHandling:
         single_flow = flow("SingleNodeFlow", node).end(node, "complete")
 
         # Execute
-        initial_state: ProcessState = {"test": "value", "processed": False}
+        initial_state = ProcessState(test="value", processed=False)
         result = await single_flow(initial_state)
         assert result.outcome == "complete"
-        assert result.state["test"] == "value"
-        assert result.state["processed"] is True
+        assert result.state.test == "value"
+        assert result.state.processed is True
 
     @staticmethod
     async def test_complex_error_flow() -> None:
         """Test error handling in AI workflows."""
 
-        class LLMState(TypedDict, total=False):
-            simulate_error: bool
-            error: str
-            response: str
-            handled: bool
-            message: str
-            processed: bool
+        @dataclass(frozen=True)
+        class LLMState:
+            simulate_error: bool = False
+            error: str = ""
+            response: str = ""
+            handled: bool = False
+            message: str = ""
+            processed: bool = False
 
         @dc(frozen=True)
         class LLMNode(Node[LLMState]):
@@ -171,10 +175,10 @@ class TestErrorHandling:
 
             @override
             async def exec(self, state: LLMState) -> NodeResult[LLMState]:
-                if state.get("simulate_error"):
-                    error_state: LLMState = {**state, "error": "API timeout"}
+                if state.simulate_error:
+                    error_state = replace(state, error="API timeout")
                     return NodeResult(error_state, outcome="error")
-                success_state: LLMState = {**state, "response": "Generated text"}
+                success_state = replace(state, response="Generated text")
                 return NodeResult(success_state, outcome="success")
 
         @dc(frozen=True)
@@ -185,12 +189,12 @@ class TestErrorHandling:
 
             @override
             async def exec(self, state: LLMState) -> NodeResult[LLMState]:
-                error = state.get("error", "Unknown error")
-                new_state: LLMState = {
-                    **state,
-                    "handled": True,
-                    "message": f"Error handled: {error}",
-                }
+                error = state.error or "Unknown error"
+                new_state = replace(
+                    state,
+                    handled=True,
+                    message=f"Error handled: {error}",
+                )
                 return NodeResult(new_state, outcome="handled")
 
         @dc(frozen=True)
@@ -201,7 +205,7 @@ class TestErrorHandling:
 
             @override
             async def exec(self, state: LLMState) -> NodeResult[LLMState]:
-                new_state: LLMState = {**state, "processed": True}
+                new_state = replace(state, processed=True)
                 return NodeResult(new_state, outcome="complete")
 
         llm = LLMNode()
@@ -218,8 +222,8 @@ class TestErrorHandling:
         )
 
         # Test error path
-        error_input: LLMState = {"simulate_error": True}
+        error_input = LLMState(simulate_error=True)
         error_result = await error_flow(error_input)
         assert error_result.outcome == "handled"
-        assert error_result.state.get("handled") is True
-        assert "API timeout" in str(error_result.state.get("message", ""))
+        assert error_result.state.handled is True
+        assert "API timeout" in error_result.state.message
