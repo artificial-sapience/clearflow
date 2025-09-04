@@ -72,29 +72,45 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
     name: str
 
     def __post_init__(self) -> None:
-        """Validate node configuration after initialization."""
+        """Validate node configuration after initialization.
+        
+        Raises:
+            ValueError: If node name is empty or contains only whitespace.
+        """
         if not self.name or not self.name.strip():
             msg = f"Node name must be a non-empty string, got: {self.name!r}"
             raise ValueError(msg)
 
     @override
     async def __call__(self, state: TIn) -> NodeResult[TOut]:  # type: ignore[override]
-        """Execute node lifecycle."""
+        """Execute node lifecycle.
+        
+        Returns:
+            NodeResult containing transformed state and routing outcome.
+        """
         state = await self.prep(state)
         result = await self.exec(state)
         return await self.post(result)
 
     async def prep(self, state: TIn) -> TIn:
-        """Pre-execution hook."""
+        """Pre-execution hook.
+        
+        Returns:
+            State passed through unchanged by default.
+        """
         return state
 
     @abstractmethod
     async def exec(self, state: TIn) -> NodeResult[TOut]:
-        """Main execution - must be implemented by subclasses."""
+        """Execute main node logic - must be implemented by subclasses."""
         ...
 
     async def post(self, result: NodeResult[TOut]) -> NodeResult[TOut]:
-        """Post-execution hook."""
+        """Post-execution hook.
+        
+        Returns:
+            Result passed through unchanged by default.
+        """
         return result
 
 
@@ -113,7 +129,11 @@ class _Flow[TIn, TOut = TIn](Node[TIn, TOut]):
 
     @override
     async def exec(self, state: TIn) -> NodeResult[TOut]:
-        """Execute the flow by routing through nodes based on outcomes."""
+        """Execute the flow by routing through nodes based on outcomes.
+        
+        Returns:
+            Final node result containing transformed state and None outcome.
+        """
         current_node = self.start_node
         current_state: object = (
             state  # clearflow: ignore[ARCH009] - Type erasure for dynamic routing

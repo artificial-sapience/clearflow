@@ -14,6 +14,9 @@ def create_chat_flow() -> Node[ChatState]:
     - Returning responses
 
     The UI layer (main.py) only handles input/output.
+    
+    Returns:
+        Chat node configured for conversation management.
     """
     chat = ChatNode(name="chat")
 

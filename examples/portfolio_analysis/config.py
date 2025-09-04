@@ -16,6 +16,9 @@ def configure_dspy(
     Args:
         model: OpenAI model to use (default: gpt-5-nano for best performance)
         temperature: Temperature for responses (1.0 for gpt-5-nano requirement)
+    
+    Raises:
+        ValueError: If OPENAI_API_KEY is not found in environment variables.
     """
     # Load environment variables
     _load_env()

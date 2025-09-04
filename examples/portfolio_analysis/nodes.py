@@ -52,21 +52,25 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
 
     @override
     async def prep(self, state: MarketData) -> MarketData:
-        """Pre-execution hook to show progress."""
+        """Pre-execution hook to show progress.
+        
+        Returns:
+            State passed through unchanged.
+        """
         print("\n🤖 QUANTITATIVE ANALYST")
         print("   └─ Analyzing market trends and opportunities...")
         return state
 
-    def _display_opportunities(
-        self, opportunities: tuple[OpportunitySignal, ...]
-    ) -> None:
+    @staticmethod
+    def _display_opportunities(opportunities: tuple[OpportunitySignal, ...]) -> None:
         """Display top investment opportunities."""
         if opportunities:
             print("   • Top Opportunities:")
             for opp in opportunities[:3]:
                 print(f"     - {opp.symbol}: {opp.confidence:.0%} confidence")
 
-    def _display_sector_analysis(self, sector_analysis: dict[str, float]) -> None:
+    @staticmethod
+    def _display_sector_analysis(sector_analysis: dict[str, float]) -> None:
         """Display sector outlook with sentiment analysis."""
         if sector_analysis:
             print("   • Sector Outlook:")
@@ -89,7 +93,11 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
     async def post(
         self, result: NodeResult[QuantInsights | AnalysisError]
     ) -> NodeResult[QuantInsights | AnalysisError]:
-        """Post-execution hook to show completion."""
+        """Post-execution hook to show completion.
+        
+        Returns:
+            Result passed through unchanged.
+        """
         if isinstance(result.state, AnalysisError):
             print("   ❌ Analysis failed")
         else:
@@ -101,7 +109,11 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
     async def exec(
         self, state: MarketData
     ) -> NodeResult[QuantInsights | AnalysisError]:
-        """Analyze market data using DSPy structured prediction."""
+        """Analyze market data using DSPy structured prediction.
+        
+        Returns:
+            NodeResult with quantitative insights or analysis error.
+        """
 
         if not state.assets:
             error = AnalysisError(
@@ -142,18 +154,24 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
 
     @override
     async def prep(self, state: QuantInsights) -> QuantInsights:
-        """Pre-execution hook to show progress."""
+        """Pre-execution hook to show progress.
+        
+        Returns:
+            State passed through unchanged.
+        """
         print("\n🤖 RISK ANALYST")
         print("   └─ Evaluating portfolio risk metrics and stress testing...")
         return state
 
-    def _display_risk_issues(self, error: RiskLimitError) -> None:
+    @staticmethod
+    def _display_risk_issues(error: RiskLimitError) -> None:
         """Display risk limit violations."""
         print("\n   ⚠️  Risk Issues:")
         for limit in error.exceeded_limits:
             print(f"   • {limit}")
 
-    def _display_risk_assessment(self, assessment: RiskAssessment) -> None:
+    @staticmethod
+    def _display_risk_assessment(assessment: RiskAssessment) -> None:
         """Display risk assessment details."""
         print("\n   🛡️ Risk Metrics:")
         metrics = assessment.risk_metrics
@@ -176,7 +194,11 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
     async def post(
         self, result: NodeResult[RiskAssessment | RiskLimitError]
     ) -> NodeResult[RiskAssessment | RiskLimitError]:
-        """Post-execution hook to show completion."""
+        """Post-execution hook to show completion.
+        
+        Returns:
+            Result passed through unchanged.
+        """
         if isinstance(result.state, RiskLimitError):
             print("   ❌ Risk limits exceeded")
             self._display_risk_issues(result.state)
@@ -189,7 +211,11 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
     async def exec(
         self, state: QuantInsights
     ) -> NodeResult[RiskAssessment | RiskLimitError]:
-        """Perform risk analysis using DSPy structured prediction."""
+        """Perform risk analysis using DSPy structured prediction.
+        
+        Returns:
+            NodeResult with risk assessment or risk limit error.
+        """
 
         try:
             # Use DSPy to get structured risk assessment
@@ -243,15 +269,24 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
 
     @override
     async def prep(self, state: RiskAssessment) -> RiskAssessment:
-        """Pre-execution hook to show progress."""
+        """Pre-execution hook to show progress.
+        
+        Returns:
+            State passed through unchanged.
+        """
         print("\n🤖 PORTFOLIO MANAGER")
         print("   └─ Developing strategic allocation recommendations...")
         return state
 
+    @staticmethod
     def _group_allocation_changes(
-        self, allocation_changes: tuple[AllocationChange, ...]
+        allocation_changes: tuple[AllocationChange, ...]
     ) -> tuple[tuple[AllocationChange, ...], tuple[AllocationChange, ...]]:
-        """Group allocation changes into increases and decreases."""
+        """Group allocation changes into increases and decreases.
+        
+        Returns:
+            Tuple of (increases, decreases) allocation changes.
+        """
         increases = tuple(
             c
             for c in allocation_changes
@@ -264,8 +299,9 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
         )
         return increases, decreases
 
+    @staticmethod
     def _display_allocation_increases(
-        self, increases: tuple[AllocationChange, ...]
+        increases: tuple[AllocationChange, ...]
     ) -> None:
         """Display recommended allocation increases."""
         if increases:
@@ -276,8 +312,9 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
                     f"     - {change.symbol}: +{delta:.1f}% (to {change.recommended_allocation:.1f}%)"
                 )
 
+    @staticmethod
     def _display_allocation_decreases(
-        self, decreases: tuple[AllocationChange, ...]
+        decreases: tuple[AllocationChange, ...]
     ) -> None:
         """Display recommended allocation decreases."""
         if decreases:
@@ -305,7 +342,11 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
     async def post(
         self, result: NodeResult[PortfolioRecommendations | AnalysisError]
     ) -> NodeResult[PortfolioRecommendations | AnalysisError]:
-        """Post-execution hook to show completion."""
+        """Post-execution hook to show completion.
+        
+        Returns:
+            Result passed through unchanged.
+        """
         if isinstance(result.state, AnalysisError):
             print("   ❌ Portfolio management failed")
         else:
@@ -317,7 +358,11 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
     async def exec(
         self, state: RiskAssessment
     ) -> NodeResult[PortfolioRecommendations | AnalysisError]:
-        """Generate portfolio recommendations using DSPy."""
+        """Generate portfolio recommendations using DSPy.
+        
+        Returns:
+            NodeResult with portfolio recommendations or analysis error.
+        """
 
         # Check if risk is too extreme for adjustments
         if state.risk_level == "extreme":

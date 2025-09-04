@@ -36,6 +36,9 @@ def _to_openai_message(msg: ChatMessage) -> ChatCompletionMessageParam:
 
     OpenAI expects specific role literals for each message type,
     not a union. This helper provides the type narrowing.
+    
+    Returns:
+        OpenAI-compatible message dictionary with correct role literal.
     """
     if msg.role == "user":
         return {"role": "user", "content": msg.content}
@@ -48,14 +51,22 @@ def _to_openai_message(msg: ChatMessage) -> ChatCompletionMessageParam:
 def _ensure_system_message(
     messages: tuple[ChatMessage, ...], system_prompt: str
 ) -> tuple[ChatMessage, ...]:
-    """Ensure conversation has a system message."""
+    """Ensure conversation has a system message.
+    
+    Returns:
+        Messages tuple with system message prepended if missing.
+    """
     if not messages:
         return (ChatMessage(role="system", content=system_prompt),)
     return messages
 
 
 async def _get_ai_response(messages: tuple[ChatMessage, ...], model: str) -> str:
-    """Call OpenAI API and get response."""
+    """Call OpenAI API and get response.
+    
+    Returns:
+        AI-generated response content string.
+    """
     client = AsyncOpenAI()
     # OpenAI API requires a list, not a tuple - this is outside our control
     api_messages = [  # clearflow: ignore[IMM006] # OpenAI requires list
@@ -88,7 +99,11 @@ class ChatNode(Node[ChatState]):
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        """Process user input and generate language model response."""
+        """Process user input and generate language model response.
+        
+        Returns:
+            NodeResult with updated conversation state.
+        """
         # Ensure system message exists
         messages = _ensure_system_message(state.messages, self.system_prompt)
 

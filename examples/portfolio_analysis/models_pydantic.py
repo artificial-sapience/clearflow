@@ -68,7 +68,14 @@ class QuantInsights:
     @field_validator("sector_analysis")
     @classmethod
     def validate_sector_scores(cls, v: dict[str, float]) -> dict[str, float]:
-        """Ensure sector scores are within valid range."""
+        """Ensure sector scores are within valid range.
+        
+        Returns:
+            Validated sector scores dictionary.
+            
+        Raises:
+            ValueError: If any sector score is outside [-1, 1] range.
+        """
         for sector, score in v.items():
             if not -1 <= score <= 1:
                 msg = f"{cls.__name__}: Sector score for {sector} must be between -1 and 1"

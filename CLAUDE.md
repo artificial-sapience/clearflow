@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Core Philosophy
 
 ClearFlow provides mission-critical AI orchestration for functional programming practitioners. Built for Python engineers who demand:
+
 - **Deep immutability** - All state transformations create new immutable data structures
 - **Functional purity** - Side effects isolated, transformations are pure functions
 - **Type safety** - Full static typing with mypy/pyright strict mode
@@ -113,6 +114,7 @@ flow = (
 ### Code Quality Standards
 
 **CRITICAL**: These standards maintain trust:
+
 - All linting rules must pass without suppression
 - Both mypy and pyright must pass in strict mode
 - **Pyright takes precedence** when tools conflict
@@ -121,6 +123,7 @@ flow = (
 - Prefer boring, obvious code over clever solutions
 
 **LINTER SUPPRESSION POLICY**:
+
 - **NEVER add linter suppressions without explicit user approval**
 - This includes: `# noqa`, `# type: ignore`, `# pyright: ignore`, etc.
 - All approved suppressions MUST include a justification comment
@@ -174,6 +177,7 @@ These linters run automatically as part of `./quality-check.sh` and enforce zero
 ### Documentation Style
 
 **CRITICAL**: All documentation must be:
+
 - **Factual and concise** - No verbosity or repetition
 - **Free of "we/our" language** - Use neutral technical language
 - **Focused on what matters** - Essential information only
@@ -181,6 +185,7 @@ These linters run automatically as part of `./quality-check.sh` and enforce zero
 - **Ego-free** - No defensiveness, no overselling, no anxiety
 
 Examples:
+
 - ❌ "We provide trustworthy orchestration for mission-critical systems"
 - ✅ "Reliable language model orchestration. Type-safe with 100% test coverage."
 - ❌ "Our philosophy is trust through proof"
@@ -193,6 +198,7 @@ If documentation sounds anxious, defensive, or like it's trying to impress, rewr
 Good documentation states facts without emotion.
 
 When responding to users:
+
 - Be direct and factual
 - State limitations without defensiveness
 - Use technical language, not marketing speak
@@ -224,6 +230,7 @@ When responding to users:
 ### Before Any Change
 
 Ask:
+
 - Can this be tested completely?
 - Does this make behavior more explicit?
 - Is this simpler than the alternative?
@@ -236,6 +243,7 @@ If any answer is "no", don't do it.
 2. **Conventional Commits**: Use `fix:`, `feat:`, `docs:`, `ci:` prefixes
 3. **Local Protection**: Pre-commit hook prevents direct commits to main
 4. **PR Process**:
+
    ```bash
    git checkout -b type/description
    # Make changes
@@ -252,8 +260,8 @@ ClearFlow provides explicit routing with single termination enforcement. Keep th
 ## Documentation Size Limits
 
 ClearFlow is ~166 lines. Documentation should be proportional:
+
 - README.md: Keep concise but complete (~200 lines is reasonable for user-facing docs)
-- CONTRIBUTING.md: <50 lines  
 - Individual docs: <100 lines
 - Total documentation: <500 lines
 
@@ -272,11 +280,12 @@ ClearFlow uses automated release management:
    - Converts draft to published GitHub release
 
 **Known Issues**:
+
 - Draft release IDs can become stale - always fetch fresh by tag name
 - PyPI trusted publisher requires exact workflow path match
 - Version must be updated in pyproject.toml before building
 
-**PyPI Package**: https://pypi.org/project/clearflow/
+**PyPI Package**: <https://pypi.org/project/clearflow/>
 
 ## Critical Technical Distinction
 

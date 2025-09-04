@@ -66,7 +66,11 @@ TECH_FINANCE_SECTORS = {"Technology", "Finance"}
 
 
 def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetData:
-    """Generate simulated market data for a single asset."""
+    """Generate simulated market data for a single asset.
+    
+    Returns:
+        AssetData with randomized market values.
+    """
     # Add some market volatility
     price_variance = random.uniform(PRICE_VARIANCE_MIN, PRICE_VARIANCE_MAX)
     current_price = round(base_price * price_variance, 2)
@@ -114,7 +118,11 @@ def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetDa
 
 
 def create_sample_market_data() -> MarketData:
-    """Create simulated market data for a diversified portfolio."""
+    """Create simulated market data for a diversified portfolio.
+    
+    Returns:
+        MarketData with normal market conditions.
+    """
 
     # Define sample assets across sectors
     sample_assets = [
@@ -156,7 +164,11 @@ def create_sample_market_data() -> MarketData:
 
 
 def create_volatile_market_data() -> MarketData:
-    """Create market data simulating high volatility conditions."""
+    """Create market data simulating high volatility conditions.
+    
+    Returns:
+        MarketData with high volatility and bearish sentiment.
+    """
 
     sample_assets = [
         ("AAPL", "Technology", 175.50),
@@ -218,7 +230,11 @@ def create_volatile_market_data() -> MarketData:
 
 
 def create_bullish_market_data() -> MarketData:
-    """Create market data simulating strong bullish conditions."""
+    """Create market data simulating strong bullish conditions.
+    
+    Returns:
+        MarketData with positive momentum and bullish sentiment.
+    """
 
     sample_assets = [
         ("AAPL", "Technology", 175.50),

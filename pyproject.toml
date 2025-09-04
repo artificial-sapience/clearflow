@@ -104,7 +104,6 @@ include = [
   "README.md",
   "LICENSE",
   "pyproject.toml",
-  "CONTRIBUTING.md",
 ]
 
 #################################### Ruff Configuration ####################################

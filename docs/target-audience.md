@@ -24,4 +24,3 @@ What gets rejected:
 - External dependencies
 - Anything that reduces type safety
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for details.
