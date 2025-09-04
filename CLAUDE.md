@@ -19,7 +19,7 @@ Target audience: Python engineers building mission-critical AI systems who embra
 ```bash
 # Install dependencies
 uv sync                    # Install runtime dependencies
-uv sync --group dev        # Install with dev dependencies
+uv sync --all-extras        # Install with dev dependencies
 
 # Run quality checks (enforced before commits)
 ./quality-check.sh         # Runs all checks: custom linters, lint, format, type check, tests

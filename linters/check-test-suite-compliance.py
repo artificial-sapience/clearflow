@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (c) 2025 ClearFlow Contributors
 """Check test suite compliance for the ClearFlow project.
 
 This script enforces test-specific best practices to ensure proper test isolation

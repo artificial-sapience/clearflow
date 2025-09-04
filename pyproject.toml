@@ -1,13 +1,20 @@
+[build-system]
+requires = ["hatchling >= 1.27"]
+build-backend = "hatchling.build"
+
 [project]
 name = "clearflow"
 version = "0.0.0"  # Version dynamically set by CI/CD pipeline
-description = "Type-safe async workflow orchestration for language models. Zero dependencies, 100% test coverage."
-authors = [{name = "Richard Beauchamp", email = "rbeauchamp@users.noreply.github.com"}]
-maintainers = [{name = "ClearFlow Contributors"}]
-license = {text = "MIT"}
+description = "Reliable async workflow orchestration for language models. Zero dependencies, 100% test coverage."
+authors = [
+  {name = "Richard Beauchamp", email = "rbeauchamp@users.noreply.github.com"}
+]
+maintainers = [
+  {name = "ClearFlow Contributors"}
+]
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
 
 keywords = [
     "language-models", "ai-agents", "orchestration", "agents", "async", 
@@ -29,43 +36,42 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+dependencies = []
+
 [project.urls]
-Homepage = "https://github.com/consent-ai/ClearFlow"
-Source = "https://github.com/consent-ai/ClearFlow"
-Issues = "https://github.com/consent-ai/ClearFlow/issues"
-Examples = "https://github.com/consent-ai/ClearFlow/tree/main/examples"
+Homepage = "https://github.com/artificial-sapience/ClearFlow"
+Repository = "https://github.com/artificial-sapience/ClearFlow.git"
+Source = "https://github.com/artificial-sapience/ClearFlow"
+Issues = "https://github.com/artificial-sapience/ClearFlow/issues"
+Examples = "https://github.com/artificial-sapience/ClearFlow/tree/main/examples"
 Inspiration = "https://github.com/The-Pocket/PocketFlow"
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     # Testing
-    "pytest>=8.4.1",
+    "pytest>=8.4.0",
     "pytest-asyncio>=1.1.0",
-    "pytest-cov>=6.2.1",
+    "pytest-cov>=6.2.0",
     
     # Type checking
-    "mypy>=1.17.1",
+    "mypy>=1.17.0",
     "pyright>=1.1.0",
     "typeguard>=4.4.0",  # Runtime type-checker
     
     # Linting & formatting
     "ruff>=0.12.0",
-    "flake8-bugbear>=24.12.12",
+    "flake8-bugbear>=24.12.0",
     
     # Security & vulnerability scanning
     "pip-audit>=2.9.0",      # CVE scanner for dependencies
-    "bandit[toml]>=1.8.6",   # AST security analyzer
-    "semgrep>=1.134.0",       # Pattern-based security analysis
+    "bandit[toml]>=1.8.0",   # AST security analyzer
+    "semgrep>=1.134.0",      # Pattern-based security analysis
     
     # Code quality & complexity
     "radon>=6.0.1",          # Cyclomatic complexity, maintainability index
     "xenon>=0.9.3",          # Complexity monitor (fails if too complex)
     "vulture>=2.14",         # Dead code detection
 ]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [tool.hatch.build]
 # Exclude development and session files from package distributions
@@ -103,7 +109,7 @@ include = [
 
 #################################### Ruff Configuration ####################################
 [tool.ruff]
-line-length = 88  # Black default for consistency
+line-length = 120
 target-version = "py313"
 indent-width = 4
 preview = true
@@ -163,24 +169,15 @@ select = [
 # Minimal ignores only for true conflicts:
 ignore = [
   # Docstring conflicts (must choose one)
-  "D203",    # 1 blank line required before class docstring (conflicts with D211)
-  "D213",    # Multi-line docstring summary should start at the second line (conflicts with D212)
+  "D203", # 1 blank line required before class docstring (conflicts with D211)
+  "D213", # Multi-line docstring summary should start at the second line (conflicts with D212)
   # Formatter conflicts that cannot be resolved
-  "COM812",  # Missing trailing comma (conflicts with formatter)
-  "ISC001",  # Implicitly concatenated string literals (conflicts with formatter)
-  # Line length - let formatter handle this
-  "E501",    # Line too long (trust formatter's judgment)
-  # Copyright headers not standard in Python ecosystem
-  "CPY001",  # Missing copyright notice at top of file
-  # Design choices
-  "PLR6301", # Methods could be static - needed for subclassing pattern
-  "D401",    # First line imperative mood - clearer as descriptions
-  "DOC501",  # Missing raises in docstring - we document inline
-  "DOC201",  # Return not documented - we prefer succinct docstrings
-  "D104",    # Missing docstring in public package
-  
-  # MISSION-CRITICAL: NO SUPPRESSIONS FOR SAFETY/CLARITY
-  # All code must be safe and unambiguous
+  "COM812", # Missing trailing comma (conflicts with formatter)
+  "ISC001", # Implicitly concatenated string literals (conflicts with formatter)
+  # Line length - let formatter handle this (Black/Ruff don't break strings/comments)
+  "E501", # Line too long (trust formatter's judgment)
+  # Copyright headers not standard in Python ecosystem (Django, Flask, FastAPI don't use them)
+  "CPY001", # Missing copyright notice at top of file
 ]
 # Never allow fixes for imports that may change execution order
 unfixable = [
@@ -221,7 +218,6 @@ max-complexity = 7  # A grade maximum
 # Example files are meant to be educational
 "examples/**/*.py" = [
   "T201",    # Print statements are needed for user interaction
-  "CPY001",  # Copyright notice not required for examples
   "INP001",  # Examples don't need to be packages
   "EXE001",  # Shebang presence is fine without executable bit
   "D",       # Allow missing docstrings in examples
@@ -248,9 +244,12 @@ ban-relative-imports = "all"  # Force absolute imports
 # Architecture enforcement
 "typing.Any" = { msg = "Avoid Any type. Use proper types or object with documented justification." }
 # Ban mocking/patching for mission-critical testing
-"unittest.mock.patch" = { msg = "patch() violates testing principles. Use explicit test doubles." }
-"unittest.mock.MagicMock" = { msg = "MagicMock hides bugs. Use explicit test doubles." }
-"unittest.mock.Mock" = { msg = "Mock hides bugs. Use explicit test doubles." }
+"unittest.mock.patch" = { msg = "patch() violates hexagonal architecture. Use MockLM at the LM boundary instead." }
+"unittest.mock.MagicMock" = { msg = "MagicMock hides bugs. Use explicit MockLM with defined responses." }
+"unittest.mock.Mock" = { msg = "Mock hides bugs. Use explicit MockLM with defined responses." }
+"mock.patch" = { msg = "patch() violates hexagonal architecture. Use MockLM at the LM boundary instead." }
+"mock.MagicMock" = { msg = "MagicMock hides bugs. Use explicit MockLM with defined responses." }
+"mock.Mock" = { msg = "Mock hides bugs. Use explicit MockLM with defined responses." }
 
 [tool.ruff.lint.flake8-bugbear]
 # Immutable calls configuration
@@ -291,6 +290,7 @@ enable_error_code = [
   "ignore-without-code", # type: ignore without error code
   "unused-awaitable",    # unused awaitable value
 ]
+plugins = ["pydantic.mypy"]
 
 # Type-ignore overrides for external dependencies
 [[tool.mypy.overrides]]
@@ -312,7 +312,7 @@ disallow_subclassing_any = true # No subclassing Any
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-include = ["clearflow", "tests", "examples"]
+include = ["clearflow", "tests", "examples", "linters"]
 exclude = ["**/__pycache__", ".venv"]
 stubPath = "typings"  # Use our DSPy type stubs
 strictListInference = true        # list[...] inferred as precise union instead of Any
@@ -347,7 +347,6 @@ exclude_lines = [
   "raise NotImplementedError",
   "if 0:",
   "if __name__ == .__main__.:",
-  "pragma: no cover",
   "\\.\\.\\.",  # Exclude ellipsis in abstract/protocol methods
 ]
 ignore_errors = false  # Mission-critical: We need to know about ALL coverage errors

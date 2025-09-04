@@ -3,7 +3,6 @@
 This module tests Node[TIn, TOut] type transformations for real AI pipelines,
 demonstrating how to avoid "god objects" through type-safe transformations.
 
-Copyright (c) 2025 ClearFlow Contributors
 """
 
 from dataclasses import dataclass as dc

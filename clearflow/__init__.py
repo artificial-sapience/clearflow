@@ -1,5 +1,3 @@
-# Copyright (c) 2025 ClearFlow Contributors
-
 """ClearFlow: Zero-dependency async workflow orchestration framework.
 
 Provides type-safe workflow composition with explicit routing and single termination.

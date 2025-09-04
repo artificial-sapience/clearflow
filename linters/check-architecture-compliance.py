@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (c) 2025 ClearFlow Contributors
 """Check architecture compliance for the ClearFlow project.
 
 This script enforces architectural requirements for ClearFlow.

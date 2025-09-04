@@ -84,8 +84,7 @@ else
 fi
 
 print_header "Syncing dependencies"
-# Sync dependencies using dependency groups
-uv sync --group dev
+uv sync --all-extras
 check_step "Dependencies synchronization"
 
 # If checking examples, ensure their dependencies are available
@@ -445,9 +444,6 @@ if [ -n "$radon_targets" ]; then
 else
     echo -e "${YELLOW}Skipping Radon (no Python targets)${NC}"
 fi
-
-# Examples are now checked with the same strict standards as all other code
-# No special handling needed - they go through all the quality checks above
 
 echo -e "\n${GREEN}════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  MISSION-CRITICAL QUALITY CHECKS PASSED! 🚀✨🎯  ${NC}"

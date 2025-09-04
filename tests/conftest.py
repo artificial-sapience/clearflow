@@ -3,7 +3,6 @@
 This module provides immutable types used across multiple test modules,
 demonstrating mission-critical AI orchestration patterns with deep immutability.
 
-Copyright (c) 2025 ClearFlow Contributors
 """
 
 from dataclasses import dataclass as dc

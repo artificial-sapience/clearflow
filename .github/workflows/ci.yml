@@ -93,7 +93,7 @@ jobs:
         enable-cache: true
         
     - name: Install dependencies
-      run: uv sync --group dev
+      run: uv sync --all-extras
         
     - name: Run ruff linting with auto-fix
       run: uv run ruff check --fix clearflow tests
@@ -151,13 +151,13 @@ jobs:
         echo "Updated version to: $VERSION"
         
     - name: Install dependencies
-      run: uv sync --group dev
+      run: uv sync --all-extras
         
     - name: Run tests with coverage
       run: uv run pytest -x -v tests --cov=clearflow --cov-report=xml --cov-report=term --cov-fail-under=100
         
     - name: Upload coverage to Coveralls
-      if: matrix.os == 'ubuntu-latest' && github.repository == 'consent-ai/ClearFlow'
+      if: matrix.os == 'ubuntu-latest' && github.repository == 'artificial-sapience/ClearFlow'
       uses: coverallsapp/github-action@v2
       with:
         files: coverage.xml
@@ -231,7 +231,7 @@ jobs:
         enable-cache: true
         
     - name: Install dependencies
-      run: uv sync --group dev
+      run: uv sync --all-extras
         
     - name: Run safety check
       run: |

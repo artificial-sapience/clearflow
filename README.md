@@ -1,6 +1,6 @@
 # ClearFlow
 
-[![Coverage Status](https://coveralls.io/repos/github/consent-ai/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/consent-ai/ClearFlow?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
@@ -151,7 +151,6 @@ class N(Node[int]):
     async def exec(self, x: int) -> NodeResult[int]:
         return NodeResult(x + 1, "ok")
 
-@pytest.mark.asyncio
 async def test_n() -> None:
     res = await N()(0)
     assert res.state == 1 and res.outcome == "ok"
@@ -182,15 +181,6 @@ Both are minimalist. ClearFlow emphasizes **type safety and explicit control**. 
 
 ---
 
-## Recipes
-
-- **Guardrails**: validate node routes `"invalid"` → termination  
-- **Retries**: node returns `"retry"` outcome → routes back to itself  
-- **Sub-flows**: build child flow, use as node in parent  
-- **Parallel**: multiple validate nodes → single process node  
-
----
-
 ## Development
 
 ```bash
@@ -198,17 +188,11 @@ Both are minimalist. ClearFlow emphasizes **type safety and explicit control**. 
 pip install --user uv   # or: pipx install uv
 
 # Clone and set up development environment
-git clone https://github.com/consent-ai/ClearFlow.git
+git clone https://github.com/artificial-sapience/ClearFlow.git
 cd ClearFlow
-uv sync --group dev      # Creates venv and installs deps automatically
+uv sync --all-extras      # Creates venv and installs deps automatically
 ./quality-check.sh       # Run all checks
 ```
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 

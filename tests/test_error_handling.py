@@ -3,7 +3,6 @@
 This module tests error conditions, edge cases, and validation logic
 to ensure robust behavior in mission-critical scenarios.
 
-Copyright (c) 2025 ClearFlow Contributors
 """
 
 from dataclasses import dataclass, replace

@@ -3,7 +3,6 @@
 This module tests the Node class functionality including pure functions,
 lifecycle hooks, and routing patterns for mission-critical AI orchestration.
 
-Copyright (c) 2025 ClearFlow Contributors
 """
 
 from dataclasses import dataclass as dc

@@ -3,7 +3,6 @@
 This module tests the Flow class functionality including linear flows,
 branching, single termination enforcement, and flow composition.
 
-Copyright (c) 2025 ClearFlow Contributors
 """
 
 from dataclasses import dataclass, replace

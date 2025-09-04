@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (c) 2025 ClearFlow Contributors
 """Check deep immutability compliance for the ClearFlow project.
 
 This script enforces deep immutability requirements.
