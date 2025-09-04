@@ -68,12 +68,8 @@ class RiskAnalystSignature(dspy.Signature):
     Focus on actionable risk insights, not arbitrary thresholds.
     """
 
-    quant_insights: QuantInsights = dspy.InputField(
-        desc="Quantitative analysis with identified opportunities"
-    )
-    risk_assessment: RiskAssessment = dspy.OutputField(
-        desc="Comprehensive risk metrics and warnings"
-    )
+    quant_insights: QuantInsights = dspy.InputField(desc="Quantitative analysis with identified opportunities")
+    risk_assessment: RiskAssessment = dspy.OutputField(desc="Comprehensive risk metrics and warnings")
 
 
 class PortfolioManagerSignature(dspy.Signature):
@@ -95,9 +91,7 @@ class PortfolioManagerSignature(dspy.Signature):
     Balance opportunity with prudent risk management.
     """
 
-    risk_assessment: RiskAssessment = dspy.InputField(
-        desc="Risk analysis including metrics and warnings"
-    )
+    risk_assessment: RiskAssessment = dspy.InputField(desc="Risk analysis including metrics and warnings")
     recommendations: PortfolioRecommendations = dspy.OutputField(
         desc="Strategic allocation changes with thesis and timeline"
     )
@@ -117,9 +111,7 @@ class ComplianceOfficerSignature(dspy.Signature):
     Be thorough and conservative in compliance assessments.
     """
 
-    recommendations: PortfolioRecommendations = dspy.InputField(
-        desc="Portfolio manager's allocation recommendations"
-    )
+    recommendations: PortfolioRecommendations = dspy.InputField(desc="Portfolio manager's allocation recommendations")
     compliance_review: ComplianceReview = dspy.OutputField(
         desc="Detailed compliance checks and overall approval status"
     )
@@ -138,21 +130,15 @@ class TradingDecisionSignature(dspy.Signature):
     Create a clear, actionable trading plan.
     """
 
-    compliance_review: ComplianceReview = dspy.InputField(
-        desc="Compliance review with checks and approval status"
-    )
-    trading_decision: TradingDecision = dspy.OutputField(
-        desc="Final trading decision with execution plan"
-    )
+    compliance_review: ComplianceReview = dspy.InputField(desc="Compliance review with checks and approval status")
+    trading_decision: TradingDecision = dspy.OutputField(desc="Final trading decision with execution plan")
 
 
 # Alternative signatures for error handling paths
 class RiskLimitSignature(dspy.Signature):
     """Evaluate if risk limits are exceeded and recommend mitigation."""
 
-    risk_assessment: RiskAssessment = dspy.InputField(
-        desc="Risk assessment with metrics"
-    )
+    risk_assessment: RiskAssessment = dspy.InputField(desc="Risk assessment with metrics")
     risk_limit_check: RiskLimitError | None = dspy.OutputField(
         desc="Risk limit error if thresholds exceeded, None if acceptable"
     )
@@ -161,9 +147,7 @@ class RiskLimitSignature(dspy.Signature):
 class ComplianceViolationSignature(dspy.Signature):
     """Identify compliance violations and required actions."""
 
-    recommendations: PortfolioRecommendations = dspy.InputField(
-        desc="Portfolio recommendations to check"
-    )
+    recommendations: PortfolioRecommendations = dspy.InputField(desc="Portfolio recommendations to check")
     compliance_error: ComplianceError | None = dspy.OutputField(
         desc="Compliance error if violations found, None if compliant"
     )

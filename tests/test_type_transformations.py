@@ -88,10 +88,7 @@ class GenerationNode(Node[Context, Response]):
     @override
     async def exec(self, state: Context) -> NodeResult[Response]:
         # Simulate generation
-        answer = (
-            f"Based on {len(state.relevant_texts)} sources: "
-            + state.relevant_texts[0][:50]
-        )
+        answer = f"Based on {len(state.relevant_texts)} sources: " + state.relevant_texts[0][:50]
         sources = tuple(f"doc{i + 1}.pdf" for i in range(len(state.relevant_texts)))
         response = Response(query=state.query, answer=answer, sources=sources)
         return NodeResult(response, outcome="generated")

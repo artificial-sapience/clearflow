@@ -89,9 +89,7 @@ def check_asyncio_run(file_path: Path, content: str) -> tuple[Violation, ...]:
     return tuple(violations)
 
 
-def _check_new_event_loop(
-    node: ast.Call, tree: ast.Module, file_path: Path
-) -> Violation | None:
+def _check_new_event_loop(node: ast.Call, tree: ast.Module, file_path: Path) -> Violation | None:
     """Check for new_event_loop() calls without cleanup."""
     if not (
         isinstance(node.func, ast.Attribute)
@@ -206,15 +204,9 @@ def _is_in_with_statement(node: ast.Call, tree: ast.Module) -> bool:
     return False
 
 
-def _check_open_without_context(
-    node: ast.Call, tree: ast.Module, file_path: Path
-) -> Violation | None:
+def _check_open_without_context(node: ast.Call, tree: ast.Module, file_path: Path) -> Violation | None:
     """Check for open() calls without context managers."""
-    if (
-        isinstance(node.func, ast.Name)
-        and node.func.id == "open"
-        and not _is_in_with_statement(node, tree)
-    ):
+    if isinstance(node.func, ast.Name) and node.func.id == "open" and not _is_in_with_statement(node, tree):
         return Violation(
             file=file_path,
             line=node.lineno,

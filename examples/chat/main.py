@@ -21,7 +21,7 @@ def print_welcome() -> None:
 
 def get_user_input() -> str | None:
     """Get input from user. Returns None if user wants to exit.
-    
+
     Returns:
         User input string or None if exiting.
     """

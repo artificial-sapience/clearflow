@@ -51,7 +51,11 @@ class IntentClassifier(Node[ChatState]):
         return NodeResult(new_state, outcome=intent)
 
     def _classify_intent(self, query: str) -> str:
-        """Classify query intent."""
+        """Classify query intent.
+
+        Returns:
+            Intent string: "technical", "question", or "general".
+        """
         query_lower = str(query).lower()
         if "code" in query_lower or "bug" in query_lower:
             return "technical"
@@ -221,11 +225,7 @@ class TestFlow:
         tokenizer = TokenizerNode()
         indexer = IndexerNode()
 
-        flow_instance = (
-            flow("RAG", tokenizer)
-            .route(tokenizer, "tokenized", indexer)
-            .end(indexer, "indexed")
-        )
+        flow_instance = flow("RAG", tokenizer).route(tokenizer, "tokenized", indexer).end(indexer, "indexed")
 
         assert flow_instance.name == "RAG"
 
@@ -235,11 +235,7 @@ class TestFlow:
         tokenizer = TokenizerNode()
         indexer = IndexerNode()
 
-        flow_instance = (
-            flow("RAG", tokenizer)
-            .route(tokenizer, "tokenized", indexer)
-            .end(indexer, "indexed")
-        )
+        flow_instance = flow("RAG", tokenizer).route(tokenizer, "tokenized", indexer).end(indexer, "indexed")
 
         initial = RawText(content="Natural language processing", source="test.txt")
         result = await flow_instance(initial)
@@ -361,9 +357,7 @@ class TestFlow:
 
         # This works - single termination point
         valid_flow = (
-            flow("ValidationPipeline", validator)
-            .route(validator, "valid", processor)
-            .end(processor, "processed")
+            flow("ValidationPipeline", validator).route(validator, "valid", processor).end(processor, "processed")
         )
 
         # Test that it runs successfully
@@ -377,19 +371,11 @@ class TestFlow:
         embedder = Embedder()
 
         # Create inner flow
-        inner_flow = (
-            flow("Inner", loader)
-            .route(loader, "loaded", embedder)
-            .end(embedder, "embedded")
-        )
+        inner_flow = flow("Inner", loader).route(loader, "loaded", embedder).end(embedder, "embedded")
 
         # Use inner flow as a node
         vector_store = VectorStore()
-        outer_flow = (
-            flow("Outer", inner_flow)
-            .route(inner_flow, "embedded", vector_store)
-            .end(vector_store, "indexed")
-        )
+        outer_flow = flow("Outer", inner_flow).route(inner_flow, "embedded", vector_store).end(vector_store, "indexed")
 
         # Just verify it builds
         assert outer_flow.name == "Outer"
@@ -399,18 +385,10 @@ class TestFlow:
         """Test execution of nested flows."""
         loader = DocumentLoader()
         embedder = Embedder()
-        doc_flow = (
-            flow("DocFlow", loader)
-            .route(loader, "loaded", embedder)
-            .end(embedder, "embedded")
-        )
+        doc_flow = flow("DocFlow", loader).route(loader, "loaded", embedder).end(embedder, "embedded")
 
         vector_store = VectorStore()
-        pipeline = (
-            flow("Pipeline", doc_flow)
-            .route(doc_flow, "embedded", vector_store)
-            .end(vector_store, "indexed")
-        )
+        pipeline = flow("Pipeline", doc_flow).route(doc_flow, "embedded", vector_store).end(vector_store, "indexed")
 
         doc_input = DocState(
             source="kb",

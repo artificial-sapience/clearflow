@@ -36,7 +36,7 @@ def _to_openai_message(msg: ChatMessage) -> ChatCompletionMessageParam:
 
     OpenAI expects specific role literals for each message type,
     not a union. This helper provides the type narrowing.
-    
+
     Returns:
         OpenAI-compatible message dictionary with correct role literal.
     """
@@ -48,11 +48,9 @@ def _to_openai_message(msg: ChatMessage) -> ChatCompletionMessageParam:
     return {"role": "system", "content": msg.content}
 
 
-def _ensure_system_message(
-    messages: tuple[ChatMessage, ...], system_prompt: str
-) -> tuple[ChatMessage, ...]:
+def _ensure_system_message(messages: tuple[ChatMessage, ...], system_prompt: str) -> tuple[ChatMessage, ...]:
     """Ensure conversation has a system message.
-    
+
     Returns:
         Messages tuple with system message prepended if missing.
     """
@@ -63,7 +61,7 @@ def _ensure_system_message(
 
 async def _get_ai_response(messages: tuple[ChatMessage, ...], model: str) -> str:
     """Call OpenAI API and get response.
-    
+
     Returns:
         AI-generated response content string.
     """
@@ -100,7 +98,7 @@ class ChatNode(Node[ChatState]):
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
         """Process user input and generate language model response.
-        
+
         Returns:
             NodeResult with updated conversation state.
         """

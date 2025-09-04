@@ -8,15 +8,13 @@ import dspy
 from dotenv import load_dotenv
 
 
-def configure_dspy(
-    model: str = "gpt-5-nano-2025-08-07", temperature: float = 1.0
-) -> None:
+def configure_dspy(model: str = "gpt-5-nano-2025-08-07", temperature: float = 1.0) -> None:
     """Configure DSPy with OpenAI backend.
 
     Args:
         model: OpenAI model to use (default: gpt-5-nano for best performance)
         temperature: Temperature for responses (1.0 for gpt-5-nano requirement)
-    
+
     Raises:
         ValueError: If OPENAI_API_KEY is not found in environment variables.
     """

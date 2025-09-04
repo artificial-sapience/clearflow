@@ -112,10 +112,7 @@ def _is_dataclass_decorator(decorator: ast.expr) -> bool:
     if isinstance(decorator, ast.Call):
         if isinstance(decorator.func, ast.Name) and decorator.func.id == "dataclass":
             return True
-        if (
-            isinstance(decorator.func, ast.Attribute)
-            and decorator.func.attr == "dataclass"
-        ):
+        if isinstance(decorator.func, ast.Attribute) and decorator.func.attr == "dataclass":
             return True
     return False
 
@@ -125,11 +122,7 @@ def _has_frozen_true(decorator: ast.expr) -> bool:
     if not isinstance(decorator, ast.Call):
         return False
     for keyword in decorator.keywords:
-        if (
-            keyword.arg == "frozen"
-            and isinstance(keyword.value, ast.Constant)
-            and keyword.value.value is True
-        ):
+        if keyword.arg == "frozen" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True:
             return True
     return False
 
@@ -183,27 +176,18 @@ def _is_basemodel_class(base: ast.expr) -> bool:
 
 def _has_model_config_target(targets: list[ast.expr]) -> bool:
     """Check if any target is named model_config."""
-    return any(
-        isinstance(target, ast.Name) and target.id == "model_config"
-        for target in targets
-    )
+    return any(isinstance(target, ast.Name) and target.id == "model_config" for target in targets)
 
 
 def _is_config_dict_call(value: ast.expr) -> bool:
     """Check if value is a ConfigDict() call."""
-    return (
-        isinstance(value, ast.Call)
-        and isinstance(value.func, ast.Name)
-        and value.func.id == "ConfigDict"
-    )
+    return isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == "ConfigDict"
 
 
 def _has_frozen_true_keyword(keywords: list[ast.keyword]) -> bool:
     """Check if keywords contain frozen=True."""
     return any(
-        keyword.arg == "frozen"
-        and isinstance(keyword.value, ast.Constant)
-        and keyword.value.value is True
+        keyword.arg == "frozen" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True
         for keyword in keywords
     )
 
@@ -221,18 +205,13 @@ def _is_frozen_config_assignment(item: ast.Assign) -> bool:
 
 def _has_frozen_config(node: ast.ClassDef) -> bool:
     """Check if class has model_config with frozen=True."""
-    return any(
-        isinstance(item, ast.Assign) and _is_frozen_config_assignment(item)
-        for item in node.body
-    )
+    return any(isinstance(item, ast.Assign) and _is_frozen_config_assignment(item) for item in node.body)
 
 
 def _is_pydantic_model(node: ast.ClassDef, pydantic_classes: set[str]) -> bool:
     """Check if class is a Pydantic model."""
     for base in node.bases:
-        if isinstance(base, ast.Name) and (
-            base.id == "BaseModel" or base.id in pydantic_classes
-        ):
+        if isinstance(base, ast.Name) and (base.id == "BaseModel" or base.id in pydantic_classes):
             return True
         if _is_basemodel_class(base):
             return True
@@ -259,9 +238,7 @@ def check_pydantic_frozen(file_path: Path, content: str) -> tuple[Violation, ...
 
     # Single pass: identify Pydantic models and collect them
     for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef) and _is_pydantic_model(
-            node, pydantic_classes
-        ):
+        if isinstance(node, ast.ClassDef) and _is_pydantic_model(node, pydantic_classes):
             pydantic_classes.add(node.name)
             classes_to_check.append(node)
 
@@ -339,15 +316,9 @@ def _has_temporary_markers(lines: tuple[str, ...]) -> bool:
     return False
 
 
-def _check_append_usage(
-    node: ast.Attribute, lines: tuple[str, ...], file_path: Path
-) -> Violation | None:
+def _check_append_usage(node: ast.Attribute, lines: tuple[str, ...], file_path: Path) -> Violation | None:
     """Check for list.append() patterns."""
-    if (
-        node.attr == "append"
-        and isinstance(node.value, ast.Name)
-        and node.lineno <= len(lines)
-    ):
+    if node.attr == "append" and isinstance(node.value, ast.Name) and node.lineno <= len(lines):
         line = lines[node.lineno - 1]
         if "temporary" not in line.lower() and "building" not in line.lower():
             return Violation(
@@ -438,9 +409,7 @@ def check_list_building(file_path: Path, content: str) -> tuple[Violation, ...]:
     return _collect_list_violations(tree, lines, file_path, content)
 
 
-def _check_typeddict_import(
-    node: ast.ImportFrom, file_path: Path
-) -> tuple[Violation, ...]:
+def _check_typeddict_import(node: ast.ImportFrom, file_path: Path) -> tuple[Violation, ...]:
     """Check if node imports TypedDict."""
     if node.module != "typing":
         return ()
@@ -464,16 +433,10 @@ def _is_typeddict_base(base: ast.expr) -> bool:
     """Check if a base class is TypedDict."""
     if isinstance(base, ast.Name) and base.id == "TypedDict":
         return True
-    return (
-        isinstance(base, ast.Subscript)
-        and isinstance(base.value, ast.Name)
-        and base.value.id == "TypedDict"
-    )
+    return isinstance(base, ast.Subscript) and isinstance(base.value, ast.Name) and base.value.id == "TypedDict"
 
 
-def _check_typeddict_inheritance(
-    node: ast.ClassDef, file_path: Path
-) -> tuple[Violation, ...]:
+def _check_typeddict_inheritance(node: ast.ClassDef, file_path: Path) -> tuple[Violation, ...]:
     """Check if class inherits from TypedDict."""
     violations = [
         Violation(

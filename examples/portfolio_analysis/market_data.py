@@ -67,7 +67,7 @@ TECH_FINANCE_SECTORS = {"Technology", "Finance"}
 
 def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetData:
     """Generate simulated market data for a single asset.
-    
+
     Returns:
         AssetData with randomized market values.
     """
@@ -76,14 +76,8 @@ def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetDa
     current_price = round(base_price * price_variance, 2)
 
     # Simulate volume based on asset type
-    base_volume = (
-        TECH_FINANCE_BASE_VOLUME
-        if sector in TECH_FINANCE_SECTORS
-        else OTHER_SECTORS_BASE_VOLUME
-    )
-    volume = int(
-        base_volume * random.uniform(VOLUME_MULTIPLIER_MIN, VOLUME_MULTIPLIER_MAX)
-    )
+    base_volume = TECH_FINANCE_BASE_VOLUME if sector in TECH_FINANCE_SECTORS else OTHER_SECTORS_BASE_VOLUME
+    volume = int(base_volume * random.uniform(VOLUME_MULTIPLIER_MIN, VOLUME_MULTIPLIER_MAX))
 
     # Generate realistic volatility (technology higher than utilities)
     volatility_multiplier = {
@@ -96,16 +90,12 @@ def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetDa
     }.get(sector, DEFAULT_VOLATILITY_MULTIPLIER)
 
     volatility = round(
-        BASE_VOLATILITY
-        * volatility_multiplier
-        * random.uniform(VOLATILITY_MULTIPLIER_MIN, VOLATILITY_MULTIPLIER_MAX),
+        BASE_VOLATILITY * volatility_multiplier * random.uniform(VOLATILITY_MULTIPLIER_MIN, VOLATILITY_MULTIPLIER_MAX),
         PRECISION_DECIMAL_PLACES,
     )
 
     # Generate momentum indicator (-1 to 1)
-    momentum = round(
-        random.uniform(MOMENTUM_MIN, MOMENTUM_MAX), PRECISION_DECIMAL_PLACES
-    )
+    momentum = round(random.uniform(MOMENTUM_MIN, MOMENTUM_MAX), PRECISION_DECIMAL_PLACES)
 
     return AssetData(
         symbol=symbol,
@@ -119,7 +109,7 @@ def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetDa
 
 def create_sample_market_data() -> MarketData:
     """Create simulated market data for a diversified portfolio.
-    
+
     Returns:
         MarketData with normal market conditions.
     """
@@ -165,7 +155,7 @@ def create_sample_market_data() -> MarketData:
 
 def create_volatile_market_data() -> MarketData:
     """Create market data simulating high volatility conditions.
-    
+
     Returns:
         MarketData with high volatility and bearish sentiment.
     """
@@ -184,19 +174,14 @@ def create_volatile_market_data() -> MarketData:
     ]
 
     # Generate high volatility scenario using immutable operations
-    def _create_volatile_asset(
-        symbol: str, sector: str, base_price: float
-    ) -> AssetData:
+    def _create_volatile_asset(symbol: str, sector: str, base_price: float) -> AssetData:
         # Increase volatility and momentum ranges for stress testing
         price_variance = random.uniform(
             VOLATILE_PRICE_VARIANCE_MIN, VOLATILE_PRICE_VARIANCE_MAX
         )  # More extreme price moves
         current_price = round(base_price * price_variance, 2)
 
-        volume = int(
-            VOLATILE_BASE_VOLUME
-            * random.uniform(VOLATILE_VOLUME_MIN, VOLATILE_VOLUME_MAX)
-        )  # High volume
+        volume = int(VOLATILE_BASE_VOLUME * random.uniform(VOLATILE_VOLUME_MIN, VOLATILE_VOLUME_MAX))  # High volume
 
         # Higher volatility across all sectors
         volatility = round(
@@ -231,7 +216,7 @@ def create_volatile_market_data() -> MarketData:
 
 def create_bullish_market_data() -> MarketData:
     """Create market data simulating strong bullish conditions.
-    
+
     Returns:
         MarketData with positive momentum and bullish sentiment.
     """
@@ -253,14 +238,10 @@ def create_bullish_market_data() -> MarketData:
 
     def _create_bullish_asset(symbol: str, sector: str, base_price: float) -> AssetData:
         # Positive price momentum in bull market
-        price_variance = random.uniform(
-            BULLISH_PRICE_VARIANCE_MIN, BULLISH_PRICE_VARIANCE_MAX
-        )  # Upward bias
+        price_variance = random.uniform(BULLISH_PRICE_VARIANCE_MIN, BULLISH_PRICE_VARIANCE_MAX)  # Upward bias
         current_price = round(base_price * price_variance, 2)
 
-        volume = int(
-            BULLISH_BASE_VOLUME * random.uniform(BULLISH_VOLUME_MIN, BULLISH_VOLUME_MAX)
-        )
+        volume = int(BULLISH_BASE_VOLUME * random.uniform(BULLISH_VOLUME_MIN, BULLISH_VOLUME_MAX))
 
         # Lower volatility in stable bull market
         volatility = round(

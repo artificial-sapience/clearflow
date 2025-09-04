@@ -53,7 +53,7 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
     @override
     async def prep(self, state: MarketData) -> MarketData:
         """Pre-execution hook to show progress.
-        
+
         Returns:
             State passed through unchanged.
         """
@@ -74,9 +74,7 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
         """Display sector outlook with sentiment analysis."""
         if sector_analysis:
             print("   • Sector Outlook:")
-            sorted_sectors = sorted(
-                sector_analysis.items(), key=itemgetter(1), reverse=True
-            )
+            sorted_sectors = sorted(sector_analysis.items(), key=itemgetter(1), reverse=True)
             for sector, score in sorted_sectors[:3]:
                 sentiment = "bullish" if score > 0 else "bearish"
                 print(f"     - {sector}: {sentiment} ({score:+.2f})")
@@ -94,7 +92,7 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
         self, result: NodeResult[QuantInsights | AnalysisError]
     ) -> NodeResult[QuantInsights | AnalysisError]:
         """Post-execution hook to show completion.
-        
+
         Returns:
             Result passed through unchanged.
         """
@@ -106,11 +104,9 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
         return result
 
     @override
-    async def exec(
-        self, state: MarketData
-    ) -> NodeResult[QuantInsights | AnalysisError]:
+    async def exec(self, state: MarketData) -> NodeResult[QuantInsights | AnalysisError]:
         """Analyze market data using DSPy structured prediction.
-        
+
         Returns:
             NodeResult with quantitative insights or analysis error.
         """
@@ -155,7 +151,7 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
     @override
     async def prep(self, state: QuantInsights) -> QuantInsights:
         """Pre-execution hook to show progress.
-        
+
         Returns:
             State passed through unchanged.
         """
@@ -195,7 +191,7 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
         self, result: NodeResult[RiskAssessment | RiskLimitError]
     ) -> NodeResult[RiskAssessment | RiskLimitError]:
         """Post-execution hook to show completion.
-        
+
         Returns:
             Result passed through unchanged.
         """
@@ -208,11 +204,9 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
         return result
 
     @override
-    async def exec(
-        self, state: QuantInsights
-    ) -> NodeResult[RiskAssessment | RiskLimitError]:
+    async def exec(self, state: QuantInsights) -> NodeResult[RiskAssessment | RiskLimitError]:
         """Perform risk analysis using DSPy structured prediction.
-        
+
         Returns:
             NodeResult with risk assessment or risk limit error.
         """
@@ -230,9 +224,7 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
                 error = RiskLimitError(
                     exceeded_limits=tuple(assessment.risk_warnings[:3]),  # Top warnings
                     risk_metrics=assessment.risk_metrics,
-                    recommendations=tuple(
-                        assessment.risk_warnings[3:6]
-                    ),  # Recommendations
+                    recommendations=tuple(assessment.risk_warnings[3:6]),  # Recommendations
                     failed_stage="RISK ANALYST (risk_analyst)",
                 )
                 return NodeResult(error, outcome="risk_limits_exceeded")
@@ -270,7 +262,7 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
     @override
     async def prep(self, state: RiskAssessment) -> RiskAssessment:
         """Pre-execution hook to show progress.
-        
+
         Returns:
             State passed through unchanged.
         """
@@ -280,59 +272,39 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
 
     @staticmethod
     def _group_allocation_changes(
-        allocation_changes: tuple[AllocationChange, ...]
+        allocation_changes: tuple[AllocationChange, ...],
     ) -> tuple[tuple[AllocationChange, ...], tuple[AllocationChange, ...]]:
         """Group allocation changes into increases and decreases.
-        
+
         Returns:
             Tuple of (increases, decreases) allocation changes.
         """
-        increases = tuple(
-            c
-            for c in allocation_changes
-            if c.recommended_allocation > c.current_allocation
-        )
-        decreases = tuple(
-            c
-            for c in allocation_changes
-            if c.recommended_allocation < c.current_allocation
-        )
+        increases = tuple(c for c in allocation_changes if c.recommended_allocation > c.current_allocation)
+        decreases = tuple(c for c in allocation_changes if c.recommended_allocation < c.current_allocation)
         return increases, decreases
 
     @staticmethod
-    def _display_allocation_increases(
-        increases: tuple[AllocationChange, ...]
-    ) -> None:
+    def _display_allocation_increases(increases: tuple[AllocationChange, ...]) -> None:
         """Display recommended allocation increases."""
         if increases:
             print("   • Recommended Increases:")
             for change in increases[:3]:
                 delta = change.recommended_allocation - change.current_allocation
-                print(
-                    f"     - {change.symbol}: +{delta:.1f}% (to {change.recommended_allocation:.1f}%)"
-                )
+                print(f"     - {change.symbol}: +{delta:.1f}% (to {change.recommended_allocation:.1f}%)")
 
     @staticmethod
-    def _display_allocation_decreases(
-        decreases: tuple[AllocationChange, ...]
-    ) -> None:
+    def _display_allocation_decreases(decreases: tuple[AllocationChange, ...]) -> None:
         """Display recommended allocation decreases."""
         if decreases:
             print("   • Recommended Decreases:")
             for change in decreases[:3]:
                 delta = change.current_allocation - change.recommended_allocation
-                print(
-                    f"     - {change.symbol}: -{delta:.1f}% (to {change.recommended_allocation:.1f}%)"
-                )
+                print(f"     - {change.symbol}: -{delta:.1f}% (to {change.recommended_allocation:.1f}%)")
 
-    def _display_portfolio_recommendations(
-        self, recommendations: PortfolioRecommendations
-    ) -> None:
+    def _display_portfolio_recommendations(self, recommendations: PortfolioRecommendations) -> None:
         """Display portfolio recommendation details."""
         print("\n   💼 Portfolio Adjustments:")
-        increases, decreases = self._group_allocation_changes(
-            recommendations.allocation_changes
-        )
+        increases, decreases = self._group_allocation_changes(recommendations.allocation_changes)
         self._display_allocation_increases(increases)
         self._display_allocation_decreases(decreases)
         print(f"   • Strategy: {recommendations.rebalancing_strategy}")
@@ -343,7 +315,7 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
         self, result: NodeResult[PortfolioRecommendations | AnalysisError]
     ) -> NodeResult[PortfolioRecommendations | AnalysisError]:
         """Post-execution hook to show completion.
-        
+
         Returns:
             Result passed through unchanged.
         """
@@ -355,11 +327,9 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
         return result
 
     @override
-    async def exec(
-        self, state: RiskAssessment
-    ) -> NodeResult[PortfolioRecommendations | AnalysisError]:
+    async def exec(self, state: RiskAssessment) -> NodeResult[PortfolioRecommendations | AnalysisError]:
         """Generate portfolio recommendations using DSPy.
-        
+
         Returns:
             NodeResult with portfolio recommendations or analysis error.
         """
@@ -392,9 +362,7 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
 
 
 @dataclass(frozen=True)
-class ComplianceOfficer(
-    Node[PortfolioRecommendations, ComplianceReview | ComplianceError]
-):
+class ComplianceOfficer(Node[PortfolioRecommendations, ComplianceReview | ComplianceError]):
     """AI-powered compliance officer using DSPy for structured compliance review."""
 
     name: str = "compliance_officer"
@@ -406,28 +374,31 @@ class ComplianceOfficer(
 
     @override
     async def prep(self, state: PortfolioRecommendations) -> PortfolioRecommendations:
-        """Pre-execution hook to show progress."""
+        """Pre-execution hook to show progress.
+
+        Returns:
+            State passed through unchanged.
+        """
         print("\n🤖 COMPLIANCE OFFICER")
         print("   └─ Reviewing recommendations for regulatory compliance...")
         return state
 
-    def _display_compliance_violations(self, error: ComplianceError) -> None:
+    @staticmethod
+    def _display_compliance_violations(error: ComplianceError) -> None:
         """Display compliance violations."""
         print("\n   🚫 Violations:")
         for violation in error.violations:
             print(f"   • {violation.rule_name}: {violation.details}")
 
-    def _display_passed_checks(
-        self, compliance_checks: tuple[ComplianceCheck, ...]
-    ) -> None:
+    @staticmethod
+    def _display_passed_checks(compliance_checks: tuple[ComplianceCheck, ...]) -> None:
         """Display passed compliance checks."""
         passed_checks = [c for c in compliance_checks if c.status == "pass"]
         for check in passed_checks[:3]:
             print(f"   • ✓ {check.rule_name}: {check.details}")
 
-    def _display_warning_checks(
-        self, compliance_checks: tuple[ComplianceCheck, ...]
-    ) -> None:
+    @staticmethod
+    def _display_warning_checks(compliance_checks: tuple[ComplianceCheck, ...]) -> None:
         """Display warning compliance checks."""
         warning_checks = [c for c in compliance_checks if c.status == "warning"]
         if warning_checks:
@@ -448,7 +419,11 @@ class ComplianceOfficer(
     async def post(
         self, result: NodeResult[ComplianceReview | ComplianceError]
     ) -> NodeResult[ComplianceReview | ComplianceError]:
-        """Post-execution hook to show completion."""
+        """Post-execution hook to show completion.
+
+        Returns:
+            Result passed through unchanged.
+        """
         if isinstance(result.state, ComplianceError):
             print("   ❌ Compliance violations detected")
             self._display_compliance_violations(result.state)
@@ -457,27 +432,35 @@ class ComplianceOfficer(
             self._display_compliance_review(result.state)
         return result
 
-    def _run_regulatory_checks(
-        self, allocation_changes: tuple[AllocationChange, ...]
-    ) -> tuple[ComplianceCheck, ...]:
-        """Run all regulatory compliance checks."""
+    @staticmethod
+    def _run_regulatory_checks(allocation_changes: tuple[AllocationChange, ...]) -> tuple[ComplianceCheck, ...]:
+        """Run all regulatory compliance checks.
+
+        Returns:
+            Tuple of compliance checks with pass/fail status.
+        """
         return (
             validate_position_limits(allocation_changes),
             validate_sector_concentration(allocation_changes),
             validate_allocation_sanity(allocation_changes),
         )
 
-    def _check_for_violations(
-        self, checks: tuple[ComplianceCheck, ...]
-    ) -> tuple[ComplianceCheck, ...]:
-        """Filter checks for failures."""
+    @staticmethod
+    def _check_for_violations(checks: tuple[ComplianceCheck, ...]) -> tuple[ComplianceCheck, ...]:
+        """Filter checks for failures.
+
+        Returns:
+            Tuple of failed compliance checks only.
+        """
         return tuple(check for check in checks if check.status == "fail")
 
     @override
-    async def exec(
-        self, state: PortfolioRecommendations
-    ) -> NodeResult[ComplianceReview | ComplianceError]:
-        """Review compliance using DSPy structured prediction."""
+    async def exec(self, state: PortfolioRecommendations) -> NodeResult[ComplianceReview | ComplianceError]:
+        """Review compliance using DSPy structured prediction.
+
+        Returns:
+            NodeResult with compliance review or compliance error.
+        """
 
         try:
             # Run regulatory compliance checks
@@ -488,9 +471,7 @@ class ComplianceOfficer(
                 # Regulatory violations detected
                 error = ComplianceError(
                     violations=failures,
-                    required_actions=tuple(
-                        f"Fix: {check.details}" for check in failures
-                    ),
+                    required_actions=tuple(f"Fix: {check.details}" for check in failures),
                     escalation_required=True,
                     failed_stage="COMPLIANCE OFFICER (compliance_officer)",
                 )
@@ -543,7 +524,11 @@ class DecisionNode(Node[ComplianceReview, TradingDecision]):
 
     @override
     async def exec(self, state: ComplianceReview) -> NodeResult[TradingDecision]:
-        """Create final trading decision using DSPy."""
+        """Create final trading decision using DSPy.
+
+        Returns:
+            NodeResult with trading decision.
+        """
 
         try:
             # Use DSPy to get structured trading decision
@@ -565,18 +550,18 @@ class DecisionNode(Node[ComplianceReview, TradingDecision]):
 
 
 @dataclass(frozen=True)
-class ErrorHandler(
-    Node[AnalysisError | RiskLimitError | ComplianceError, TradingDecision]
-):
+class ErrorHandler(Node[AnalysisError | RiskLimitError | ComplianceError, TradingDecision]):
     """Error handler node that converts errors to a hold decision."""
 
     name: str = "error_handler"
 
     @override
-    async def exec(
-        self, state: AnalysisError | RiskLimitError | ComplianceError
-    ) -> NodeResult[TradingDecision]:
-        """Convert error state to a conservative trading decision."""
+    async def exec(self, state: AnalysisError | RiskLimitError | ComplianceError) -> NodeResult[TradingDecision]:
+        """Convert error state to a conservative trading decision.
+
+        Returns:
+            NodeResult with hold trading decision.
+        """
         # Create error message based on error type
         if isinstance(state, AnalysisError):
             error_msg = f"Analysis Error: {state.error_message}"

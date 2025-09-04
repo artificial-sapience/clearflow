@@ -26,9 +26,7 @@ def validate_position_limits(
         ComplianceCheck with position limit status
     """
     violations = [
-        change.symbol
-        for change in allocation_changes
-        if change.recommended_allocation > ComplianceRules.POSITION_LIMIT
+        change.symbol for change in allocation_changes if change.recommended_allocation > ComplianceRules.POSITION_LIMIT
     ]
 
     if violations:
@@ -63,11 +61,7 @@ def validate_sector_concentration(
     }
 
     for sector_name, symbols in sectors.items():
-        total = sum(
-            change.recommended_allocation
-            for change in allocation_changes
-            if change.symbol in symbols
-        )
+        total = sum(change.recommended_allocation for change in allocation_changes if change.symbol in symbols)
 
         if total > ComplianceRules.SECTOR_LIMIT:
             return ComplianceCheck(
@@ -86,18 +80,22 @@ def validate_sector_concentration(
 def _check_negative_allocations(
     allocation_changes: tuple[AllocationChange, ...],
 ) -> tuple[str, ...]:
-    """Get symbols with negative allocations."""
-    return tuple(
-        change.symbol
-        for change in allocation_changes
-        if change.recommended_allocation < 0
-    )
+    """Get symbols with negative allocations.
+
+    Returns:
+        Tuple of symbols with negative recommended allocations.
+    """
+    return tuple(change.symbol for change in allocation_changes if change.recommended_allocation < 0)
 
 
 def _check_total_allocation(
     allocation_changes: tuple[AllocationChange, ...],
 ) -> float:
-    """Calculate total allocation percentage."""
+    """Calculate total allocation percentage.
+
+    Returns:
+        Sum of all recommended allocation percentages.
+    """
     return sum(change.recommended_allocation for change in allocation_changes)
 
 

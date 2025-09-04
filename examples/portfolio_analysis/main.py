@@ -38,7 +38,7 @@ def print_market_overview(market_data: MarketData) -> None:
 
 def _get_allocation_action(delta: float) -> str:
     """Get allocation action based on delta.
-    
+
     Returns:
         Action string: "INCREASE", "DECREASE", or "HOLD".
     """

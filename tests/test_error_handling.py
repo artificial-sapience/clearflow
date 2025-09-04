@@ -67,9 +67,7 @@ class TestErrorHandling:
 
         # Flow with incomplete routing - unexpected outcome not routed
         incomplete_flow = (
-            flow("IncompleteFlow", unpredictable)
-            .route(unpredictable, "expected", terminal)
-            .end(terminal, "completed")
+            flow("IncompleteFlow", unpredictable).route(unpredictable, "expected", terminal).end(terminal, "completed")
             # "unexpected" outcome not routed - will bubble up
         )
 
