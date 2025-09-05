@@ -57,7 +57,12 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
 
 
 def _is_mutable_list_annotation(node: ast.Subscript) -> str | None:
-    """Check if node is a mutable list annotation and return the type name."""
+    """Check if node is a mutable list annotation and return the type name.
+
+    Returns:
+        String description of the list type found, or None if not a list.
+
+    """
     if not isinstance(node.value, ast.Name):
         return None
     if node.value.id == "list":
@@ -106,7 +111,12 @@ def check_list_annotations(file_path: Path, content: str) -> tuple[Violation, ..
 
 
 def _is_dataclass_decorator(decorator: ast.expr) -> bool:
-    """Check if decorator is @dataclass."""
+    """Check if decorator is @dataclass.
+
+    Returns:
+        True if decorator is a dataclass decorator, False otherwise.
+
+    """
     if isinstance(decorator, ast.Name) and decorator.id == "dataclass":
         return True
     if isinstance(decorator, ast.Call):
@@ -118,7 +128,12 @@ def _is_dataclass_decorator(decorator: ast.expr) -> bool:
 
 
 def _has_frozen_true(decorator: ast.expr) -> bool:
-    """Check if decorator has frozen=True."""
+    """Check if decorator has frozen=True.
+
+    Returns:
+        True if decorator has frozen=True, False otherwise.
+
+    """
     if not isinstance(decorator, ast.Call):
         return False
     for keyword in decorator.keywords:
@@ -168,24 +183,44 @@ def check_dataclass_frozen(file_path: Path, content: str) -> tuple[Violation, ..
 
 
 def _is_basemodel_class(base: ast.expr) -> bool:
-    """Check if base class is BaseModel."""
+    """Check if base class is BaseModel.
+
+    Returns:
+        True if base class is BaseModel, False otherwise.
+
+    """
     if isinstance(base, ast.Name) and base.id == "BaseModel":
         return True
     return isinstance(base, ast.Attribute) and base.attr == "BaseModel"
 
 
 def _has_model_config_target(targets: list[ast.expr]) -> bool:
-    """Check if any target is named model_config."""
+    """Check if any target is named model_config.
+
+    Returns:
+        True if model_config is targeted, False otherwise.
+
+    """
     return any(isinstance(target, ast.Name) and target.id == "model_config" for target in targets)
 
 
 def _is_config_dict_call(value: ast.expr) -> bool:
-    """Check if value is a ConfigDict() call."""
+    """Check if value is a ConfigDict() call.
+
+    Returns:
+        True if value is a ConfigDict call, False otherwise.
+
+    """
     return isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == "ConfigDict"
 
 
 def _has_frozen_true_keyword(keywords: list[ast.keyword]) -> bool:
-    """Check if keywords contain frozen=True."""
+    """Check if keywords contain frozen=True.
+
+    Returns:
+        True if keywords contain frozen=True, False otherwise.
+
+    """
     return any(
         keyword.arg == "frozen" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True
         for keyword in keywords
@@ -193,7 +228,12 @@ def _has_frozen_true_keyword(keywords: list[ast.keyword]) -> bool:
 
 
 def _is_frozen_config_assignment(item: ast.Assign) -> bool:
-    """Check if assignment is model_config = ConfigDict(frozen=True)."""
+    """Check if assignment is model_config = ConfigDict(frozen=True).
+
+    Returns:
+        True if assignment is frozen model_config, False otherwise.
+
+    """
     if not _has_model_config_target(item.targets):
         return False
     if not _is_config_dict_call(item.value):
@@ -204,12 +244,22 @@ def _is_frozen_config_assignment(item: ast.Assign) -> bool:
 
 
 def _has_frozen_config(node: ast.ClassDef) -> bool:
-    """Check if class has model_config with frozen=True."""
+    """Check if class has model_config with frozen=True.
+
+    Returns:
+        True if model has frozen configuration, False otherwise.
+
+    """
     return any(isinstance(item, ast.Assign) and _is_frozen_config_assignment(item) for item in node.body)
 
 
 def _is_pydantic_model(node: ast.ClassDef, pydantic_classes: set[str]) -> bool:
-    """Check if class is a Pydantic model."""
+    """Check if class is a Pydantic model.
+
+    Returns:
+        True if class inherits from BaseModel, False otherwise.
+
+    """
     for base in node.bases:
         if isinstance(base, ast.Name) and (base.id == "BaseModel" or base.id in pydantic_classes):
             return True
@@ -260,7 +310,12 @@ def check_pydantic_frozen(file_path: Path, content: str) -> tuple[Violation, ...
 
 
 def _get_mutable_default_info(default: ast.expr) -> tuple[str, str] | None:
-    """Get mutable type info if default is mutable, else None."""
+    """Get mutable type info if default is mutable, else None.
+
+    Returns:
+        Tuple of (type description, instance description) or None if not mutable.
+
+    """
     if isinstance(default, ast.List):
         return "list", "use None or tuple"
     if isinstance(default, ast.Dict):
@@ -306,7 +361,12 @@ def check_mutable_defaults(file_path: Path, content: str) -> tuple[Violation, ..
 
 
 def _has_temporary_markers(lines: tuple[str, ...]) -> bool:
-    """Check if file has markers indicating intentional temporary list building."""
+    """Check if file has markers indicating intentional temporary list building.
+
+    Returns:
+        True if temporary markers are present, False otherwise.
+
+    """
     for i, line in enumerate(lines):
         if "# Temporary" in line or "# temporary" in line or "# Building" in line:
             # This suggests intentional temporary list building
@@ -317,7 +377,12 @@ def _has_temporary_markers(lines: tuple[str, ...]) -> bool:
 
 
 def _check_append_usage(node: ast.Attribute, lines: tuple[str, ...], file_path: Path) -> Violation | None:
-    """Check for list.append() patterns."""
+    """Check for list.append() patterns.
+
+    Returns:
+        Violation if append usage found, None otherwise.
+
+    """
     if node.attr == "append" and isinstance(node.value, ast.Name) and node.lineno <= len(lines):
         line = lines[node.lineno - 1]
         if "temporary" not in line.lower() and "building" not in line.lower():
@@ -333,7 +398,12 @@ def _check_append_usage(node: ast.Attribute, lines: tuple[str, ...], file_path: 
 
 
 def _should_skip_listcomp(node: ast.ListComp, lines: tuple[str, ...]) -> bool:
-    """Check if list comprehension should be skipped."""
+    """Check if list comprehension should be skipped.
+
+    Returns:
+        True if list comprehension should be skipped, False otherwise.
+
+    """
     if node.lineno > len(lines):
         return False
 
@@ -351,7 +421,12 @@ def _should_skip_listcomp(node: ast.ListComp, lines: tuple[str, ...]) -> bool:
 
 
 def _should_skip_file(file_path: Path) -> bool:
-    """Check if file should be skipped for list building checks."""
+    """Check if file should be skipped for list building checks.
+
+    Returns:
+        True if file should be skipped, False otherwise.
+
+    """
     path_str = str(file_path)
     return "tests/" in path_str or "linters/" in path_str
 
@@ -359,7 +434,12 @@ def _should_skip_file(file_path: Path) -> bool:
 def _collect_list_violations(
     tree: ast.Module, lines: tuple[str, ...], file_path: Path, content: str
 ) -> tuple[Violation, ...]:
-    """Collect all list building violations from AST."""
+    """Collect all list building violations from AST.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     violations: list[Violation] = []
 
     for node in ast.walk(tree):
@@ -410,7 +490,12 @@ def check_list_building(file_path: Path, content: str) -> tuple[Violation, ...]:
 
 
 def _check_typeddict_import(node: ast.ImportFrom, file_path: Path) -> tuple[Violation, ...]:
-    """Check if node imports TypedDict."""
+    """Check if node imports TypedDict.
+
+    Returns:
+        Tuple of violations for TypedDict imports.
+
+    """
     if node.module != "typing":
         return ()
 
@@ -430,14 +515,24 @@ def _check_typeddict_import(node: ast.ImportFrom, file_path: Path) -> tuple[Viol
 
 
 def _is_typeddict_base(base: ast.expr) -> bool:
-    """Check if a base class is TypedDict."""
+    """Check if a base class is TypedDict.
+
+    Returns:
+        True if base class is TypedDict, False otherwise.
+
+    """
     if isinstance(base, ast.Name) and base.id == "TypedDict":
         return True
     return isinstance(base, ast.Subscript) and isinstance(base.value, ast.Name) and base.value.id == "TypedDict"
 
 
 def _check_typeddict_inheritance(node: ast.ClassDef, file_path: Path) -> tuple[Violation, ...]:
-    """Check if class inherits from TypedDict."""
+    """Check if class inherits from TypedDict.
+
+    Returns:
+        Tuple of violations for TypedDict inheritance.
+
+    """
     violations = [
         Violation(
             file=file_path,

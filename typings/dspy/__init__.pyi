@@ -1,42 +1,97 @@
-from typing import Any
+"""Minimal DSPy type stubs for ClearFlow examples.
 
-from _typeshed import Incomplete
-from dspy.__metadata__ import __author_email__ as __author_email__
-from dspy.__metadata__ import __description__ as __description__
-from dspy.__metadata__ import __url__ as __url__
-from dspy.__metadata__ import __version__ as __version__
-from dspy.adapters import Adapter as Adapter
-from dspy.adapters import Audio as Audio
-from dspy.adapters import ChatAdapter as ChatAdapter
-from dspy.adapters import Code as Code
-from dspy.adapters import History as History
-from dspy.adapters import Image as Image
-from dspy.adapters import JSONAdapter as JSONAdapter
-from dspy.adapters import Tool as Tool
-from dspy.adapters import ToolCalls as ToolCalls
-from dspy.adapters import TwoStepAdapter as TwoStepAdapter
-from dspy.adapters import Type as Type
-from dspy.adapters import XMLAdapter as XMLAdapter
-from dspy.clients import *
-from dspy.clients import DSPY_CACHE as DSPY_CACHE
-from dspy.dsp.colbertv2 import ColBERTv2 as ColBERTv2
-from dspy.dsp.utils.settings import settings as settings
-from dspy.evaluate import Evaluate as Evaluate
-from dspy.predict import *
-from dspy.primitives import *
-from dspy.retrievers import *
-from dspy.signatures import *
-from dspy.streaming.streamify import streamify as streamify
-from dspy.teleprompt import *
-from dspy.utils.asyncify import asyncify as asyncify
-from dspy.utils.logging_utils import configure_dspy_loggers as configure_dspy_loggers
-from dspy.utils.logging_utils import disable_logging as disable_logging
-from dspy.utils.logging_utils import enable_logging as enable_logging
-from dspy.utils.saving import load as load
-from dspy.utils.syncify import syncify as syncify
-from dspy.utils.usage_tracker import track_usage as track_usage
+This file contains ONLY the DSPy APIs we actually use.
 
-configure: Incomplete
-context: Incomplete
-BootstrapRS = BootstrapFewShotWithRandomSearch
-cache = DSPY_CACHE
+APIs stubbed (based on actual usage):
+- dspy.LM: Language model configuration
+- dspy.configure: Global DSPy configuration  
+- dspy.Signature: Base class for prompt signatures
+- dspy.InputField: Input field descriptor
+- dspy.OutputField: Output field descriptor
+- dspy.Predict: Prediction module
+
+If you need additional DSPy functionality:
+1. Add it to the examples
+2. Add the type stub here
+3. Document what it's used for
+
+This keeps our stubs maintainable and accurate.
+"""
+from typing import Any, Optional
+
+from pydantic import BaseModel
+from pydantic._internal._model_construction import ModelMetaclass
+
+# Language Model Configuration
+class LM:
+    """Language model interface for DSPy."""
+    def __init__(
+        self,
+        model: str,
+        *,
+        api_key: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: Optional[int] = None,
+        **kwargs: Any
+    ) -> None: ...
+
+# Global Configuration
+def configure(
+    *,
+    lm: Optional[LM] = None,
+    **kwargs: Any
+) -> None:
+    """Configure global DSPy settings."""
+    ...
+
+# Field Descriptors
+def InputField(
+    *,
+    desc: str = "",
+    prefix: str = "",
+    format: Any = None,
+    **kwargs: Any
+) -> Any:  # Returns Any to work with metaclass transformation
+    """Define an input field in a DSPy signature."""
+    ...
+
+def OutputField(
+    *,
+    desc: str = "",
+    prefix: str = "",
+    format: Any = None,
+    **kwargs: Any
+) -> Any:  # Returns Any to work with metaclass transformation
+    """Define an output field in a DSPy signature."""
+    ...
+
+# Signature Base Class
+class SignatureMeta(ModelMetaclass):
+    """Metaclass for DSPy signatures."""
+    ...
+
+class Signature(BaseModel, metaclass=SignatureMeta):
+    """Base class for DSPy prompt signatures.
+    
+    Inherits from Pydantic BaseModel and uses metaclass
+    transformation to convert field descriptors into typed attributes.
+    """
+    __doc__: str
+
+# Prediction Module
+class Predict:
+    """DSPy prediction module for executing signatures."""
+    
+    def __init__(
+        self,
+        signature: type[Signature] | str,
+        **kwargs: Any
+    ) -> None: ...
+    
+    def __call__(self, **kwargs: Any) -> Any:
+        """Execute the prediction with given inputs."""
+        ...
+    
+    def forward(self, **kwargs: Any) -> Any:
+        """Forward pass through the prediction module."""
+        ...

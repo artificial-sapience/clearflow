@@ -90,7 +90,12 @@ def check_asyncio_run(file_path: Path, content: str) -> tuple[Violation, ...]:
 
 
 def _check_new_event_loop(node: ast.Call, tree: ast.Module, file_path: Path) -> Violation | None:
-    """Check for new_event_loop() calls without cleanup."""
+    """Check for new_event_loop() calls without cleanup.
+
+    Returns:
+        Violation if new_event_loop without cleanup found, None otherwise.
+
+    """
     if not (
         isinstance(node.func, ast.Attribute)
         and isinstance(node.func.value, ast.Name)
@@ -115,7 +120,12 @@ def _check_new_event_loop(node: ast.Call, tree: ast.Module, file_path: Path) -> 
 
 
 def _has_cleanup_in_try_finally(node: ast.Call, tree: ast.Module) -> bool:
-    """Check if node is in try block with close() in finally."""
+    """Check if node is in try block with close() in finally.
+
+    Returns:
+        True if node has cleanup in try/finally, False otherwise.
+
+    """
     for other_node in ast.walk(tree):
         if isinstance(other_node, ast.Try):
             # Check if the loop creation is in the try block
@@ -127,7 +137,12 @@ def _has_cleanup_in_try_finally(node: ast.Call, tree: ast.Module) -> bool:
 
 
 def _has_close_in_finally(finalbody: list[ast.stmt]) -> bool:
-    """Check if finally block contains a close() call."""
+    """Check if finally block contains a close() call.
+
+    Returns:
+        True if finally block contains close() call, False otherwise.
+
+    """
     for final_stmt in finalbody:
         if (
             isinstance(final_stmt, ast.Expr)
@@ -140,7 +155,12 @@ def _has_close_in_finally(finalbody: list[ast.stmt]) -> bool:
 
 
 def _check_get_event_loop(node: ast.Call, file_path: Path) -> Violation | None:
-    """Check for get_event_loop() calls."""
+    """Check for get_event_loop() calls.
+
+    Returns:
+        Violation if get_event_loop() found, None otherwise.
+
+    """
     if (
         isinstance(node.func, ast.Attribute)
         and isinstance(node.func.value, ast.Name)
@@ -195,7 +215,12 @@ def check_event_loop_creation(file_path: Path, content: str) -> tuple[Violation,
 
 
 def _is_in_with_statement(node: ast.Call, tree: ast.Module) -> bool:
-    """Check if a call node is used within a with statement."""
+    """Check if a call node is used within a with statement.
+
+    Returns:
+        True if call is within a with statement, False otherwise.
+
+    """
     for other_node in ast.walk(tree):
         if isinstance(other_node, ast.With):
             for item in other_node.items:
@@ -205,7 +230,12 @@ def _is_in_with_statement(node: ast.Call, tree: ast.Module) -> bool:
 
 
 def _check_open_without_context(node: ast.Call, tree: ast.Module, file_path: Path) -> Violation | None:
-    """Check for open() calls without context managers."""
+    """Check for open() calls without context managers.
+
+    Returns:
+        Violation if open() without context manager found, None otherwise.
+
+    """
     if isinstance(node.func, ast.Name) and node.func.id == "open" and not _is_in_with_statement(node, tree):
         return Violation(
             file=file_path,

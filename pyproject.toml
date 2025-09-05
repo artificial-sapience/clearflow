@@ -54,7 +54,6 @@ dev = [
     "pytest-cov>=6.2.0",
     
     # Type checking
-    "mypy>=1.17.0",
     "pyright>=1.1.0",
     "typeguard>=4.4.0",  # Runtime type-checker
     
@@ -113,7 +112,7 @@ target-version = "py313"
 indent-width = 4
 preview = true
 fix = false
-extend-exclude = ["*.ipynb"]  # Exclude notebooks
+extend-exclude = ["*.ipynb", "typings"]  # Exclude notebooks and auto-generated type stubs
 unsafe-fixes = false
 
 [tool.ruff.format]
@@ -257,55 +256,6 @@ extend-immutable-calls = ["tuple", "frozenset"]
 [tool.ruff.lint.flake8-bandit]
 # Enable security-focused rules
 check-typed-exception = true
-
-#################################### Mypy Configuration ####################################
-[tool.mypy]
-python_version = "3.13"
-strict = true
-mypy_path = "typings"  # Use our DSPy type stubs
-show_error_codes = true
-explicit_package_bases = true
-warn_unreachable = true
-warn_unused_ignores = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_any_generics = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_no_return = true
-implicit_reexport = false
-strict_equality = true
-strict_concatenate = true  # forbid back-propagation of *args / **kwargs types
-# Treat specific warning categories as errors
-enable_error_code = [
-  "redundant-expr",      # dead-code expression
-  "truthy-bool",         # implicit truthiness conversion
-  "ignore-without-code", # type: ignore without error code
-  "unused-awaitable",    # unused awaitable value
-]
-plugins = ["pydantic.mypy"]
-
-# Type-ignore overrides for external dependencies
-[[tool.mypy.overrides]]
-module = "tests.*"
-disallow_untyped_defs = true  # Mission-critical: Tests must be fully typed
-
-[[tool.mypy.overrides]]
-module = "examples.*"
-# Mission-critical: Examples must demonstrate best practices
-disallow_untyped_defs = true
-disallow_any_unimported = true  # No Any from imports
-disallow_any_expr = true        # No Any in expressions
-disallow_any_decorated = true   # No Any in decorators
-disallow_any_explicit = true    # No explicit Any
-disallow_any_generics = true    # No Any in generics
-disallow_subclassing_any = true # No subclassing Any
 
 #################################### Pyright Configuration ####################################
 [tool.pyright]

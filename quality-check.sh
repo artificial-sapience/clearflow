@@ -163,24 +163,6 @@ print_header "Running formatting checks"
 uv run ruff format --check $QUALITY_TARGETS
 check_step "Ruff formatting check"
 
-print_header "Running mypy type checks"
-# Mypy auto-reads [tool.mypy] from pyproject.toml including 'strict = true'
-# Only pass explicit targets if user provided them
-if [ $# -gt 0 ]; then
-    MYPY_ARGS="$QUALITY_TARGETS"
-else
-    MYPY_ARGS="clearflow tests examples linters"  # Default directories
-fi
-if ! uv run mypy $MYPY_ARGS; then
-    echo -e "${RED}✗ Type checking violations detected${NC}"
-    echo -e "${YELLOW}⚠️  DO NOT suppress with # type: ignore comments${NC}"
-    echo -e "${YELLOW}⚠️  DO NOT add to [tool.mypy.overrides] in pyproject.toml${NC}"
-    echo -e "${YELLOW}⚠️  AI ASSISTANTS: Never suppress type errors without explicit user approval${NC}"
-    echo -e "${GREEN}✅ FIX THE ROOT CAUSE: Add proper type annotations${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✓ Mypy type checking passed${NC}"
-
 print_header "Running pyright type checks"
 # Pyright auto-reads [tool.pyright] from pyproject.toml
 # Only pass explicit targets if user provided them

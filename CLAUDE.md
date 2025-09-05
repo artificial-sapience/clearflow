@@ -8,7 +8,7 @@ ClearFlow provides mission-critical AI orchestration for functional programming 
 
 - **Deep immutability** - All state transformations create new immutable data structures
 - **Functional purity** - Side effects isolated, transformations are pure functions
-- **Type safety** - Full static typing with mypy/pyright strict mode
+- **Type safety** - Full static typing with pyright strict mode (mypy removed)
 - **100% test coverage** - Every path tested, no exceptions
 - **Explicit routing** - Given an outcome, the next step is always the same
 - **Zero dependencies** - Stdlib only for maximum reliability
@@ -33,8 +33,7 @@ python3 linters/check-test-suite-compliance.py   # Test isolation and resource m
 # Individual quality commands
 uv run ruff check --fix clearflow tests                 # Auto-fix linting (no unsafe fixes)
 uv run ruff format clearflow tests                      # Format code
-uv run mypy --strict clearflow tests                    # Type check (mypy)
-uv run pyright clearflow tests                          # Type check (pyright) - TAKES PRECEDENCE
+uv run pyright clearflow tests                          # Type check (pyright - only type checker)
 uv run pytest -x -v tests                              # Run all tests
 uv run pytest -x -v tests -k "specific_test"           # Run specific test
 
@@ -49,7 +48,8 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
 ### Core Concepts
 
 1. **Nodes**: Async functions that transform state
-   - Inherit from `Node[T]` and override `exec()` method
+   - Inherit from `Node[T]` or `Node[TIn, TOut]` and override `exec()` method
+   - Nodes are frozen dataclasses with a `name` field
    - Input: state of type `T` (any type: dict, TypedDict, dataclass, primitives)
    - Output: `NodeResult[T](state, outcome)`
    - Designed for explicit transformations
@@ -62,15 +62,17 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
    - Works with dict, TypedDict, dataclass, primitives
 
 3. **Flow**: Type-safe workflow builder
+   - Create with `flow("name", start_node)` function
+   - Chain with `.route(from_node, outcome, to_node)`
+   - End with `.end(final_node, outcome)` for single termination
    - Single termination rule: exactly one route to `None`
-   - Trustworthy orchestration with full generic support
-   - Build-time validation of flow structure
+   - Full generic support with type inference
 
 ### Key Facts
 
-- **Code size**: <200 lines (currently 188)
+- **Code size**: ~250 lines total, ~185 non-comment lines
 - **Test coverage**: 100% required
-- **Type safety**: No `Any` or `type: ignore` allowed
+- **Type safety**: No unnecessary `Any` (required for metaclass patterns)
 - **Immutability**: All dataclasses frozen
 - **Routing**: Explicit (NOT deterministic execution)
 - **Single termination**: Exactly one route to `None` per flow
@@ -78,27 +80,32 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
 ### Common Patterns
 
 ```python
-# Creating nodes with OO approach
+from dataclasses import dataclass
+from typing import override
+from clearflow import Node, NodeResult, flow
+
+# Creating nodes - Node is a frozen dataclass
+@dataclass(frozen=True)
 class DocumentLoader(Node[DocumentState]):
-    def __init__(self) -> None:
-        super().__init__(name="loader")
+    name: str = "loader"
     
+    @override
     async def exec(self, state: DocumentState) -> NodeResult[DocumentState]:
         content = await load_document(state["path"])
         new_state: DocumentState = {**state, "content": content}
         return NodeResult(new_state, outcome="loaded")
 
 # Building a flow with single termination
-complete = CompleteNode()  # Convergence point
+loader = DocumentLoader()
+processor = ProcessorNode()
+complete = CompleteNode()
 
-flow = (
-    Flow[DocumentState]("Pipeline")
-    .start_with(loader)
+flow_instance = (
+    flow("Pipeline", loader)
     .route(loader, "loaded", processor)
     .route(loader, "error", complete)
     .route(processor, "processed", complete)
-    .route(complete, "done", None)  # Single termination
-    .build()
+    .end(complete, "done")  # Single termination
 )
 ```
 
@@ -116,16 +123,15 @@ flow = (
 **CRITICAL**: These standards maintain trust:
 
 - All linting rules must pass without suppression
-- Both mypy and pyright must pass in strict mode
-- **Pyright takes precedence** when tools conflict
-- No `type: ignore` comments in core library code
-- No `Any` types where proper types can be used
+- Pyright must pass in strict mode (sole type checker)
+- Minimal `# pyright: ignore` comments (only for documented limitations)
+- No `Any` types except where required (e.g., metaclass patterns)
 - Prefer boring, obvious code over clever solutions
 
 **LINTER SUPPRESSION POLICY**:
 
 - **NEVER add linter suppressions without explicit user approval**
-- This includes: `# noqa`, `# type: ignore`, `# pyright: ignore`, etc.
+- This includes: `# noqa`, `# pyright: ignore`, etc.
 - All approved suppressions MUST include a justification comment
 - Example: `# noqa: C901  # Display function complexity acceptable for UI`
 - Always fix the root cause instead of suppressing when possible
@@ -259,7 +265,7 @@ ClearFlow provides explicit routing with single termination enforcement. Keep th
 
 ## Documentation Size Limits
 
-ClearFlow is ~166 lines. Documentation should be proportional:
+ClearFlow is ~250 lines. Documentation should be proportional:
 
 - README.md: Keep concise but complete (~200 lines is reasonable for user-facing docs)
 - Individual docs: <100 lines
@@ -287,11 +293,18 @@ ClearFlow uses automated release management:
 
 **PyPI Package**: <https://pypi.org/project/clearflow/>
 
-## Critical Technical Distinction
+## Critical Technical Distinctions
 
 **Explicit routing ≠ Deterministic execution**
 
 ClearFlow provides explicit routing (given outcome X, next step is always Y) but NOT deterministic execution (nodes execute arbitrary async code with unpredictable timing).
+
+**Type Stub Best Practices**
+
+- Stub only what you use (e.g., 6 DSPy APIs, not 127 files)
+- Metaclass field descriptors must return `Any` (standard practice)
+- Document why in stubs: `# Returns Any for metaclass transformation`
+- Minimal stubs are maintainable; complete stubs are not
 
 Always use precise technical terms. Users are engineers who will verify claims.
 
@@ -303,3 +316,7 @@ Always use precise technical terms. Users are engineers who will verify claims.
 4. **Show, don't tell** - Code examples > philosophical manifestos
 5. **Trust the code** - A well-written 200-line library doesn't need 450-line guides
 6. **Be boring** - Boring, obvious code and docs are better than clever ones
+7. **Mypy vs Pyright** - Pyright supports PEP 695 defaults, mypy doesn't. Use pyright only.
+8. **Type stub maintenance** - Keep only what you use. 127 stubs for 6 APIs is waste.
+9. **Metaclass patterns** - Must return `Any` from field constructors (industry standard)
+10. **DSPy signatures** - They're Pydantic models with metaclass transformation

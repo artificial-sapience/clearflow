@@ -1,6 +1,6 @@
 """AI-powered financial specialist nodes using DSPy for structured outputs."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from operator import itemgetter
 from typing import override
 
@@ -43,6 +43,7 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
     """AI-powered quantitative analyst using DSPy for structured analysis."""
 
     name: str = "quant_analyst"
+    _predict: dspy.Predict = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize DSPy predictor."""
@@ -142,6 +143,7 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
     """AI-powered risk analyst using DSPy for structured risk assessment."""
 
     name: str = "risk_analyst"
+    _predict: dspy.Predict = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize DSPy predictor."""
@@ -184,7 +186,7 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
             print("   • Key Warnings:")
             for warning in assessment.risk_warnings[:2]:
                 print(f"     - {warning}")
-        print(f"   • Overall Assessment: {assessment.overall_assessment}")
+        print(f"   • Overall Assessment: {assessment.risk_summary}")
 
     @override
     async def post(
@@ -253,6 +255,7 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
     """AI-powered portfolio manager using DSPy for structured recommendations."""
 
     name: str = "portfolio_manager"
+    _predict: dspy.Predict = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize DSPy predictor."""
@@ -307,7 +310,7 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
         increases, decreases = self._group_allocation_changes(recommendations.allocation_changes)
         self._display_allocation_increases(increases)
         self._display_allocation_decreases(decreases)
-        print(f"   • Strategy: {recommendations.rebalancing_strategy}")
+        print(f"   • Strategy: {recommendations.investment_thesis[:100]}...")
         print(f"   • Timeline: {recommendations.execution_timeline}")
 
     @override
@@ -366,6 +369,7 @@ class ComplianceOfficer(Node[PortfolioRecommendations, ComplianceReview | Compli
     """AI-powered compliance officer using DSPy for structured compliance review."""
 
     name: str = "compliance_officer"
+    _predict: dspy.Predict = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize DSPy predictor."""
@@ -516,6 +520,7 @@ class DecisionNode(Node[ComplianceReview, TradingDecision]):
     """Final decision node using DSPy for structured trading decision."""
 
     name: str = "final_decision"
+    _predict: dspy.Predict = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize DSPy predictor."""

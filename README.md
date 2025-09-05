@@ -14,7 +14,7 @@ Type-safe async workflow orchestration for language models. **Explicit routing, 
 - **Predictable control flow** – explicit routes, no hidden magic  
 - **Immutable, typed state** – frozen state passed via `NodeResult`  
 - **One exit rule** – exactly one termination route enforced  
-- **Tiny surface area** – one file, three concepts: `Node`, `NodeResult`, `Flow`  
+- **Tiny surface area** – one file, three exports: `Node`, `NodeResult`, `flow`  
 - **100% test coverage** – every line tested  
 - **Zero runtime deps** – bring your own clients (OpenAI, Anthropic, etc.)  
 
@@ -28,40 +28,70 @@ pip install clearflow
 
 ---
 
-## 60-second Quickstart
+## 60-second Quickstart: RAG Pipeline
 
 ```python
-from typing import TypedDict
-from clearflow import Flow, Node, NodeResult
+from dataclasses import dataclass
+from typing import override
+from clearflow import Node, NodeResult, flow
 
-# 1) Define typed state
-class ChatState(TypedDict):
-    messages: list[dict[str, str]]
+# 1) Define immutable state transitions
+@dataclass(frozen=True)
+class Query:
+    question: str
 
-# 2) Define a node
-class ChatNode(Node[ChatState]):
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        # Call your LLM here
-        # reply = await llm.chat(state["messages"])
-        reply = {"role": "assistant", "content": "Hello!"}
-        new_state: ChatState = {"messages": [*state["messages"], reply]}
-        return NodeResult(new_state, outcome="success")
+@dataclass(frozen=True)
+class Context:
+    question: str
+    documents: list[str]
 
-# 3) Build flow with explicit routing
-chat = ChatNode()
-flow = (
-    Flow[ChatState]("ChatBot")
-    .start_with(chat)
-    .route(chat, "success", None)  # terminate on success
-    .build()
+@dataclass(frozen=True)
+class Answer:
+    question: str
+    documents: list[str]
+    response: str
+
+# 2) Define nodes for each step
+@dataclass(frozen=True)
+class Retriever(Node[Query, Context]):
+    name: str = "retriever"
+    
+    @override
+    async def exec(self, state: Query) -> NodeResult[Context]:
+        # Retrieve relevant documents from vector store
+        docs = ["Paris is the capital of France.", "London is the capital of UK."]
+        return NodeResult(Context(state.question, docs), outcome="retrieved")
+
+@dataclass(frozen=True)
+class Generator(Node[Context, Answer]):
+    name: str = "generator"
+    
+    @override
+    async def exec(self, state: Context) -> NodeResult[Answer]:
+        # Generate answer using LLM with retrieved context
+        response = f"Based on context: {state.documents[0]}"
+        return NodeResult(
+            Answer(state.question, state.documents, response), 
+            outcome="answered"
+        )
+
+# 3) Build RAG flow with explicit routing
+retriever = Retriever()
+generator = Generator()
+
+rag_flow = (
+    flow("RAG", retriever)
+    .route(retriever, "retrieved", generator)
+    .end(generator, "answered")
 )
 
 # 4) Run it
-async def main() -> None:
-    result = await flow({"messages": [{"role": "user", "content": "Hi"}]})
-    print(result.state["messages"][-1]["content"])  # "Hello!"
-
 import asyncio
+
+async def main() -> None:
+    result = await rag_flow(Query("What is the capital of France?"))
+    print(result.state.response)  # "Based on context: Paris is the capital of France."
+
 asyncio.run(main())
 ```
 
@@ -69,70 +99,97 @@ asyncio.run(main())
 
 ## Core Concepts
 
-### `Node[T]`
+### `Node[TIn, TOut]`
 
-A unit that transforms state of type `T`.
+A unit that transforms state from `TIn` to `TOut` (or `Node[T]` when types are the same).
 
-- `prep(state: T) -> T` – optional pre-work/validation  
-- `exec(state: T) -> NodeResult[T]` – **required**; return new state + outcome  
-- `post(result: NodeResult[T]) -> NodeResult[T]` – optional cleanup/logging  
+- `prep(state: TIn) -> TIn` – optional pre-work/validation  
+- `exec(state: TIn) -> NodeResult[TOut]` – **required**; return new state + outcome  
+- `post(result: NodeResult[TOut]) -> NodeResult[TOut]` – optional cleanup/logging  
 
-Nodes are `async` and **pure** (no shared mutable state).
+Nodes are `async`, **pure** (no side effects), and use frozen dataclasses.
 
 ### `NodeResult[T]`
 
 Holds the **new state** and an **outcome** string used for routing.
 
-### `Flow[T]`
+### `flow()`
 
-A fluent builder that wires nodes together with **explicit routing**:
+A function that creates a flow builder with **explicit routing**:
 
 ```python
-Flow[T]("Name")
-  .start_with(a)
-  .route(a, "ok", b)
-  .route(b, "done", None)  # exactly one termination
-  .build()                 # -> returns a Node[T] you can await
+flow("Name", start_node)
+  .route(start_node, "outcome1", next_node)
+  .route(next_node, "outcome2", final_node)
+  .end(final_node, "done")  # exactly one termination
 ```
 
-**Routing**: next node is `(from_node.name, outcome)`. If no name set, uses class name.  
-**Nested flows**: a built flow is itself a `Node[T]` – compose flows within flows.
+**Routing**: Routes are `(node, outcome)` pairs. Each outcome must have exactly one route.  
+**Type inference**: The flow infers types from start to end, supporting transformations.  
+**Composability**: A flow is itself a `Node` – compose flows within flows.
 
 ---
 
-## Example: Multi-step Pipeline
+## Example: Agent Router
 
 ```python
-from typing import TypedDict
-from clearflow import Flow, Node, NodeResult
+from dataclasses import dataclass, replace
+from typing import override
+from clearflow import Node, NodeResult, flow
 
-class State(TypedDict):
-    value: int
+@dataclass(frozen=True)
+class Request:
+    query: str
+    intent: str = ""
+    response: str = ""
 
-class Validate(Node[State]):
-    async def exec(self, s: State) -> NodeResult[State]:
-        return NodeResult(s, "valid" if s["value"] >= 0 else "invalid")
+@dataclass(frozen=True)
+class Classifier(Node[Request]):
+    name: str = "classifier"
+    
+    @override
+    async def exec(self, state: Request) -> NodeResult[Request]:
+        # Classify intent: "code", "docs", or "general"
+        intent = "code" if "bug" in state.query else "general"
+        return NodeResult(replace(state, intent=intent), outcome=intent)
 
-class Process(Node[State]):
-    async def exec(self, s: State) -> NodeResult[State]:
-        return NodeResult({"value": s["value"] * 2}, "success")
+@dataclass(frozen=True)
+class CodeAgent(Node[Request]):
+    name: str = "code_agent"
+    
+    @override
+    async def exec(self, state: Request) -> NodeResult[Request]:
+        return NodeResult(
+            replace(state, response="Here's a code solution..."),
+            outcome="handled"
+        )
 
-class Output(Node[State]):
-    async def exec(self, s: State) -> NodeResult[State]:
-        print("Final:", s["value"])
-        return NodeResult(s, "done")
+@dataclass(frozen=True)
+class GeneralAgent(Node[Request]):
+    name: str = "general_agent"
+    
+    @override
+    async def exec(self, state: Request) -> NodeResult[Request]:
+        return NodeResult(
+            replace(state, response="I can help with that..."),
+            outcome="handled"
+        )
 
-flow = (
-    Flow[State]("Pipeline")
-    .start_with(Validate())
-    .route(Validate(), "valid", Process())
-    .route(Validate(), "invalid", Output())  # route invalid to output
-    .route(Process(), "success", Output())
-    .route(Output(), "done", None)  # single termination point
+# Build router flow
+classifier = Classifier()
+code_agent = CodeAgent()
+general_agent = GeneralAgent()
+
+router = (
+    flow("AgentRouter", classifier)
+    .route(classifier, "code", code_agent)
+    .route(classifier, "general", general_agent)
+    .route(code_agent, "handled", None)    # terminate
+    .route(general_agent, "handled", None) # terminate
     .build()
 )
 
-await flow({"value": 21})  # Final: 42
+await router(Request(query="fix this bug"))  # Routes to CodeAgent
 ```
 
 See more: [Chat example](examples/chat/) | [Structured output](examples/structured_output/)
@@ -145,15 +202,24 @@ Nodes are easy to test in isolation because they are pure functions over typed s
 
 ```python
 import pytest
+from dataclasses import dataclass
+from typing import override
 from clearflow import Node, NodeResult
 
-class N(Node[int]):
-    async def exec(self, x: int) -> NodeResult[int]:
-        return NodeResult(x + 1, "ok")
+@dataclass(frozen=True)
+class Counter(Node[int]):
+    name: str = "counter"
+    
+    @override
+    async def exec(self, state: int) -> NodeResult[int]:
+        return NodeResult(state + 1, "incremented")
 
-async def test_n() -> None:
-    res = await N()(0)
-    assert res.state == 1 and res.outcome == "ok"
+@pytest.mark.asyncio
+async def test_counter() -> None:
+    counter = Counter()
+    result = await counter(0)
+    assert result.state == 1
+    assert result.outcome == "incremented"
 ```
 
 ---
@@ -175,7 +241,7 @@ async def test_n() -> None:
 | **Routing** | Explicit `(node, outcome)` routes | Graph with labeled edges |
 | **Termination** | Exactly one `None` route enforced | Multiple exit patterns |
 | **Type safety** | Full Python 3.13+ generics | Dynamic |
-| **Lines** | 166 | 100 |
+| **Lines** | ~250 | 100 |
 
 Both are minimalist. ClearFlow emphasizes **type safety and explicit control**. PocketFlow emphasizes **brevity and shared state**.
 

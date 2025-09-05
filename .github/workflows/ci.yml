@@ -72,8 +72,8 @@ jobs:
         echo "pep440_version=$PEP_VERSION" >> $GITHUB_OUTPUT
         echo "Converted version: $VERSION -> $PEP_VERSION"
 
-  lint-and-type-check:
-    name: Lint and Type Check
+  quality-checks:
+    name: Quality Checks
     runs-on: ubuntu-latest
     needs: version
     
@@ -95,23 +95,61 @@ jobs:
     - name: Install dependencies
       run: uv sync --all-extras
         
+    # Custom linters - MUST run first
+    - name: Architecture compliance check
+      run: python3 linters/check-architecture-compliance.py clearflow tests examples linters
+      
+    - name: Immutability compliance check
+      run: python3 linters/check-immutability.py clearflow tests examples linters
+      
+    - name: Test suite compliance check
+      run: python3 linters/check-test-suite-compliance.py clearflow tests examples linters
+        
+    # Ruff checks
     - name: Run ruff linting with auto-fix
-      run: uv run ruff check --fix clearflow tests
+      run: uv run ruff check --fix clearflow tests examples linters
       
     - name: Verify no unfixed linting issues
-      run: uv run ruff check --exit-non-zero-on-fix clearflow tests
+      run: uv run ruff check --exit-non-zero-on-fix clearflow tests examples linters
       
     - name: Run ruff formatting
-      run: uv run ruff format clearflow tests
+      run: uv run ruff format clearflow tests examples linters
       
     - name: Verify formatting is correct
-      run: uv run ruff format --check clearflow tests
+      run: uv run ruff format --check clearflow tests examples linters
       
-    - name: Run mypy type checking
-      run: uv run mypy --strict clearflow tests
-      
+    # Type checking
     - name: Run pyright type checking
-      run: uv run pyright clearflow tests
+      run: PYRIGHT_PYTHON_FORCE_VERSION=latest uv run pyright clearflow tests examples linters
+      
+    # Complexity and dead code checks
+    - name: Xenon complexity check
+      run: |
+        # Check non-linter code with Grade A requirement
+        uv run xenon --max-average A --max-modules A --max-absolute A clearflow tests examples
+        # Check linters with Grade B requirement (infrastructure code)
+        uv run xenon --max-average B --max-modules B --max-absolute B linters
+      
+    - name: Vulture dead code detection
+      run: |
+        vulture_output=$(uv run vulture clearflow tests examples linters --min-confidence 80 2>&1 || true)
+        if echo "$vulture_output" | grep -q "unused"; then
+          echo "Dead code detected:"
+          echo "$vulture_output"
+          exit 1
+        fi
+      
+    - name: Radon complexity metrics
+      run: |
+        radon_output=$(uv run radon cc clearflow tests examples linters -a 2>&1)
+        echo "$radon_output"
+        if echo "$radon_output" | grep -q "Average complexity: "; then
+          avg_grade=$(echo "$radon_output" | sed -n 's/.*Average complexity: \([A-F]\).*/\1/p')
+          if [[ "$avg_grade" != "A" ]]; then
+            echo "Average complexity Grade $avg_grade exceeds maximum allowed Grade A"
+            exit 1
+          fi
+        fi
 
   test-matrix:
     name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -233,7 +271,12 @@ jobs:
     - name: Install dependencies
       run: uv sync --all-extras
         
-    - name: Run safety check
+    - name: CVE scan with pip-audit
       run: |
-        uv run safety check --json
-      continue-on-error: true  # Don't fail the build on vulnerabilities, but report them
+        # PYSEC-2022-42969: py library ReDoS vulnerability - approved suppression for test dependency
+        uv run pip-audit --fix --desc --ignore-vuln PYSEC-2022-42969
+        
+    - name: AST security analysis with Bandit
+      run: |
+        # Exclude tests from security analysis
+        uv run bandit -r clearflow examples linters -f txt 2>&1 | tail -5

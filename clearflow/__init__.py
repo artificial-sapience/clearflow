@@ -1,14 +1,14 @@
 """ClearFlow: Zero-dependency async workflow orchestration framework.
 
 Provides type-safe workflow composition with explicit routing and single termination.
-Built for mission-critical AI orchestration with 100% test coverage requirement.
+Built for mission-critical AI orchestration.
 """
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Protocol, TypeVar, cast, override
+from typing import Protocol, cast, final, override
 
 __all__ = [
     "Node",
@@ -16,11 +16,7 @@ __all__ = [
     "flow",
 ]
 
-TIn = TypeVar("TIn")
-TOut = TypeVar("TOut")
-FromNodeName = str
-Outcome = str
-RouteKey = tuple[FromNodeName, Outcome]
+RouteKey = tuple[str, str]  # (node_name, outcome)
 
 
 class NodeBase(Protocol):
@@ -34,22 +30,25 @@ class NodeBase(Protocol):
 
     async def __call__(
         self,
-        state: object,
-    ) -> "NodeResult[object]":  # clearflow: ignore[ARCH009]
-        """Execute the node with any state type.
-
-        Note: We intentionally use 'object' here for type erasure. This protocol
-        represents the type-erased interface for heterogeneous node collections.
-        """
+        state: object,  # clearflow: ignore[ARCH009]  # Type erasure needed for heterogeneous collections
+    ) -> "NodeResult[object]":  # clearflow: ignore[ARCH009]  # Type erasure needed for heterogeneous collections
+        """Execute the node with any state type."""
         ...
 
 
+@final
 @dataclass(frozen=True)
 class NodeResult[T]:
-    """Result of node execution with state and outcome."""
+    """Result of node execution.
+
+    Attributes:
+        state: The transformed state from node execution.
+        outcome: The routing outcome determining next node.
+
+    """
 
     state: T
-    outcome: Outcome
+    outcome: str
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -62,10 +61,6 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
     Type parameters:
         TIn: Input state type
         TOut: Output state type (defaults to TIn for non-transforming nodes)
-
-    Examples:
-        Node[Query]                    # Non-transforming: Query -> Query
-        Node[Query, SearchResults]     # Transforming: Query -> SearchResults
 
     """
 
@@ -83,7 +78,7 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
             raise ValueError(msg)
 
     @override
-    async def __call__(self, state: TIn) -> NodeResult[TOut]:  # type: ignore[override]
+    async def __call__(self, state: TIn) -> NodeResult[TOut]:  # pyright: ignore[reportIncompatibleMethodOverride]  # NodeBase uses object for type erasure but Node preserves type safety
         """Execute node lifecycle.
 
         Returns:
@@ -94,7 +89,7 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
         result = await self.exec(state)
         return await self.post(result)
 
-    async def prep(self, state: TIn) -> TIn:
+    async def prep(self, state: TIn) -> TIn:  # noqa: PLR6301  # Template method hook for subclasses
         """Pre-execution hook.
 
         Returns:
@@ -108,7 +103,7 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
         """Execute main node logic - must be implemented by subclasses."""
         ...
 
-    async def post(self, result: NodeResult[TOut]) -> NodeResult[TOut]:
+    async def post(self, result: NodeResult[TOut]) -> NodeResult[TOut]:  # noqa: PLR6301  # Template method hook for subclasses
         """Post-execution hook.
 
         Returns:
@@ -118,50 +113,56 @@ class Node[TIn, TOut = TIn](ABC, NodeBase):
         return result
 
 
+@final
 @dataclass(frozen=True, kw_only=True)
-class _Flow[TIn, TOut = TIn](Node[TIn, TOut]):
-    """Internal flow implementation that transforms TIn to TOut.
+class _Flow[TStartIn, TEndOut = TStartIn](Node[TStartIn, TEndOut]):
+    """Internal flow implementation that transforms TStartIn to TEndOut.
 
     Implementation note: We use 'object' for node types internally because
     Python's type system cannot track types through runtime-determined paths.
     Type safety is maintained at the public API boundaries - exec() guarantees
-    TIn→TOut transformation through construction-time validation.
+    TStartIn→TEndOut transformation through construction-time validation.
     """
 
-    start_node: NodeBase
+    start: NodeBase
     routes: Mapping[RouteKey, NodeBase | None]
 
     @override
-    async def exec(self, state: TIn) -> NodeResult[TOut]:
+    async def exec(self, state: TStartIn) -> NodeResult[TEndOut]:
         """Execute the flow by routing through nodes based on outcomes.
 
         Returns:
             Final node result containing transformed state and None outcome.
 
+        Raises:
+            ValueError: If no route is defined for an outcome from a node.
+
         """
-        current_node = self.start_node
-        current_state: object = state  # clearflow: ignore[ARCH009] - Type erasure for dynamic routing
+        current_node = self.start
+        current_state: object = state  # clearflow: ignore[ARCH009]  # Type erasure needed for dynamic routing
 
         while True:
             # Execute node
             result = await current_node(current_state)
             key = (current_node.name, result.outcome)
 
-            # Return if no route defined
+            # Raise error if no route defined - all outcomes must be explicitly handled
             if key not in self.routes:
-                return cast("NodeResult[TOut]", result)
+                msg = f"No route defined for outcome '{result.outcome}' from node '{current_node.name}'"
+                raise ValueError(msg)
 
             # Check next node
             next_node = self.routes[key]
             if next_node is None:
-                return cast("NodeResult[TOut]", result)
+                return cast("NodeResult[TEndOut]", result)
 
             # Continue
             current_node = next_node
             current_state = result.state
 
 
-@dataclass(frozen=True)
+@final
+@dataclass(frozen=True, kw_only=True)
 class _FlowBuilder[TStartIn, TStartOut]:
     """Flow builder for composing node routes.
 
@@ -169,8 +170,7 @@ class _FlowBuilder[TStartIn, TStartOut]:
         TStartIn: The input type the flow accepts (from start node)
         TStartOut: The output type of the start node
 
-    This builder creates an incomplete flow. Call end() to specify
-    where the flow ends and get the completed flow.
+    Call end() to specify where the flow ends and get the completed flow.
     """
 
     _name: str
@@ -180,14 +180,14 @@ class _FlowBuilder[TStartIn, TStartOut]:
     def route(
         self,
         from_node: NodeBase,
-        outcome: Outcome,
+        outcome: str,
         to_node: NodeBase,
     ) -> "_FlowBuilder[TStartIn, TStartOut]":
         """Connect nodes: from_node --outcome--> to_node.
 
         Args:
             from_node: Source node
-            outcome: Outcome string that triggers this route
+            outcome: Outcome that triggers this route
             to_node: Destination node (use end() for flow completion)
 
         Returns:
@@ -203,55 +203,49 @@ class _FlowBuilder[TStartIn, TStartOut]:
             _routes=MappingProxyType(new_routes),
         )
 
-    def end[TTermIn, TTermOut](
+    def end[TEndIn, TEndOut](
         self,
-        final_node: Node[TTermIn, TTermOut],
-        outcome: Outcome,
-    ) -> Node[TStartIn, TTermOut]:
+        end: Node[TEndIn, TEndOut],
+        outcome: str,
+    ) -> Node[TStartIn, TEndOut]:
         """End the flow at the specified node and outcome.
 
         This completes the flow definition by specifying where it ends.
         The flow's output type is determined by the final node's output type.
 
         Args:
-            final_node: The node where the flow ends
+            end: The node where the flow ends
             outcome: The outcome from this node that completes the flow
 
         Returns:
-            A flow node that transforms TStartIn to TTermOut
-
-        Example:
-            flow("RAG", retriever).route(retriever, "found", generator).end(generator, "answered")
+            A flow node that transforms TStartIn to TEndOut
 
         """
-        route_key: RouteKey = (final_node.name, outcome)
+        route_key: RouteKey = (end.name, outcome)
         new_routes = {**self._routes, route_key: None}
 
-        return _Flow[TStartIn, TTermOut](
+        return _Flow[TStartIn, TEndOut](
             name=self._name,
-            start_node=self._start,
+            start=self._start,
             routes=MappingProxyType(new_routes),
         )
 
 
-def flow[TIn, TStartOut](
+def flow[TStartIn, TStartOut](
     name: str,
-    start: Node[TIn, TStartOut],
-) -> _FlowBuilder[TIn, TStartOut]:
+    start: Node[TStartIn, TStartOut],
+) -> _FlowBuilder[TStartIn, TStartOut]:
     """Create a flow with the given name and starting node.
 
     Args:
         name: The name of the flow
-        start: The starting node that accepts TIn and outputs TOut
+        start: The starting node that accepts TStartIn and outputs TStartOut
 
     Returns:
         Builder for route definition and flow completion
 
-    Example:
-        flow("RAG", retriever).route(...).end(generator, "answered")
-
     """
-    return _FlowBuilder[TIn, TStartOut](
+    return _FlowBuilder[TStartIn, TStartOut](
         _name=name,
         _start=start,
         _routes=MappingProxyType({}),

@@ -31,12 +31,22 @@ class Violation(NamedTuple):
 
 
 def _check_line_for_suppression(line: str, pattern: str) -> bool:
-    """Check if a single line contains the suppression pattern."""
+    """Check if a single line contains the suppression pattern.
+
+    Returns:
+        True if the pattern is found, False otherwise.
+
+    """
     return bool(re.search(pattern, line, re.IGNORECASE))
 
 
 def _get_lines_to_check(lines: list[str], line_num: int) -> list[str]:
-    """Get the current line and next 2 lines for suppression checking."""
+    """Get the current line and next 2 lines for suppression checking.
+
+    Returns:
+        List of lines to check for suppressions.
+
+    """
     if line_num <= 0 or line_num > len(lines):
         return []
     # Get current line and up to 2 following lines
@@ -71,7 +81,12 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
 
 
 def _check_private_imports(node: ast.ImportFrom, file_path: Path, *, is_internal: bool) -> Violation | None:
-    """Check for imports from private implementation modules."""
+    """Check for imports from private implementation modules.
+
+    Returns:
+        Violation if private import found, None otherwise.
+
+    """
     if not node.module:
         return None
     private_module = "clearflow." + "_internal"
@@ -88,7 +103,12 @@ def _check_private_imports(node: ast.ImportFrom, file_path: Path, *, is_internal
 
 
 def _check_mock_imports(node: ast.ImportFrom, file_path: Path) -> tuple[Violation, ...]:
-    """Check for unittest.mock imports that violate architecture."""
+    """Check for unittest.mock imports that violate architecture.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     violations: list[Violation] = []
     if node.module == "unittest.mock":
         for alias in node.names:
@@ -108,7 +128,12 @@ def _check_mock_imports(node: ast.ImportFrom, file_path: Path) -> tuple[Violatio
 
 
 def _check_typing_imports(node: ast.ImportFrom, file_path: Path, content: str) -> tuple[Violation, ...]:
-    """Check for TYPE_CHECKING and Any imports from typing module."""
+    """Check for TYPE_CHECKING and Any imports from typing module.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     violations: list[Violation] = []
     if not node.module:
         return tuple(violations)
@@ -141,7 +166,12 @@ def _check_typing_imports(node: ast.ImportFrom, file_path: Path, content: str) -
 
 
 def _check_type_checking_block(node: ast.If, file_path: Path, content: str) -> Violation | None:
-    """Check for if TYPE_CHECKING blocks."""
+    """Check for if TYPE_CHECKING blocks.
+
+    Returns:
+        Violation if TYPE_CHECKING block found, None otherwise.
+
+    """
     if (
         isinstance(node.test, ast.Name)
         and node.test.id == "TYPE_CHECKING"
@@ -161,7 +191,12 @@ def _check_type_checking_block(node: ast.If, file_path: Path, content: str) -> V
 def _check_object_in_params(
     node: ast.FunctionDef | ast.AsyncFunctionDef, file_path: Path, content: str
 ) -> tuple[Violation, ...]:
-    """Check for 'object' type annotations in function parameters."""
+    """Check for 'object' type annotations in function parameters.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     violations = [
         Violation(
             file=file_path,
@@ -183,7 +218,12 @@ def _check_object_in_params(
 
 
 def _check_object_type_usage(node: ast.Name, file_path: Path, content: str) -> Violation | None:
-    """Check for 'object' type usage in type annotations."""
+    """Check for 'object' type usage in type annotations.
+
+    Returns:
+        Violation if 'object' type usage found, None otherwise.
+
+    """
     if node.id != "object":
         return None
 
@@ -207,7 +247,12 @@ def _check_object_type_usage(node: ast.Name, file_path: Path, content: str) -> V
 
 
 def _check_any_type_usage(node: ast.Name, file_path: Path) -> Violation | None:
-    """Check for 'Any' type usage anywhere."""
+    """Check for 'Any' type usage anywhere.
+
+    Returns:
+        Violation if Any type usage found, None otherwise.
+
+    """
     if node.id == "Any":
         return Violation(
             file=file_path,
@@ -221,7 +266,12 @@ def _check_any_type_usage(node: ast.Name, file_path: Path) -> Violation | None:
 
 
 def _check_typing_any_attribute(node: ast.Attribute, file_path: Path) -> Violation | None:
-    """Check for typing.Any in subscripts."""
+    """Check for typing.Any in subscripts.
+
+    Returns:
+        Violation if typing.Any usage found, None otherwise.
+
+    """
     if isinstance(node.value, ast.Name) and node.value.id == "typing" and node.attr == "Any":
         return Violation(
             file=file_path,
@@ -237,7 +287,12 @@ def _check_typing_any_attribute(node: ast.Attribute, file_path: Path) -> Violati
 def _check_import_from_node(
     node: ast.ImportFrom, file_path: Path, content: str, *, is_internal: bool
 ) -> tuple[Violation, ...]:
-    """Check all violations for ImportFrom nodes."""
+    """Check all violations for ImportFrom nodes.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     violations: list[Violation] = []
 
     # Check private imports
@@ -255,7 +310,12 @@ def _check_import_from_node(
 
 
 def _check_name_node(node: ast.Name, file_path: Path, content: str) -> tuple[Violation, ...]:
-    """Check all violations for Name nodes."""
+    """Check all violations for Name nodes.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     violations: list[Violation] = []
 
     # Check object type usage
@@ -272,19 +332,34 @@ def _check_name_node(node: ast.Name, file_path: Path, content: str) -> tuple[Vio
 
 
 def _check_if_node(node: ast.If, file_path: Path, content: str) -> tuple[Violation, ...]:
-    """Check If node for violations."""
+    """Check If node for violations.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     violation = _check_type_checking_block(node, file_path, content)
     return (violation,) if violation else ()
 
 
 def _check_attribute_node(node: ast.Attribute, file_path: Path) -> tuple[Violation, ...]:
-    """Check Attribute node for violations."""
+    """Check Attribute node for violations.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     violation = _check_typing_any_attribute(node, file_path)
     return (violation,) if violation else ()
 
 
 def _process_node(node: ast.AST, file_path: Path, content: str, *, is_internal: bool) -> tuple[Violation, ...]:
-    """Process a single AST node for violations."""
+    """Process a single AST node for violations.
+
+    Returns:
+        Tuple of violations found.
+
+    """
     if isinstance(node, ast.ImportFrom):
         return _check_import_from_node(node, file_path, content, is_internal=is_internal)
     if isinstance(node, ast.If):

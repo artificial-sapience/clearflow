@@ -38,7 +38,7 @@ class TestErrorHandling:
 
     @staticmethod
     async def test_missing_route() -> None:
-        """Test behavior when a route is not defined."""
+        """Test that undefined routes raise an error."""
 
         @dc(frozen=True)
         class UnpredictableNode(Node[dict[str, str]]):
@@ -68,12 +68,12 @@ class TestErrorHandling:
         # Flow with incomplete routing - unexpected outcome not routed
         incomplete_flow = (
             flow("IncompleteFlow", unpredictable).route(unpredictable, "expected", terminal).end(terminal, "completed")
-            # "unexpected" outcome not routed - will bubble up
+            # "unexpected" outcome not routed - should raise error
         )
 
-        # Should bubble up the unhandled outcome
-        result = await incomplete_flow({"force_outcome": "unexpected"})
-        assert result.outcome == "unexpected"
+        # Should raise ValueError for unhandled outcome
+        with pytest.raises(ValueError, match="No route defined for outcome 'unexpected' from node 'unpredictable'"):
+            await incomplete_flow({"force_outcome": "unexpected"})
 
     @staticmethod
     async def test_empty_node_name() -> None:
