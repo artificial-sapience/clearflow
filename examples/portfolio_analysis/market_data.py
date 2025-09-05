@@ -1,4 +1,8 @@
-"""Market data simulator for portfolio analysis example."""
+"""Market data simulator for portfolio analysis example.
+
+IMPORTANT: All data is simulated for educational purposes only.
+Ticker symbols are fictional. Not for actual investment decisions.
+"""
 
 # ruff: noqa: S311 - Using random for example data generation, not cryptographic purposes
 # ruff: noqa: DTZ005 - Timezone not needed for example market date strings
@@ -66,10 +70,10 @@ TECH_FINANCE_SECTORS = {"Technology", "Finance"}
 
 
 def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetData:
-    """Generate simulated market data for a single asset.
+    """Generate simulated market data for a single FICTIONAL asset.
 
     Returns:
-        AssetData with randomized market values.
+        AssetData with randomized simulated values.
     """
     # Add some market volatility
     price_variance = random.uniform(PRICE_VARIANCE_MIN, PRICE_VARIANCE_MAX)
@@ -114,21 +118,21 @@ def create_sample_market_data() -> MarketData:
         MarketData with normal market conditions.
     """
 
-    # Define sample assets across sectors
+    # Define FICTIONAL assets across sectors (not real tickers)
     sample_assets = [
-        ("AAPL", "Technology", 175.50),
-        ("MSFT", "Technology", 380.25),
-        ("GOOGL", "Technology", 140.80),
-        ("JPM", "Finance", 165.30),
-        ("BAC", "Finance", 42.15),
-        ("JNJ", "Healthcare", 162.40),
-        ("PFE", "Healthcare", 28.90),
-        ("XOM", "Energy", 108.75),
-        ("CVX", "Energy", 152.60),
-        ("NEE", "Utilities", 82.35),
-        ("SO", "Utilities", 75.20),
-        ("AMZN", "Consumer", 155.90),
-        ("WMT", "Consumer", 82.45),
+        ("TECH-01", "Technology", 175.50),
+        ("TECH-02", "Technology", 380.25),
+        ("TECH-03", "Technology", 140.80),
+        ("FIN-01", "Finance", 165.30),
+        ("FIN-02", "Finance", 42.15),
+        ("HLTH-01", "Healthcare", 162.40),
+        ("HLTH-02", "Healthcare", 28.90),
+        ("ENRG-01", "Energy", 108.75),
+        ("ENRG-02", "Energy", 152.60),
+        ("UTIL-01", "Utilities", 82.35),
+        ("UTIL-02", "Utilities", 75.20),
+        ("CONS-01", "Consumer", 155.90),
+        ("CONS-02", "Consumer", 82.45),
     ]
 
     # Generate market data for each asset
@@ -160,17 +164,18 @@ def create_volatile_market_data() -> MarketData:
         MarketData with high volatility and bearish sentiment.
     """
 
+    # FICTIONAL tickers for educational demonstration
     sample_assets = [
-        ("AAPL", "Technology", 175.50),
-        ("MSFT", "Technology", 380.25),
-        ("TSLA", "Technology", 195.30),  # High volatility stock
-        ("JPM", "Finance", 165.30),
-        ("NVDA", "Technology", 875.40),  # High momentum stock
-        ("XOM", "Energy", 108.75),
-        ("COIN", "Finance", 240.80),  # Crypto-related volatility
-        ("NEE", "Utilities", 82.35),
-        ("AMZN", "Consumer", 155.90),
-        ("SPY", "Index", 485.60),  # Market index
+        ("TECH-01", "Technology", 175.50),
+        ("TECH-02", "Technology", 380.25),
+        ("VOL-01", "Technology", 195.30),  # High volatility example
+        ("FIN-01", "Finance", 165.30),
+        ("MOM-01", "Technology", 875.40),  # High momentum example
+        ("ENRG-01", "Energy", 108.75),
+        ("RISK-01", "Finance", 240.80),  # High risk example
+        ("UTIL-01", "Utilities", 82.35),
+        ("CONS-01", "Consumer", 155.90),
+        ("IDX-01", "Index", 485.60),  # Example index
     ]
 
     # Generate high volatility scenario using immutable operations
@@ -221,19 +226,20 @@ def create_bullish_market_data() -> MarketData:
         MarketData with positive momentum and bullish sentiment.
     """
 
+    # FICTIONAL tickers for educational demonstration
     sample_assets = [
-        ("AAPL", "Technology", 175.50),
-        ("MSFT", "Technology", 380.25),
-        ("GOOGL", "Technology", 140.80),
-        ("NVDA", "Technology", 875.40),
-        ("JPM", "Finance", 165.30),
-        ("GS", "Finance", 425.80),
-        ("JNJ", "Healthcare", 162.40),
-        ("UNH", "Healthcare", 512.90),
-        ("XOM", "Energy", 108.75),
-        ("NEE", "Utilities", 82.35),
-        ("AMZN", "Consumer", 155.90),
-        ("TSLA", "Technology", 195.30),
+        ("TECH-01", "Technology", 175.50),
+        ("TECH-02", "Technology", 380.25),
+        ("TECH-03", "Technology", 140.80),
+        ("GROW-01", "Technology", 875.40),
+        ("FIN-01", "Finance", 165.30),
+        ("FIN-02", "Finance", 425.80),
+        ("HLTH-01", "Healthcare", 162.40),
+        ("HLTH-02", "Healthcare", 512.90),
+        ("ENRG-01", "Energy", 108.75),
+        ("UTIL-01", "Utilities", 82.35),
+        ("CONS-01", "Consumer", 155.90),
+        ("GROW-02", "Technology", 195.30),
     ]
 
     def _create_bullish_asset(symbol: str, sector: str, base_price: float) -> AssetData:

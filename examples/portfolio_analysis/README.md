@@ -1,20 +1,23 @@
-# Portfolio Analysis Example
+# Portfolio Analysis Example (Educational)
 
-AI-powered portfolio management team demonstrating mission-critical financial decision-making workflows.
+**DISCLAIMER**: This is an educational example using simulated data with fictional tickers.
+Not for actual investment decisions. This is not investment advice.
 
 ## Overview
 
-This example showcases **multiple AI specialists** working together as a coordinated team to analyze market conditions and make portfolio allocation decisions. Each node represents a different financial expert with specialized reasoning capabilities.
+This educational example demonstrates **multiple AI agents** working together to analyze simulated market conditions and make example portfolio allocation decisions. Each node represents a different analysis stage with specialized reasoning capabilities.
 
-## Business Value
+**All data is simulated. Ticker symbols are fictional. For educational purposes only.**
 
-Demonstrates the type of **mission-critical AI orchestration** that financial institutions need:
+## Educational Value
 
-- **Multi-agent coordination** - Different AI specialists with distinct expertise
-- **Type-safe financial workflows** - Precise data flow between analysis stages  
-- **Risk management integration** - Comprehensive checks before trading decisions
-- **Regulatory compliance** - Automated validation against financial rules
-- **Audit trail** - Clear reasoning chain for regulatory review
+Demonstrates workflow orchestration patterns that could be adapted for financial applications:
+
+- **Multi-agent coordination** - Different AI agents with distinct roles
+- **Type-safe workflows** - Precise data flow between analysis stages  
+- **Risk assessment patterns** - Example checks in decision workflows
+- **Compliance patterns** - Example validation steps
+- **Audit trail** - Clear reasoning chain for transparency
 
 ## AI Team Members
 
@@ -57,14 +60,14 @@ export OPENAI_API_KEY="your-key"
 python main.py
 ```
 
-The system will:
+The educational demonstration will:
 
-1. Load simulated market data for major asset classes
-2. Run quantitative analysis to identify opportunities
-3. Perform risk assessment and stress testing
-4. Generate portfolio allocation recommendations
-5. Validate compliance with investment policies
-6. Display the complete analysis chain with reasoning
+1. Generate simulated market data with fictional tickers
+2. Run example quantitative analysis
+3. Perform example risk assessment
+4. Generate example allocation recommendations
+5. Demonstrate validation patterns
+6. Display the complete example workflow
 
 ## Flow Structure
 
@@ -94,42 +97,43 @@ graph LR
 
 ## Key Features
 
-- **Multiple LM calls** - Each specialist uses AI reasoning, not just data processing
+- **Multiple LM calls** - Each stage uses AI reasoning
 - **Type-safe transformations** - `MarketData → QuantInsights → RiskAssessment → Recommendations → Compliance → Decision`
-- **Intelligent error handling** - AI-powered recovery and escalation
-- **Mission-critical reliability** - Proper validation and audit trails
-- **Real business logic** - Actual portfolio management decision-making
+- **Error handling** - Example recovery patterns
+- **Validation patterns** - Demonstrates validation approaches
+- **Educational workflow** - Learn orchestration patterns
 
 ## Example Output
 
 ```text
-🏦 AI PORTFOLIO MANAGEMENT TEAM
+📚 EDUCATIONAL PORTFOLIO ANALYSIS EXAMPLE
 ════════════════════════════════
+⚠️ Using simulated data with fictional tickers
 
-📊 Quantitative Analysis:
-• Market momentum: Bullish trend in technology sector
-• Volatility: Elevated in emerging markets (22% vs 15% historical)  
-• Opportunities: Growth stocks showing oversold conditions
+📊 Example Analysis (TECH-01, FIN-01, etc.):
+• Simulated momentum: Example bullish trend
+• Simulated volatility: Example elevated levels  
+• Example opportunities: Demonstration only
 
-⚠️ Risk Assessment:
-• Portfolio VaR: $1.2M (within $2M limit)
-• Concentration risk: High exposure to tech sector (35%)
-• Correlation: Increased during market stress
+⚠️ Example Risk Assessment:
+• Example VaR calculation: Simulated values
+• Example concentration: Demonstration only
+• Example correlation: Educational purposes
 
-🎯 Portfolio Recommendations:
-• Reduce tech allocation from 35% → 25%
-• Increase defensive positions (utilities, healthcare)
-• Hedge emerging market exposure
+🎯 Example Recommendations:
+• Example: Adjust TECH-01 allocation
+• Example: Consider UTIL-01 positions
+• Example: Review ENRG-01 exposure
 
-✅ Compliance Review:
-• All recommendations within client mandate
-• Position limits respected
-• ESG criteria maintained
+✅ Example Validation:
+• Demonstration of validation steps
+• Example limit checks
+• Example criteria review
 
-💼 Final Decision: APPROVED
-• Execute rebalancing over 3-day period
-• Monitor for adverse market movements
-• Review allocation in 30 days
+💼 Example Output: DEMONSTRATION COMPLETE
+• Educational example only
+• Not investment advice
+• All data simulated
 ```
 
 ## Customization
@@ -139,4 +143,4 @@ graph LR
 - **Investment Strategy**: Update logic in `PortfolioManager` node  
 - **Compliance Rules**: Configure policies in `ComplianceOfficer` node
 
-This example demonstrates how ClearFlow orchestrates **specialized AI reasoning** for mission-critical financial applications - exactly what our target audience builds for banks, hedge funds, and asset managers.
+This educational example demonstrates how ClearFlow orchestrates **AI workflows** that could be adapted for various applications. All data is simulated with fictional tickers for educational purposes only.

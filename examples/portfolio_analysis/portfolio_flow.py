@@ -1,4 +1,4 @@
-"""Portfolio analysis flow using DSPy-powered nodes."""
+"""Educational portfolio analysis example using DSPy-powered nodes."""
 # pyright: reportUnknownParameterType=false, reportUnknownMemberType=false
 
 from clearflow import Node, flow

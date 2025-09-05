@@ -1,4 +1,4 @@
-"""AI-powered financial specialist nodes using DSPy for structured outputs."""
+"""Educational example nodes demonstrating workflow patterns with DSPy."""
 
 from dataclasses import dataclass, field
 from operator import itemgetter
