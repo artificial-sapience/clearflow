@@ -1,6 +1,6 @@
 """Test Node abstraction features of ClearFlow.
 
-This module tests the Node class functionality including pure functions,
+This module tests the Node class functionality including lifecycle hooks,
 lifecycle hooks, and routing patterns for mission-critical AI orchestration.
 
 """
@@ -17,13 +17,13 @@ from tests.conftest import AgentState, Message, ValidationState
 
 @dc(frozen=True)
 class TokenCountNode(Node[ValidationState]):
-    """Pure function for token counting in LLM validation."""
+    """Node for token counting in LLM validation."""
 
     name: str = "token_counter"
 
     @override
     async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
-        # Pure transformation: count tokens (simplified)
+        # Transformation: count tokens (simplified)
         token_count = len(state.input_text.split())
 
         if token_count > 100:
@@ -127,12 +127,12 @@ class TestNode:
     """Test the Node abstraction."""
 
     @staticmethod
-    async def test_pure_function_principle() -> None:
-        """Test that exec functions are pure - same input produces same output."""
+    async def test_immutable_transformations() -> None:
+        """Test that nodes perform immutable transformations - same input produces same output."""
         node = TokenCountNode()
         initial = ValidationState(input_text="Short prompt for testing")
 
-        # Multiple calls with same input produce same output (functional purity)
+        # Multiple calls with same input produce same output (immutable transformations)
         result1 = await node(initial)
         result2 = await node(initial)
 

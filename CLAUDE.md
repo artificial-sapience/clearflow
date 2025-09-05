@@ -4,16 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Philosophy
 
-ClearFlow provides mission-critical AI orchestration for functional programming practitioners. Built for Python engineers who demand:
+ClearFlow provides mission-critical AI orchestration with verifiable correctness. Built for Python engineers who demand:
 
 - **Deep immutability** - All state transformations create new immutable data structures
-- **Functional purity** - Side effects isolated, transformations are pure functions
+- **Immutable transformations** - Nodes transform state without mutation (though they may perform I/O)
 - **Type safety** - Full static typing with pyright strict mode (mypy removed)
 - **100% test coverage** - Every path tested, no exceptions
 - **Explicit routing** - Given an outcome, the next step is always the same
 - **Zero dependencies** - Stdlib only for maximum reliability
 
-Target audience: Python engineers building mission-critical AI systems who embrace functional programming patterns and require provably correct orchestration.
+Target audience: Python engineers building mission-critical AI systems who require verifiable orchestration with explicit control flow.
 
 ## Development Commands
 

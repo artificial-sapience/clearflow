@@ -5,18 +5,18 @@
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Type-safe async workflow orchestration for language models. **Explicit routing, immutable state, zero dependencies.**
+Verifiable workflow orchestration for language models.
 
 ---
 
 ## Why ClearFlow?
 
-- **Predictable control flow** – explicit routes, no hidden magic  
-- **Immutable, typed state** – frozen state passed via `NodeResult`  
-- **One exit rule** – exactly one termination route enforced  
-- **Tiny surface area** – one file, three exports: `Node`, `NodeResult`, `flow`  
-- **100% test coverage** – every line tested  
-- **Zero runtime deps** – bring your own clients (OpenAI, Anthropic, etc.)  
+- **Type-safe state transformations** – Errors caught at development time, not runtime
+- **Single exit enforcement** – No ambiguous endings
+- **100% test coverage** – Every path proven to work
+- **Immutable state transformations** – No hidden state mutations
+- **Zero dependencies** – No hidden failure modes
+- **~250 lines total** – Entire system can be quickly audited
 
 ---
 
@@ -58,8 +58,11 @@ class Retriever(Node[Query, Context]):
     
     @override
     async def exec(self, state: Query) -> NodeResult[Context]:
-        # Retrieve relevant documents from vector store
-        docs = ["Paris is the capital of France.", "London is the capital of UK."]
+        # Retrieve domain-specific documents (e.g., internal KB, product docs)
+        docs = [
+            "ClearFlow v2.1 deprecated the 'callback' parameter.",
+            "Use 'outcome' for explicit routing between nodes."
+        ]
         return NodeResult(Context(state.question, docs), outcome="retrieved")
 
 @dataclass(frozen=True)
@@ -68,8 +71,8 @@ class Generator(Node[Context, Answer]):
     
     @override
     async def exec(self, state: Context) -> NodeResult[Answer]:
-        # Generate answer using LLM with retrieved context
-        response = f"Based on context: {state.documents[0]}"
+        # Generate answer grounded in retrieved domain knowledge
+        response = f"Based on docs: {state.documents[0]}"
         return NodeResult(
             Answer(state.question, state.documents, response), 
             outcome="answered"
@@ -89,8 +92,8 @@ rag_flow = (
 import asyncio
 
 async def main() -> None:
-    result = await rag_flow(Query("What is the capital of France?"))
-    print(result.state.response)  # "Based on context: Paris is the capital of France."
+    result = await rag_flow(Query("What replaced 'callback' in ClearFlow v2.1?"))
+    print(result.state.response)  # "Based on docs: ClearFlow v2.1 deprecated..."
 
 asyncio.run(main())
 ```
@@ -107,7 +110,7 @@ A unit that transforms state from `TIn` to `TOut` (or `Node[T]` when types are t
 - `exec(state: TIn) -> NodeResult[TOut]` – **required**; return new state + outcome  
 - `post(result: NodeResult[TOut]) -> NodeResult[TOut]` – optional cleanup/logging  
 
-Nodes are `async`, **pure** (no side effects), and use frozen dataclasses.
+Nodes are frozen dataclasses that execute async transformations without mutating input state.
 
 ### `NodeResult[T]`
 
@@ -130,120 +133,17 @@ flow("Name", start_node)
 
 ---
 
-## Example: Agent Router
-
-```python
-from dataclasses import dataclass, replace
-from typing import override
-from clearflow import Node, NodeResult, flow
-
-@dataclass(frozen=True)
-class Request:
-    query: str
-    intent: str = ""
-    response: str = ""
-
-@dataclass(frozen=True)
-class Classifier(Node[Request]):
-    name: str = "classifier"
-    
-    @override
-    async def exec(self, state: Request) -> NodeResult[Request]:
-        # Classify intent: "code", "docs", or "general"
-        intent = "code" if "bug" in state.query else "general"
-        return NodeResult(replace(state, intent=intent), outcome=intent)
-
-@dataclass(frozen=True)
-class CodeAgent(Node[Request]):
-    name: str = "code_agent"
-    
-    @override
-    async def exec(self, state: Request) -> NodeResult[Request]:
-        return NodeResult(
-            replace(state, response="Here's a code solution..."),
-            outcome="handled"
-        )
-
-@dataclass(frozen=True)
-class GeneralAgent(Node[Request]):
-    name: str = "general_agent"
-    
-    @override
-    async def exec(self, state: Request) -> NodeResult[Request]:
-        return NodeResult(
-            replace(state, response="I can help with that..."),
-            outcome="handled"
-        )
-
-# Build router flow
-classifier = Classifier()
-code_agent = CodeAgent()
-general_agent = GeneralAgent()
-
-router = (
-    flow("AgentRouter", classifier)
-    .route(classifier, "code", code_agent)
-    .route(classifier, "general", general_agent)
-    .route(code_agent, "handled", None)    # terminate
-    .route(general_agent, "handled", None) # terminate
-    .build()
-)
-
-await router(Request(query="fix this bug"))  # Routes to CodeAgent
-```
-
-See more: [Chat example](examples/chat/) | [Structured output](examples/structured_output/)
-
----
-
-## Testing Example
-
-Nodes are easy to test in isolation because they are pure functions over typed state:
-
-```python
-import pytest
-from dataclasses import dataclass
-from typing import override
-from clearflow import Node, NodeResult
-
-@dataclass(frozen=True)
-class Counter(Node[int]):
-    name: str = "counter"
-    
-    @override
-    async def exec(self, state: int) -> NodeResult[int]:
-        return NodeResult(state + 1, "incremented")
-
-@pytest.mark.asyncio
-async def test_counter() -> None:
-    counter = Counter()
-    result = await counter(0)
-    assert result.state == 1
-    assert result.outcome == "incremented"
-```
-
----
-
-## When to Use ClearFlow
-
-- LLM workflows where you need explicit control  
-- Systems requiring clear error handling paths  
-- Projects with strict dependency requirements  
-- Applications where debugging matters  
-
----
-
 ## ClearFlow vs PocketFlow
 
 | Aspect | ClearFlow | PocketFlow |
 |--------|-----------|------------|
-| **State** | Immutable, passed via `NodeResult` | Shared store (mutable dict) |
-| **Routing** | Explicit `(node, outcome)` routes | Graph with labeled edges |
-| **Termination** | Exactly one `None` route enforced | Multiple exit patterns |
-| **Type safety** | Full Python 3.13+ generics | Dynamic |
-| **Lines** | ~250 | 100 |
+| **State** | Immutable, passed via `NodeResult` | Mutable, passed via `shared` param |
+| **Routing** | Outcome-based explicit routes | Action-based graph edges |
+| **Termination** | Exactly one exit enforced | Multiple exits allowed |
+| **Type safety** | Full Python 3.13+ generics | Dynamic (no annotations) |
+| **Lines** | ~250 | ~90 |
 
-Both are minimalist. ClearFlow emphasizes **type safety and explicit control**. PocketFlow emphasizes **brevity and shared state**.
+Both are minimalist. ClearFlow emphasizes **verifiable correctness**. PocketFlow emphasizes **brevity and flexibility**.
 
 ---
 
@@ -251,12 +151,12 @@ Both are minimalist. ClearFlow emphasizes **type safety and explicit control**. 
 
 ```bash
 # Install uv (if not already installed)
-pip install --user uv   # or: pipx install uv
+pipx install uv
 
 # Clone and set up development environment
 git clone https://github.com/artificial-sapience/ClearFlow.git
 cd ClearFlow
-uv sync --all-extras      # Creates venv and installs deps automatically
+uv sync --all-extras     # Creates venv and installs deps automatically
 ./quality-check.sh       # Run all checks
 ```
 
