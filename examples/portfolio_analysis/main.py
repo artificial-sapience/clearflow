@@ -9,7 +9,7 @@ from examples.portfolio_analysis.market_data import (
     create_sample_market_data,
     create_volatile_market_data,
 )
-from examples.portfolio_analysis.models_pydantic import (
+from examples.portfolio_analysis.models import (
     AllocationChange,
     MarketData,
     TradingDecision,

@@ -9,7 +9,7 @@ import openai
 from pydantic import ValidationError
 
 from clearflow import Node, NodeResult
-from examples.portfolio_analysis.models_pydantic import (
+from examples.portfolio_analysis.models import (
     AllocationChange,
     AnalysisError,
     ComplianceCheck,

@@ -12,7 +12,7 @@ from datetime import datetime
 from itertools import starmap
 from typing import Literal
 
-from examples.portfolio_analysis.models_pydantic import AssetData, MarketData
+from examples.portfolio_analysis.models import AssetData, MarketData
 
 # Market simulation constants
 PRICE_VARIANCE_MIN = 0.95

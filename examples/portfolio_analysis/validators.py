@@ -5,7 +5,7 @@ All other risk assessment and recommendations are handled by AI intelligence.
 """
 
 from examples.portfolio_analysis.config import ComplianceRules
-from examples.portfolio_analysis.models_pydantic import (
+from examples.portfolio_analysis.models import (
     AllocationChange,
     ComplianceCheck,
 )

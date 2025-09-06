@@ -3,7 +3,7 @@
 
 import dspy
 
-from examples.portfolio_analysis.models_pydantic import (
+from examples.portfolio_analysis.models import (
     ComplianceError,
     ComplianceReview,
     MarketData,

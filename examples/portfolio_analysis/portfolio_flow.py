@@ -3,7 +3,7 @@
 
 from clearflow import Node, flow
 from examples.portfolio_analysis.config import configure_dspy
-from examples.portfolio_analysis.models_pydantic import MarketData, TradingDecision
+from examples.portfolio_analysis.models import MarketData, TradingDecision
 from examples.portfolio_analysis.nodes import (
     ComplianceOfficer,
     DecisionNode,
