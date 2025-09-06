@@ -2,8 +2,8 @@
 
 import dspy
 
-from examples.portfolio_analysis.agents.quant.models import QuantInsights
 from examples.portfolio_analysis.shared.models import MarketData
+from examples.portfolio_analysis.specialists.quant.models import QuantInsights
 
 
 class QuantAnalystSignature(dspy.Signature):

@@ -4,9 +4,9 @@ This module contains ONLY hard-coded regulatory requirements that cannot be viol
 All other risk assessment and recommendations are handled by AI intelligence.
 """
 
-from examples.portfolio_analysis.agents.compliance.models import ComplianceCheck
-from examples.portfolio_analysis.agents.portfolio.models import AllocationChange
 from examples.portfolio_analysis.shared.config import ComplianceRules
+from examples.portfolio_analysis.specialists.compliance.models import ComplianceCheck
+from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange
 
 # Constants
 MAX_TOTAL_ALLOCATION = 100.0  # Maximum total portfolio allocation percentage

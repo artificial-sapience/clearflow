@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from examples.portfolio_analysis.agents.portfolio.models import AllocationChange
+from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange
 
 
 @dataclass(frozen=True)

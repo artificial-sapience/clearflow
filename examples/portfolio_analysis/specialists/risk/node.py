@@ -8,9 +8,9 @@ import openai
 from pydantic import ValidationError
 
 from clearflow import Node, NodeResult
-from examples.portfolio_analysis.agents.quant.models import QuantInsights
-from examples.portfolio_analysis.agents.risk.models import RiskAssessment, RiskLimitError, RiskMetrics
-from examples.portfolio_analysis.agents.risk.signature import RiskAnalystSignature
+from examples.portfolio_analysis.specialists.quant.models import QuantInsights
+from examples.portfolio_analysis.specialists.risk.models import RiskAssessment, RiskLimitError, RiskMetrics
+from examples.portfolio_analysis.specialists.risk.signature import RiskAnalystSignature
 
 
 @dataclass(frozen=True)

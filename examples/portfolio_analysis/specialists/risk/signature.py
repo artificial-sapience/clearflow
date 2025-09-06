@@ -2,8 +2,8 @@
 
 import dspy
 
-from examples.portfolio_analysis.agents.quant.models import QuantInsights
-from examples.portfolio_analysis.agents.risk.models import RiskAssessment, RiskLimitError
+from examples.portfolio_analysis.specialists.quant.models import QuantInsights
+from examples.portfolio_analysis.specialists.risk.models import RiskAssessment, RiskLimitError
 
 
 class RiskAnalystSignature(dspy.Signature):

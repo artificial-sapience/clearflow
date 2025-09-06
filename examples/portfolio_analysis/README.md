@@ -1,11 +1,11 @@
-# Portfolio Analysis Example (Educational)
+# Portfolio Analysis Workflow Example (Educational)
 
 **DISCLAIMER**: This is an educational example using simulated data with fictional tickers.
 Not for actual investment decisions. This is not investment advice.
 
 ## Overview
 
-This educational example demonstrates **multiple AI agents** working together to analyze simulated market conditions and make example portfolio allocation decisions. Each node represents a different analysis stage with specialized reasoning capabilities.
+This educational example demonstrates a **multi-specialist workflow** analyzing simulated market conditions to make example portfolio allocation decisions. Each node represents a specialized analysis stage with domain-specific reasoning capabilities.
 
 **All data is simulated. Ticker symbols are fictional. For educational purposes only.**
 
@@ -13,15 +13,15 @@ This educational example demonstrates **multiple AI agents** working together to
 
 Demonstrates workflow orchestration patterns that could be adapted for financial applications:
 
-- **Multi-agent coordination** - Different AI agents with distinct roles
+- **Multi-specialist workflow** - Specialized processors with distinct roles
 - **Type-safe workflows** - Precise data flow between analysis stages  
 - **Risk assessment patterns** - Example checks in decision workflows
 - **Compliance patterns** - Example validation steps
 - **Audit trail** - Clear reasoning chain for transparency
 
-## AI Team Members
+## Workflow Specialists
 
-Each node uses language model intelligence for specialized financial reasoning:
+Each specialist node uses language model intelligence for domain-specific financial analysis:
 
 ### 1. **QuantAnalyst**
 
@@ -79,25 +79,25 @@ graph LR
     R -->|risk_assessed| P[PortfolioManager]
     R -->|high_risk| E
     P -->|recommendations| C[ComplianceOfficer]
-    P -->|no_opportunities| T[Terminal]
-    C -->|approved| T[Terminal]
+    P -->|no_opportunities| D[DecisionNode]
+    C -->|approved| D[DecisionNode]
     C -->|rejected| E
-    E -->|handled| T
-    T -->|completed| End([Final Decision])
+    E -->|handled| D
+    D -->|decision_ready| End([Final Decision])
 ```
 
-**Node Outcomes:**
+**Specialist Outcomes:**
 
 - `QuantAnalyst`: insights/analysis_failed
 - `RiskAnalyst`: risk_assessed/high_risk  
 - `PortfolioManager`: recommendations/no_opportunities
 - `ComplianceOfficer`: approved/rejected
 - `ErrorHandler`: handled
-- `Terminal`: completed (→ End)
+- `DecisionNode`: decision_ready (→ End)
 
 ## Key Features
 
-- **Multiple LM calls** - Each stage uses AI reasoning
+- **Sequential processing** - Each specialist processes data in sequence
 - **Type-safe transformations** - `MarketData → QuantInsights → RiskAssessment → Recommendations → Compliance → Decision`
 - **Error handling** - Example recovery patterns
 - **Validation patterns** - Demonstrates validation approaches
@@ -143,4 +143,4 @@ graph LR
 - **Investment Strategy**: Update logic in `PortfolioManager` node  
 - **Compliance Rules**: Configure policies in `ComplianceOfficer` node
 
-This educational example demonstrates how ClearFlow orchestrates **AI workflows** that could be adapted for various applications. All data is simulated with fictional tickers for educational purposes only.
+This educational example demonstrates how ClearFlow orchestrates **specialist workflows** following the Workflow design pattern, not the Agent pattern. Each specialist is a specialized processor, not an autonomous agent. All data is simulated with fictional tickers for educational purposes only.

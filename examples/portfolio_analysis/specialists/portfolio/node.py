@@ -8,10 +8,10 @@ import openai
 from pydantic import ValidationError
 
 from clearflow import Node, NodeResult
-from examples.portfolio_analysis.agents.portfolio.models import AllocationChange, PortfolioRecommendations
-from examples.portfolio_analysis.agents.portfolio.signature import PortfolioManagerSignature
-from examples.portfolio_analysis.agents.risk.models import RiskAssessment
 from examples.portfolio_analysis.shared.models import AnalysisError
+from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange, PortfolioRecommendations
+from examples.portfolio_analysis.specialists.portfolio.signature import PortfolioManagerSignature
+from examples.portfolio_analysis.specialists.risk.models import RiskAssessment
 
 
 @dataclass(frozen=True)

@@ -3,8 +3,6 @@
 import asyncio
 
 from clearflow import NodeResult
-from examples.portfolio_analysis.agents.decision.models import TradingDecision
-from examples.portfolio_analysis.agents.portfolio.models import AllocationChange
 from examples.portfolio_analysis.market_data import (
     create_bullish_market_data,
     create_sample_market_data,
@@ -12,6 +10,8 @@ from examples.portfolio_analysis.market_data import (
 )
 from examples.portfolio_analysis.portfolio_flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.shared import MarketData
+from examples.portfolio_analysis.specialists.decision.models import TradingDecision
+from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange
 
 
 def print_market_overview(market_data: MarketData) -> None:
@@ -133,7 +133,7 @@ def _print_menu() -> None:
     print("=" * 80)
     print("\n⚠️  DISCLAIMER: This is an educational example using simulated data.")
     print("    Not for actual investment decisions. Not investment advice.")
-    print("\nThis example demonstrates multi-agent portfolio analysis using DSPy")
+    print("\nThis example demonstrates multi-specialist portfolio analysis using DSPy")
     print("for structured outputs and Pydantic for validation.")
     print("\nSelect market scenario:")
     print("1. Normal market conditions (default)")

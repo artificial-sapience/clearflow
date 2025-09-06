@@ -1,7 +1,8 @@
 """Educational portfolio analysis example using DSPy-powered nodes."""
 
 from clearflow import Node, flow
-from examples.portfolio_analysis.agents import (
+from examples.portfolio_analysis.shared import MarketData, configure_dspy
+from examples.portfolio_analysis.specialists import (
     ComplianceOfficer,
     DecisionNode,
     ErrorHandler,
@@ -9,8 +10,7 @@ from examples.portfolio_analysis.agents import (
     QuantAnalyst,
     RiskAnalyst,
 )
-from examples.portfolio_analysis.agents.decision.models import TradingDecision
-from examples.portfolio_analysis.shared import MarketData, configure_dspy
+from examples.portfolio_analysis.specialists.decision.models import TradingDecision
 
 
 def create_portfolio_analysis_flow() -> Node[MarketData, TradingDecision]:

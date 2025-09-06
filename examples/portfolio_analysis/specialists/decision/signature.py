@@ -2,8 +2,8 @@
 
 import dspy
 
-from examples.portfolio_analysis.agents.compliance.models import ComplianceReview
-from examples.portfolio_analysis.agents.decision.models import TradingDecision
+from examples.portfolio_analysis.specialists.compliance.models import ComplianceReview
+from examples.portfolio_analysis.specialists.decision.models import TradingDecision
 
 
 class TradingDecisionSignature(dspy.Signature):

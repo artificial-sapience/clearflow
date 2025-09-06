@@ -9,9 +9,9 @@ import openai
 from pydantic import ValidationError
 
 from clearflow import Node, NodeResult
-from examples.portfolio_analysis.agents.quant.models import OpportunitySignal, QuantInsights
-from examples.portfolio_analysis.agents.quant.signature import QuantAnalystSignature
 from examples.portfolio_analysis.shared.models import AnalysisError, MarketData
+from examples.portfolio_analysis.specialists.quant.models import OpportunitySignal, QuantInsights
+from examples.portfolio_analysis.specialists.quant.signature import QuantAnalystSignature
 
 
 @dataclass(frozen=True)

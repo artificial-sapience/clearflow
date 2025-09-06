@@ -8,14 +8,14 @@ import openai
 from pydantic import ValidationError
 
 from clearflow import Node, NodeResult
-from examples.portfolio_analysis.agents.compliance.models import ComplianceCheck, ComplianceError, ComplianceReview
-from examples.portfolio_analysis.agents.compliance.signature import ComplianceOfficerSignature
-from examples.portfolio_analysis.agents.compliance.validators import (
+from examples.portfolio_analysis.specialists.compliance.models import ComplianceCheck, ComplianceError, ComplianceReview
+from examples.portfolio_analysis.specialists.compliance.signature import ComplianceOfficerSignature
+from examples.portfolio_analysis.specialists.compliance.validators import (
     validate_allocation_sanity,
     validate_position_limits,
     validate_sector_concentration,
 )
-from examples.portfolio_analysis.agents.portfolio.models import AllocationChange, PortfolioRecommendations
+from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange, PortfolioRecommendations
 
 
 @dataclass(frozen=True)

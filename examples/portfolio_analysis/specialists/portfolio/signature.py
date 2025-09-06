@@ -2,8 +2,8 @@
 
 import dspy
 
-from examples.portfolio_analysis.agents.portfolio.models import PortfolioRecommendations
-from examples.portfolio_analysis.agents.risk.models import RiskAssessment
+from examples.portfolio_analysis.specialists.portfolio.models import PortfolioRecommendations
+from examples.portfolio_analysis.specialists.risk.models import RiskAssessment
 
 
 class PortfolioManagerSignature(dspy.Signature):

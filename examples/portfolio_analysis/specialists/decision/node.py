@@ -8,11 +8,11 @@ import openai
 from pydantic import ValidationError
 
 from clearflow import Node, NodeResult
-from examples.portfolio_analysis.agents.compliance.models import ComplianceError, ComplianceReview
-from examples.portfolio_analysis.agents.decision.models import TradingDecision
-from examples.portfolio_analysis.agents.decision.signature import TradingDecisionSignature
-from examples.portfolio_analysis.agents.risk.models import RiskLimitError
 from examples.portfolio_analysis.shared.models import AnalysisError
+from examples.portfolio_analysis.specialists.compliance.models import ComplianceError, ComplianceReview
+from examples.portfolio_analysis.specialists.decision.models import TradingDecision
+from examples.portfolio_analysis.specialists.decision.signature import TradingDecisionSignature
+from examples.portfolio_analysis.specialists.risk.models import RiskLimitError
 
 
 @dataclass(frozen=True)
