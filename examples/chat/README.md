@@ -35,7 +35,8 @@ uv sync --all-extras
 
 # 3. Run the example
 cd examples/chat
-uv run python main.py
+python main.py  # If venv is activated
+# Or: uv run python main.py
 ```
 
 ## How It Works

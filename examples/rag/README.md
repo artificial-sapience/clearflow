@@ -35,9 +35,10 @@ uv sync --all-extras
 
 # 3. Run the example
 cd examples/rag
-uv run python main.py
-# Or with custom query:
-uv run python main.py "What is Q-Mesh protocol?"
+python main.py  # If venv is activated
+# Or: uv run python main.py
+# With custom query:
+python main.py "What is Q-Mesh protocol?"
 ```
 
 ## How It Works
