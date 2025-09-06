@@ -4,6 +4,9 @@
 name-template: '$INPUT_NAME'
 tag-template: '$INPUT_TAG'
 categories:
+  - title: '⚠️ Breaking Changes'
+    labels:
+      - 'breaking'
   - title: '🚀 Features'
     labels:
       - 'feat'
@@ -45,6 +48,9 @@ template: |
 
   $CHANGES
 autolabeler:
+  - label: 'breaking'
+    title:
+      - '/^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?!:/i'
   - label: 'feat'
     title:
       - '/^feat(\([^)]+\))?:/i'

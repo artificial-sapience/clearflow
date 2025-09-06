@@ -22,11 +22,11 @@ branches:
     increment: Inherit
     source-branches: ['main']
 
-# Commit message incrementing based on Conventional Commits
-major-version-bump-message: '\+semver:\s?(breaking|major)'
-minor-version-bump-message: '\+semver:\s?(feature|minor)'
-patch-version-bump-message: '\+semver:\s?(fix|patch)'
-no-bump-message: '\+semver:\s?(none|skip)'
+# Pure Conventional Commits patterns
+major-version-bump-message: '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([\w\s-,/\\]*\))?!:'
+minor-version-bump-message: '^feat(\([\w\s-,/\\]*\))?:'
+patch-version-bump-message: '^fix(\([\w\s-,/\\]*\))?:'
+no-bump-message: '^chore(\(release\))?:'
 
 # Use conventional commits for automatic versioning
 commit-message-incrementing: Enabled
