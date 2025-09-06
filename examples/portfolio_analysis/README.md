@@ -6,6 +6,23 @@
 
 This example demonstrates a **multi-specialist workflow** analyzing market conditions to make portfolio allocation decisions. Each node represents a specialized analysis stage with domain-specific reasoning capabilities.
 
+## Flow Structure
+
+```mermaid
+graph LR
+    Start([Market Data]) --> Q[QuantAnalyst]
+    Q -->|analysis_complete| R[RiskAnalyst]
+    Q -->|analysis_failed| E[ErrorHandler]
+    R -->|risk_acceptable| P[PortfolioManager]
+    R -->|risk_limits_exceeded| E
+    P -->|recommendations_ready| C[ComplianceOfficer]
+    P -->|analysis_failed| E
+    C -->|compliance_approved| D[DecisionNode]
+    C -->|compliance_failed| E
+    E -->|error_handled| D
+    D -->|decision_ready| End([Final Decision])
+```
+
 ## Educational Value
 
 Demonstrates workflow orchestration patterns that could be adapted for financial applications:
@@ -79,23 +96,6 @@ The educational demonstration will:
 4. Generate example allocation recommendations
 5. Demonstrate validation patterns
 6. Display the complete example workflow
-
-## Flow Structure
-
-```mermaid
-graph LR
-    Start([Market Data]) --> Q[QuantAnalyst]
-    Q -->|analysis_complete| R[RiskAnalyst]
-    Q -->|analysis_failed| E[ErrorHandler]
-    R -->|risk_acceptable| P[PortfolioManager]
-    R -->|risk_limits_exceeded| E
-    P -->|recommendations_ready| C[ComplianceOfficer]
-    P -->|analysis_failed| E
-    C -->|compliance_approved| D[DecisionNode]
-    C -->|compliance_failed| E
-    E -->|error_handled| D
-    D -->|decision_ready| End([Final Decision])
-```
 
 **Specialist Outcomes:**
 

@@ -9,7 +9,7 @@ RAG combines document retrieval with language model generation to answer questio
 1. **Offline Indexing**: Process and index documents for fast retrieval
 2. **Online Query**: Retrieve relevant context and generate answers
 
-## Architecture
+## Flow
 
 ```mermaid
 graph TD
@@ -66,41 +66,6 @@ python main.py "What is Q-Mesh protocol?"
 
 # Alternative syntax
 python main.py --How does NeurAlign M7 work?
-```
-
-## Example Output
-
-```
-============================================================
-ClearFlow RAG Example
-============================================================
-
-📚 Loaded 5 documents for indexing
-
-============================================================
-OFFLINE: Document Indexing
-============================================================
-✅ Created 10 chunks from 5 documents
-✅ Created 10 document embeddings
-🔍 Creating search index...
-✅ Index created with 10 vectors
-
-============================================================
-ONLINE: Query Processing
-============================================================
-🔍 Embedding query: How to install ClearFlow?
-🔎 Searching for relevant documents...
-📄 Retrieved document (index: 0, distance: 0.3427)
-📄 Most relevant text: "ClearFlow is a type-safe workflow orchestration framework..."
-
-🤖 Generated Answer:
-To install ClearFlow, use the command: pip install clearflow
-
-============================================================
-FINAL ANSWER
-============================================================
-Question: How to install ClearFlow?
-Answer: To install ClearFlow, use the command: pip install clearflow
 ```
 
 ## Key Features
