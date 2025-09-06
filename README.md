@@ -24,6 +24,8 @@ Type-safe orchestration for unpredictable AI.
 pip install clearflow
 ```
 
+> **Upgrading from v0.x?** See the [Migration Guide](MIGRATION.md) for breaking changes.
+
 ## Examples
 
 | Name | Description |
