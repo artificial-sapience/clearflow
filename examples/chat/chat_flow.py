@@ -1,25 +1,31 @@
-"""Chat flow construction."""
+"""Chat flow construction - conversation between two intelligent entities."""
 
 from clearflow import Node, flow
-from examples.chat.nodes import ChatNode, ChatState
+from examples.chat.nodes import ChatState, HumanNode, LlmNode
 
 
 def create_chat_flow() -> Node[ChatState]:
-    """Create a chat flow that manages conversations through a language model.
+    """Create a conversation flow between two intelligent entities.
 
-    The ChatNode handles all conversation management including:
-    - Maintaining message history
-    - Adding user messages
-    - Processing through the language model
-    - Returning responses
+    This flow models conversation as interaction between two complete
+    intelligent entities, each with their own I/O capabilities:
 
-    The UI layer (main.py) only handles input/output.
+    - HumanNode: Human intelligent entity with console I/O
+    - LlmNode: AI intelligent entity with OpenAI API I/O
+
+    The flow alternates between the two entities until the human
+    chooses to quit, creating a natural conversational pattern.
 
     Returns:
-        Chat node configured for conversation management.
+        Flow configured for intelligent entity conversation.
     """
-    chat = ChatNode(name="chat")
+    human = HumanNode(name="human")
+    llm = LlmNode(name="llm")
 
-    # Single-node flow that processes one message and ends
-    # The chat node returns "awaiting_input" or "responded" outcomes
-    return flow("ChatBot", chat).end(chat, "responded")
+    # Conversation between two intelligent entities
+    return (
+        flow("IntelligentConversation", human)
+        .route(human, "responded", llm)
+        .route(llm, "responded", human)
+        .end(human, "quit")  # Single termination when human decides to quit
+    )

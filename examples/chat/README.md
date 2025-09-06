@@ -1,14 +1,24 @@
-# Chat Example
+# Chat Example: Intelligent Entity Conversation
 
-Simple conversational flow demonstrating ClearFlow's explicit routing for language model interactions.
+Demonstrates ClearFlow's power for modeling conversation as interaction between intelligent entities, a human and a language model, each with their own I/O capabilities and cognitive processes.
+
+## Core Concept: Node == Intelligent Entity
+
+Each node represents a **complete intelligent entity**:
+
+- **HumanNode**: Human participant with console I/O and decision-making
+- **LlmNode**: AI participant with API I/O and reasoning capabilities
+
+This creates a natural conversation pattern between two intelligent systems.
 
 ## Flow
 
 ```mermaid
 graph LR
-    Start([User Input]) --> chat[ChatNode]
-    chat -->|awaiting_input| Continue([Continue Loop])
-    chat -->|responded| End([End])
+    Start([Initial State]) --> human[HumanNode]
+    human -->|responded| llm[LlmNode]
+    human -->|quit| End([Terminate])
+    llm -->|responded| human
 ```
 
 ## Quick Start
@@ -27,22 +37,34 @@ uv run python main.py
 
 ## How It Works
 
-This example demonstrates a single-node flow where the `ChatNode` handles OpenAI API calls and conversation state management. The node returns explicit outcomes:
+This example models conversation as interaction between two intelligent entities:
 
-- `awaiting_input` - When waiting for user input
-- `responded` - After generating an AI response
+### HumanNode - Complete Human Intelligence
 
-The separation ensures UI logic (looping, input/output) stays in `main.py`, while business logic (LLM calls, state management) stays in the node.
+- **Input**: Gets console input from user
+- **Output**: Displays AI responses on console
+- **Cognition**: Decides whether to continue or quit
+- **Memory**: Manages human messages in conversation history
+
+### LlmNode - Complete AI Intelligence  
+
+- **Input**: Receives human messages from state
+- **Output**: Generates responses via OpenAI API
+- **Cognition**: Reasons about context and generates appropriate responses
+- **Memory**: Manages AI responses in conversation history
+
+The flow alternates between these two entities, creating a natural conversational pattern where each participant is a complete intelligent system with its own interface modalities.
 
 ## Key Features
 
-- **Single-node flow** - Simplest possible ClearFlow pattern
-- **Explicit outcomes** - Clear distinction between waiting and responding states
-- **State management** - Immutable conversation history tracking
-- **Clean separation** - UI logic separate from business logic
+- **Intelligent entities**: Each node represents a complete intelligent participant
+- **Complete I/O**: Every entity handles its own input and output capabilities
+- **Natural conversation**: Two entities alternating in dialogue
+- **Clean abstraction**: Intelligence units rather than operational steps
+- **Extensible pattern**: Easy to add more intelligent entities (databases, tools, etc.)
 
 ## Files
 
-- `main.py` - UI handling and conversation loop
-- `nodes.py` - ChatNode with OpenAI integration
-- `chat_flow.py` - Single-node flow definition
+- `main.py` - Entry point that starts the intelligent entity conversation
+- `nodes.py` - HumanNode and LlmNode intelligent entity implementations
+- `chat_flow.py` - Two-node conversational flow definition

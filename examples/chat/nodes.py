@@ -1,4 +1,4 @@
-"""Chat node implementation - pure business logic with immutable state."""
+"""Chat node implementations - intelligent entities with complete I/O capabilities."""
 
 import dataclasses
 from dataclasses import dataclass
@@ -81,15 +81,66 @@ async def _get_ai_response(messages: tuple[ChatMessage, ...], model: str) -> str
 
 
 @dataclass(frozen=True)
-class ChatNode(Node[ChatState]):
-    """Node that processes chat messages through a language model.
+class HumanNode(Node[ChatState]):
+    """Human intelligent entity with complete I/O capabilities.
 
-    This node handles the complete conversation management:
-    1. Maintains conversation history
-    2. Adds user messages when provided
-    3. Ensures system prompt is present
-    4. Processes through language model
-    5. Returns updated conversation state
+    This node represents a human participant in the conversation, handling:
+    - Input: Getting console input from the user
+    - Output: Displaying AI responses on the console
+    - Cognition: Deciding whether to continue or quit the conversation
+    - Memory: Adding human messages to the conversation history
+
+    The human is a complete intelligent entity, not just an input source.
+    """
+
+    @override
+    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+        """Execute human interaction cycle: display, input, decide.
+
+        Returns:
+            NodeResult with "responded" (message sent) or "quit" (exit).
+        """
+        # Output capability: Display AI response if present
+        if state.last_response:
+            print(f"\nAssistant: {state.last_response}")
+            print("-" * 50)
+
+        # Input capability: Get human input
+        try:
+            user_input = input("You: ")
+
+            # Cognitive process: Decide to quit or continue
+            if user_input.lower() in {"quit", "exit", "bye"}:
+                print("\nGoodbye!")
+                return NodeResult(state, outcome="quit")
+
+            # Memory management: Add human message to conversation
+            messages = (*state.messages, ChatMessage(role="user", content=user_input))
+            new_state = dataclasses.replace(
+                state,
+                messages=messages,
+                user_input=user_input,
+                last_response="",  # Clear for next cycle
+            )
+            return NodeResult(new_state, outcome="responded")
+
+        except (EOFError, KeyboardInterrupt):
+            # Graceful exit on interrupt
+            print("\nGoodbye!")
+            return NodeResult(state, outcome="quit")
+
+
+@dataclass(frozen=True)
+class LlmNode(Node[ChatState]):
+    """LLM intelligent entity with complete I/O capabilities.
+
+    This node represents an AI participant in the conversation, handling:
+    - Input: Receiving human messages from state
+    - Output: Generating responses via OpenAI API
+    - Cognition: Reasoning about context and generating appropriate responses
+    - Memory: Adding AI responses to the conversation history
+
+    The LLM is a complete intelligent entity, not just a processing function.
     """
 
     model: str = "gpt-5-nano-2025-08-07"
@@ -97,32 +148,28 @@ class ChatNode(Node[ChatState]):
 
     @override
     async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        """Process user input and generate language model response.
+        """Execute LLM interaction cycle: receive, process, respond.
 
         Returns:
-            NodeResult with updated conversation state.
+            NodeResult with "responded" outcome (always responds).
         """
-        # Ensure system message exists
+        # Ensure system message exists for context
         messages = _ensure_system_message(state.messages, self.system_prompt)
 
-        # Handle initialization without user input
-        if not state.user_input:
-            init_state = dataclasses.replace(state, messages=messages)
-            return NodeResult(init_state, outcome="awaiting_input")
+        # Input capability: Receive human message from state
+        # (Already in messages from HumanNode)
 
-        # Add user message and get AI response
-        messages = (*messages, ChatMessage(role="user", content=state.user_input))
+        # Cognitive process + Output capability: Generate response via API
         assistant_response = await _get_ai_response(messages, self.model)
-        messages = (
-            *messages,
-            ChatMessage(role="assistant", content=assistant_response),
-        )
 
-        # Return updated state
+        # Memory management: Add AI response to conversation
+        messages = (*messages, ChatMessage(role="assistant", content=assistant_response))
         new_state = dataclasses.replace(
             state,
             messages=messages,
             last_response=assistant_response,
-            user_input="",  # Clear user input after processing
+            user_input="",  # Clear human input after processing
         )
+
+        # LLM always responds (no quit outcome)
         return NodeResult(new_state, outcome="responded")
