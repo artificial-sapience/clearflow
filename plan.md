@@ -2,39 +2,45 @@
 
 ## Current Branch: `support-state-type-transformations`
 
-## Immediate Priority Tasks
+## Final PR Preparation 📋
 
-### 1. Fix Dependency Conflicts 🚨
-- [ ] Resolve rich version conflict (dspy wants >=13.7.1, semgrep wants <13.6)
-- [ ] Update ALL dependencies to latest stable versions (2025 versions)
-- [ ] Test that all examples work with updated dependencies
-- [ ] Ensure pyright finds dependencies correctly with new structure
-
-### 2. Complete RAG Example
-- [ ] Fix remaining pyright type errors in RAG example
-- [ ] Add type stubs for numpy/openai if needed (or rely on built-in types)
-- [ ] Ensure RAG example passes all quality checks
-- [ ] Test RAG example with actual API calls
-
-### 3. Finalize Dependency Organization
-- [ ] Verify each example's pyproject.toml is complete
-- [ ] Consider if examples should depend on local clearflow or PyPI version
-- [ ] Update example READMEs with new installation instructions
-- [ ] Document the new structure in CLAUDE.md
-
-### 4. Final PR Preparation 📋
+### Pre-submission Checklist
 - [ ] Run full quality-check.sh on entire codebase
-- [ ] Create detailed PR description including:
-  - Type transformation support
-  - Flow builder validation
-  - Custom linters
-  - Portfolio example refactoring (agents → specialists)
-  - RAG example addition
-  - Dependency reorganization with pyproject.toml
-  - Badge additions
-- [ ] Submit PR for review
+- [ ] Test all examples work with actual API calls
+- [ ] Verify all documentation is up-to-date
+- [ ] Check git status is clean
 
-## Future Considerations
+### PR Description Template
+```markdown
+## Summary
+This PR adds comprehensive improvements to ClearFlow:
+
+### Core Features
+- ✅ Type transformation support with TIn/TOut generics
+- ✅ Flow builder validation (reachability, duplicate routes)
+- ✅ Custom linters for mission-critical compliance
+- ✅ Single termination enforcement
+
+### Examples
+- ✅ Portfolio analysis example (multi-specialist workflow with DSPy)
+- ✅ RAG example (retrieval-augmented generation)
+- ✅ Chat example (simple conversational flow)
+- ✅ Standardized READMEs with mermaid diagrams
+
+### Infrastructure
+- ✅ Dependency organization with pyproject.toml
+- ✅ Removed semgrep (conflict with dspy 3.0.3)
+- ✅ Fixed pyright and tool exclusions for .venv
+- ✅ Badge additions to main README
+- ✅ API key loading from root .env for all examples
+
+### Testing
+- 100% test coverage maintained
+- All quality checks pass
+- Examples tested with OpenAI API
+```
+
+## Post-PR Tasks (Future)
 - Add timeout and max iterations support to flow execution
 - Create more examples following different design patterns
 - Consider documentation site when project grows

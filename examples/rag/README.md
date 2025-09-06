@@ -6,16 +6,18 @@ Retrieval-Augmented Generation system demonstrating ClearFlow's type-safe state 
 
 ```mermaid
 graph TD
-    subgraph Offline Flow
-        Docs[Documents] --> Chunk[ChunkDocuments]
-        Chunk --> Embed[EmbedDocuments]
-        Embed --> Index[CreateIndex]
+    subgraph Offline Indexing Flow
+        Start1([RAGState]) --> Chunk[ChunkDocumentsNode]
+        Chunk -->|chunked| Embed[EmbedDocumentsNode]
+        Embed -->|embedded| Index[CreateIndexNode]
+        Index -->|indexed| End1([IndexedState])
     end
     
-    subgraph Online Flow
-        Query[Query] --> QEmbed[EmbedQuery]
-        QEmbed --> Retrieve[RetrieveDocument]
-        Retrieve --> Generate[GenerateAnswer]
+    subgraph Online Query Flow
+        Start2([QueryState]) --> EmbedQ[EmbedQueryNode]
+        EmbedQ -->|embedded| Retrieve[RetrieveDocumentNode]
+        Retrieve -->|retrieved| Generate[GenerateAnswerNode]
+        Generate -->|answered| End2([AnsweredState])
     end
 ```
 

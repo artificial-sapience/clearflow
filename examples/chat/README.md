@@ -6,9 +6,9 @@ Simple conversational flow demonstrating ClearFlow's explicit routing for langua
 
 ```mermaid
 graph LR
-    Start([User Input]) --> Chat[ChatNode]
-    Chat -->|awaiting_input| End([Wait for User])
-    Chat -->|responded| End
+    Start([User Input]) --> chat[ChatNode]
+    chat -->|awaiting_input| Continue([Continue Loop])
+    chat -->|responded| End([End])
 ```
 
 ## Quick Start
