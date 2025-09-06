@@ -93,7 +93,17 @@ jobs:
         enable-cache: true
         
     - name: Install dependencies
-      run: uv sync --all-extras
+      run: |
+        # Install main project dependencies
+        uv sync --all-extras
+        
+        # Install example-specific dependencies
+        for example_dir in examples/*/; do
+          if [ -f "$example_dir/pyproject.toml" ]; then
+            echo "Installing dependencies for $example_dir"
+            (cd "$example_dir" && uv sync)
+          fi
+        done
         
     # Custom linters - MUST run first
     - name: Architecture compliance check
@@ -125,14 +135,14 @@ jobs:
     # Complexity and dead code checks
     - name: Xenon complexity check
       run: |
-        # Check non-linter code with Grade A requirement
-        uv run xenon --max-average A --max-modules A --max-absolute A clearflow tests examples
+        # Check non-linter code with Grade A requirement (excluding .venv)
+        uv run xenon --max-average A --max-modules A --max-absolute A -e "*/.venv/*,*/venv/*" clearflow tests examples
         # Check linters with Grade B requirement (infrastructure code)
-        uv run xenon --max-average B --max-modules B --max-absolute B linters
+        uv run xenon --max-average B --max-modules B --max-absolute B -e "*/.venv/*,*/venv/*" linters
       
     - name: Vulture dead code detection
       run: |
-        vulture_output=$(uv run vulture clearflow tests examples linters --min-confidence 80 2>&1 || true)
+        vulture_output=$(uv run vulture clearflow tests examples linters --exclude "*/.venv/*,*/venv/*" --min-confidence 80 2>&1 || true)
         if echo "$vulture_output" | grep -q "unused"; then
           echo "Dead code detected:"
           echo "$vulture_output"
@@ -141,7 +151,7 @@ jobs:
       
     - name: Radon complexity metrics
       run: |
-        radon_output=$(uv run radon cc clearflow tests examples linters -a 2>&1)
+        radon_output=$(uv run radon cc clearflow tests examples linters -e "*/.venv/*,*/venv/*" -a 2>&1)
         echo "$radon_output"
         if echo "$radon_output" | grep -q "Average complexity: "; then
           avg_grade=$(echo "$radon_output" | sed -n 's/.*Average complexity: \([A-F]\).*/\1/p')
@@ -189,10 +199,20 @@ jobs:
         echo "Updated version to: $VERSION"
         
     - name: Install dependencies
-      run: uv sync --all-extras
+      run: |
+        # Install main project dependencies
+        uv sync --all-extras
+        
+        # Install example-specific dependencies
+        for example_dir in examples/*/; do
+          if [ -f "$example_dir/pyproject.toml" ]; then
+            echo "Installing dependencies for $example_dir"
+            (cd "$example_dir" && uv sync)
+          fi
+        done
         
     - name: Run tests with coverage
-      run: uv run pytest -x -v tests --cov=clearflow --cov-report=xml --cov-report=term --cov-fail-under=100
+      run: uv run pytest -x -v tests --cov=clearflow --cov-report=xml --cov-report=term-missing --cov-fail-under=100
         
     - name: Upload coverage to Coveralls
       if: matrix.os == 'ubuntu-latest' && github.repository == 'artificial-sapience/ClearFlow'
@@ -269,7 +289,17 @@ jobs:
         enable-cache: true
         
     - name: Install dependencies
-      run: uv sync --all-extras
+      run: |
+        # Install main project dependencies
+        uv sync --all-extras
+        
+        # Install example-specific dependencies
+        for example_dir in examples/*/; do
+          if [ -f "$example_dir/pyproject.toml" ]; then
+            echo "Installing dependencies for $example_dir"
+            (cd "$example_dir" && uv sync)
+          fi
+        done
         
     - name: CVE scan with pip-audit
       run: |

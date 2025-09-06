@@ -45,11 +45,13 @@ uv run python main.py "What is Q-Mesh protocol?"
 RAG combines document retrieval with language model generation. This implementation uses two flows:
 
 **Offline Indexing Flow:**
+
 - `ChunkDocuments` - Splits text into overlapping chunks (500 chars, 50 overlap)
 - `EmbedDocuments` - Creates OpenAI embeddings for each chunk
 - `CreateIndex` - Builds FAISS vector index for similarity search
 
 **Online Query Flow:**
+
 - `EmbedQuery` - Converts user query to embedding
 - `RetrieveDocument` - Finds most similar chunk via cosine similarity
 - `GenerateAnswer` - Uses GPT-4 with retrieved context to answer
