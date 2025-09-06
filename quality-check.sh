@@ -87,13 +87,8 @@ print_header "Syncing dependencies"
 uv sync --all-extras
 check_step "Dependencies synchronization"
 
-# If checking examples, ensure their dependencies are available
-if [[ "$QUALITY_TARGETS" == *"examples"* ]]; then
-    print_header "Installing example dependencies"
-    echo "Installing dependencies for all examples..."
-    # Already installed via --all-extras above, just verify
-    check_step "Example dependencies installation"
-fi
+# Examples use main project dependencies via --all-extras
+# No separate installation needed
 
 # ============================================================
 # CRITICAL: Architecture compliance MUST come FIRST

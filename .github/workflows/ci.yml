@@ -93,17 +93,7 @@ jobs:
         enable-cache: true
         
     - name: Install dependencies
-      run: |
-        # Install main project dependencies
-        uv sync --all-extras
-        
-        # Install example-specific dependencies
-        for example_dir in examples/*/; do
-          if [ -f "$example_dir/pyproject.toml" ]; then
-            echo "Installing dependencies for $example_dir"
-            (cd "$example_dir" && uv sync)
-          fi
-        done
+      run: uv sync --all-extras
         
     # Custom linters - MUST run first
     - name: Architecture compliance check
@@ -199,17 +189,7 @@ jobs:
         echo "Updated version to: $VERSION"
         
     - name: Install dependencies
-      run: |
-        # Install main project dependencies
-        uv sync --all-extras
-        
-        # Install example-specific dependencies
-        for example_dir in examples/*/; do
-          if [ -f "$example_dir/pyproject.toml" ]; then
-            echo "Installing dependencies for $example_dir"
-            (cd "$example_dir" && uv sync)
-          fi
-        done
+      run: uv sync --all-extras
         
     - name: Run tests with coverage
       run: uv run pytest -x -v tests --cov=clearflow --cov-report=xml --cov-report=term-missing --cov-fail-under=100
@@ -289,17 +269,7 @@ jobs:
         enable-cache: true
         
     - name: Install dependencies
-      run: |
-        # Install main project dependencies
-        uv sync --all-extras
-        
-        # Install example-specific dependencies
-        for example_dir in examples/*/; do
-          if [ -f "$example_dir/pyproject.toml" ]; then
-            echo "Installing dependencies for $example_dir"
-            (cd "$example_dir" && uv sync)
-          fi
-        done
+      run: uv sync --all-extras
         
     - name: CVE scan with pip-audit
       run: |
