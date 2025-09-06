@@ -2,9 +2,7 @@
 # pyright: reportUnknownParameterType=false, reportUnknownMemberType=false
 
 from clearflow import Node, flow
-from examples.portfolio_analysis.config import configure_dspy
-from examples.portfolio_analysis.models import MarketData, TradingDecision
-from examples.portfolio_analysis.nodes import (
+from examples.portfolio_analysis.agents import (
     ComplianceOfficer,
     DecisionNode,
     ErrorHandler,
@@ -12,6 +10,8 @@ from examples.portfolio_analysis.nodes import (
     QuantAnalyst,
     RiskAnalyst,
 )
+from examples.portfolio_analysis.agents.decision.models import TradingDecision
+from examples.portfolio_analysis.shared import MarketData, configure_dspy
 
 
 def create_portfolio_analysis_flow() -> Node[MarketData, TradingDecision]:

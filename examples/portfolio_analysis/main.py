@@ -4,17 +4,15 @@
 import asyncio
 
 from clearflow import NodeResult
+from examples.portfolio_analysis.agents.decision.models import TradingDecision
+from examples.portfolio_analysis.agents.portfolio.models import AllocationChange
 from examples.portfolio_analysis.market_data import (
     create_bullish_market_data,
     create_sample_market_data,
     create_volatile_market_data,
 )
-from examples.portfolio_analysis.models import (
-    AllocationChange,
-    MarketData,
-    TradingDecision,
-)
 from examples.portfolio_analysis.portfolio_flow import create_portfolio_analysis_flow
+from examples.portfolio_analysis.shared import MarketData
 
 
 def print_market_overview(market_data: MarketData) -> None:
