@@ -1,93 +1,68 @@
-# Retrieval-Augmented Generation (RAG) Example
+# RAG Example
 
-This example demonstrates a complete RAG system using ClearFlow's type-safe orchestration.
-
-## Overview
-
-RAG combines document retrieval with language model generation to answer questions using specific context. This implementation follows the classic two-phase pattern:
-
-1. **Offline Indexing**: Process and index documents for fast retrieval
-2. **Online Query**: Retrieve relevant context and generate answers
+Retrieval-Augmented Generation system demonstrating ClearFlow's type-safe state transformations.
 
 ## Flow
 
 ```mermaid
 graph TD
     subgraph Offline Flow
-        ChunkDocuments --> EmbedDocuments --> CreateIndex
+        Docs[Documents] --> Chunk[ChunkDocuments]
+        Chunk --> Embed[EmbedDocuments]
+        Embed --> Index[CreateIndex]
     end
     
     subgraph Online Flow
-        EmbedQuery --> RetrieveDocument --> GenerateAnswer
+        Query[Query] --> QEmbed[EmbedQuery]
+        QEmbed --> Retrieve[RetrieveDocument]
+        Retrieve --> Generate[GenerateAnswer]
     end
 ```
 
-### Offline Flow Nodes
-
-- **ChunkDocumentsNode**: Splits documents into overlapping chunks (500 chars with 50 char overlap)
-- **EmbedDocumentsNode**: Converts chunks to vector embeddings using OpenAI
-- **CreateIndexNode**: Builds FAISS vector index for similarity search
-
-### Online Flow Nodes
-
-- **EmbedQueryNode**: Converts user query to embedding
-- **RetrieveDocumentNode**: Finds most similar document chunk
-- **GenerateAnswerNode**: Uses GPT-4 to generate answer with retrieved context
-
-## State Transformations
-
-ClearFlow's type system tracks state transformations through the pipeline:
-
-```python
-RAGState → ChunkedState → EmbeddedState → IndexedState
-QueryState → RetrievedState → AnsweredState
-```
-
-Each transformation is immutable, creating new state objects with additional fields.
-
-## Installation
+## Quick Start
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# 1. Set up your OpenAI API key
+cp ../../.env.example ../../.env
+# Edit .env and add your API key
 
-# Set OpenAI API key
-export OPENAI_API_KEY="your-api-key-here"
+# 2. Install dependencies (from project root)
+uv sync --all-extras
+
+# 3. Run the example
+uv run python main.py
+# Or with custom query:
+uv run python main.py "What is Q-Mesh protocol?"
 ```
 
-## Usage
+## How It Works
 
-```bash
-# Run with default query
-python main.py
+RAG combines document retrieval with language model generation. This implementation uses two flows:
 
-# Run with custom query
-python main.py "What is Q-Mesh protocol?"
+**Offline Indexing Flow:**
+- `ChunkDocuments` - Splits text into overlapping chunks (500 chars, 50 overlap)
+- `EmbedDocuments` - Creates OpenAI embeddings for each chunk
+- `CreateIndex` - Builds FAISS vector index for similarity search
 
-# Alternative syntax
-python main.py --How does NeurAlign M7 work?
-```
+**Online Query Flow:**
+- `EmbedQuery` - Converts user query to embedding
+- `RetrieveDocument` - Finds most similar chunk via cosine similarity
+- `GenerateAnswer` - Uses GPT-4 with retrieved context to answer
+
+Each transformation creates new immutable state: `RAGState → ChunkedState → EmbeddedState → IndexedState`
 
 ## Key Features
 
-- **Type Safety**: Full typing with state transformations
-- **Immutable State**: Each node creates new state objects
-- **Explicit Routing**: Clear flow definition with single termination
-- **Error Handling**: Validates state at each step
-
-## Comparison with PocketFlow RAG
-
-| Aspect | ClearFlow | PocketFlow |
-|--------|-----------|------------|
-| **State** | Immutable dataclasses | Mutable dict |
-| **Typing** | Full type inference | Dynamic |
-| **Routing** | Explicit with outcomes | Sequential `>>` |
-| **Nodes** | Frozen dataclasses | Regular classes |
+- **Two-phase architecture** - Separate indexing and query flows
+- **Type-safe transformations** - Each node produces specific state types
+- **Immutable state** - All transformations create new state objects
+- **Vector search** - FAISS for efficient similarity matching
+- **Explicit routing** - Clear flow definition with single termination
 
 ## Files
 
-- `models.py` - State definitions with type hierarchy
-- `nodes.py` - Node implementations for both flows
-- `rag_flow.py` - Flow composition and routing
-- `utils.py` - OpenAI integration utilities
-- `main.py` - Entry point and orchestration
+- `main.py` - Entry point and flow orchestration
+- `nodes.py` - All node implementations
+- `rag_flow.py` - Flow definitions and routing
+- `models.py` - State type definitions
+- `utils.py` - OpenAI and chunking utilities

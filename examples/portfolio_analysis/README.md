@@ -1,12 +1,8 @@
-# Portfolio Analysis Workflow Example
+# Portfolio Analysis Example
 
-*Educational example using simulated market data.*
+Multi-specialist workflow for portfolio allocation decisions using simulated market data.
 
-## Overview
-
-This example demonstrates a **multi-specialist workflow** analyzing market conditions to make portfolio allocation decisions. Each node represents a specialized analysis stage with domain-specific reasoning capabilities.
-
-## Flow Structure
+## Flow
 
 ```mermaid
 graph LR
@@ -23,102 +19,45 @@ graph LR
     D -->|decision_ready| End([Final Decision])
 ```
 
-## Educational Value
-
-Demonstrates workflow orchestration patterns that could be adapted for financial applications:
-
-- **Multi-specialist workflow** - Specialized processors with distinct roles
-- **Type-safe workflows** - Precise data flow between analysis stages  
-- **Risk assessment patterns** - Example checks in decision workflows
-- **Compliance patterns** - Example validation steps
-- **Audit trail** - Clear reasoning chain for transparency
-
-## Workflow Specialists
-
-Each specialist node uses language model intelligence for domain-specific financial analysis:
-
-### 1. **QuantAnalyst**
-
-- Analyzes market trends and technical indicators
-- Calculates momentum, volatility, and correlation metrics
-- Identifies investment opportunities with confidence scores
-
-### 2. **RiskAnalyst**
-
-- Performs stress testing and scenario analysis
-- Calculates Value-at-Risk (VaR) and exposure limits
-- Assesses portfolio concentration and correlation risks
-
-### 3. **PortfolioManager**
-
-- Synthesizes quantitative and risk analysis
-- Makes strategic allocation decisions based on investment thesis
-- Balances returns, risk, and client objectives
-
-### 4. **ComplianceOfficer**
-
-- Reviews proposed trades against regulatory requirements
-- Validates position limits and client mandates
-- Ensures adherence to investment policies
-
-### 5. **DecisionNode**
-
-- Synthesizes all analyses into final trading decision
-- Creates structured execution plan with monitoring requirements
-- Maintains complete audit trail for compliance
-
-### 6. **ErrorHandler**
-
-- Converts any analysis errors into conservative hold decisions
-- Ensures workflow always produces a valid trading decision
-- Provides detailed error context for debugging
-
-## Setup
+## Quick Start
 
 ```bash
-# From project root
+# 1. Set up your OpenAI API key
+cp ../../.env.example ../../.env
+# Edit .env and add your API key
+
+# 2. Install dependencies (from project root)
 uv sync --all-extras
-export OPENAI_API_KEY="your-key"
-```
 
-## Usage
-
-```bash
-# From examples/portfolio_analysis directory
+# 3. Run the example
 uv run python main.py
 ```
 
-The educational demonstration will:
+## How It Works
 
-1. Generate simulated market data with fictional tickers
-2. Run example quantitative analysis
-3. Perform example risk assessment
-4. Generate example allocation recommendations
-5. Demonstrate validation patterns
-6. Display the complete example workflow
+This example demonstrates a sequential workflow where each specialist node analyzes market data and passes enriched state to the next stage:
 
-**Specialist Outcomes:**
+1. **QuantAnalyst** - Technical analysis and opportunity identification
+2. **RiskAnalyst** - Risk assessment and limit checking
+3. **PortfolioManager** - Allocation recommendations
+4. **ComplianceOfficer** - Regulatory validation
+5. **DecisionNode** - Final synthesis and execution plan
+6. **ErrorHandler** - Converts errors to conservative decisions
 
-- `QuantAnalyst`: analysis_complete / analysis_failed
-- `RiskAnalyst`: risk_acceptable / risk_limits_exceeded  
-- `PortfolioManager`: recommendations_ready / analysis_failed
-- `ComplianceOfficer`: compliance_approved / compliance_failed
-- `ErrorHandler`: error_handled
-- `DecisionNode`: decision_ready (→ End)
+Each node uses DSPy for structured LLM outputs with Pydantic validation.
 
 ## Key Features
 
-- **Sequential processing** - Each specialist processes data in sequence
-- **Type-safe transformations** - `MarketData → QuantInsights → RiskAssessment → Recommendations → Compliance → Decision`
-- **Error handling** - Example recovery patterns
-- **Validation patterns** - Demonstrates validation approaches
-- **Educational workflow** - Learn orchestration patterns
+- **Sequential processing** - Each specialist processes in order
+- **Type-safe transformations** - `MarketData → QuantInsights → RiskAssessment → Decision`
+- **Error recovery** - Failures route to ErrorHandler then continue
+- **Structured outputs** - DSPy signatures ensure consistent responses
+- **Audit trail** - Complete reasoning chain for compliance
 
-## Customization
+## Files
 
-- **Market Data**: Modify `market_data.py` to simulate different market conditions
-- **Risk Limits**: Adjust parameters in `RiskAnalyst` node
-- **Investment Strategy**: Update logic in `PortfolioManager` node  
-- **Compliance Rules**: Configure policies in `ComplianceOfficer` node
-
-This example demonstrates how ClearFlow orchestrates **specialist workflows** following the Workflow design pattern, not the Agent pattern. Each specialist is a specialized processor, not an autonomous agent.
+- `main.py` - Entry point with scenario selection
+- `portfolio_flow.py` - Flow definition and routing
+- `market_data.py` - Simulated market data generation
+- `specialists/` - Individual specialist node implementations
+- `shared/` - Common models and configuration

@@ -1,52 +1,48 @@
-# ClearFlow Chat Example
+# Chat Example
 
-A simple chat application using OpenAI's API, demonstrating how ClearFlow provides explicit routing for language model conversations.
+Simple conversational flow demonstrating ClearFlow's explicit routing for language model interactions.
+
+## Flow
+
+```mermaid
+graph LR
+    Start([User Input]) --> Chat[ChatNode]
+    Chat -->|awaiting_input| End([Wait for User])
+    Chat -->|responded| End
+```
 
 ## Quick Start
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# 1. Set up your OpenAI API key
+cp ../../.env.example ../../.env
+# Edit .env and add your API key
 
-# Set your OpenAI API key
-export OPENAI_API_KEY="your-api-key"
+# 2. Install dependencies (from project root)
+uv sync --all-extras
 
-# Run
-python main.py
+# 3. Run the example
+uv run python main.py
 ```
 
-## Structure
+## How It Works
 
-- **`main.py`** - UI handling (input/output)
-- **`nodes.py`** - ChatNode with conversation logic
-- **`flow.py`** - Single-node flow definition
+This example demonstrates a single-node flow where the `ChatNode` handles OpenAI API calls and conversation state management. The node returns explicit outcomes:
 
-## Key Pattern
+- `awaiting_input` - When waiting for user input
+- `responded` - After generating an AI response
 
-ClearFlow separates concerns cleanly:
+The separation ensures UI logic (looping, input/output) stays in `main.py`, while business logic (LLM calls, state management) stays in the node.
 
-```python
-# flow.py - Simple single-node flow
-flow = (
-    Flow[ChatState]("ChatBot")
-    .start_with(chat)
-    # No routes needed - single node returns outcomes directly
-    .build()
-)
+## Key Features
 
-# nodes.py - Business logic with explicit outcomes
-if user_input is None:
-    return NodeResult(new_state, outcome="awaiting_input")
-# ... process language model call ...
-return NodeResult(new_state, outcome="responded")
+- **Single-node flow** - Simplest possible ClearFlow pattern
+- **Explicit outcomes** - Clear distinction between waiting and responding states
+- **State management** - Immutable conversation history tracking
+- **Clean separation** - UI logic separate from business logic
 
-# main.py - UI handles the conversation loop
-while True:
-    user_input = get_user_input()
-    if user_input is None:
-        break
-    # Update state with user input and process
-    result = await flow(state)
-```
+## Files
 
-The separation ensures that UI logic (looping, input/output) stays in main.py, while business logic (language model calls, state management) stays in the node.
+- `main.py` - UI handling and conversation loop
+- `nodes.py` - ChatNode with OpenAI integration
+- `chat_flow.py` - Single-node flow definition
