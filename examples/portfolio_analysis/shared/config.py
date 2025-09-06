@@ -1,5 +1,4 @@
 """Configuration for DSPy and OpenAI integration."""
-# pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 
 import os
 from pathlib import Path

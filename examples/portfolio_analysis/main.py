@@ -1,5 +1,4 @@
 """Main entry point for AI-powered portfolio analysis using DSPy."""
-# pyright: reportUnknownMemberType=false
 
 import asyncio
 
