@@ -24,14 +24,17 @@ graph TD
 ## Quick Start
 
 ```bash
+# From project root directory
+
 # 1. Set up your OpenAI API key
-cp ../../.env.example ../../.env
+cp .env.example .env
 # Edit .env and add your API key
 
-# 2. Install dependencies (from project root)
+# 2. Install dependencies
 uv sync --all-extras
 
 # 3. Run the example
+cd examples/rag
 uv run python main.py
 # Or with custom query:
 uv run python main.py "What is Q-Mesh protocol?"

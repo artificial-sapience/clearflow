@@ -9,7 +9,7 @@ Each node represents a **complete intelligent entity**:
 - **HumanNode**: Human participant with console I/O and decision-making
 - **LlmNode**: AI participant with API I/O and reasoning capabilities
 
-This creates a natural conversation pattern between two intelligent systems.
+This creates a natural conversation pattern between two intelligent entities.
 
 ## Flow
 
@@ -24,14 +24,17 @@ graph LR
 ## Quick Start
 
 ```bash
+# From project root directory
+
 # 1. Set up your OpenAI API key
-cp ../../.env.example ../../.env
+cp .env.example .env
 # Edit .env and add your API key
 
-# 2. Install dependencies (from project root)
+# 2. Install dependencies
 uv sync --all-extras
 
 # 3. Run the example
+cd examples/chat
 uv run python main.py
 ```
 
