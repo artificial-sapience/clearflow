@@ -7,18 +7,31 @@ Please continue working on the ClearFlow project.
 - Review `plan.md` for current priorities and task list
 - We're on branch: `support-state-type-transformations`
 
-## Next Priority
+## Critical Priority 🚨
 
-Based on `plan.md`, the immediate priorities are:
+**Fix the dependency conflict** discovered in the last session:
+- `dspy>=3.0.0` requires `rich>=13.7.1`
+- `semgrep>=1.134.0` requires `rich>=13.5.2,<13.6.dev0`
 
-1. **Consider Simple Examples** - Evaluate if we need an ultra-simple quickstart or additional examples
-2. **Prepare PR** - Create detailed PR description and submit for review
+## Immediate Tasks
 
-## Key Points to Remember
+1. **Update ALL dependencies to latest stable versions** (2025 versions)
+   - Check PyPI for latest stable releases
+   - Update version constraints in pyproject.toml
+   - Resolve the rich version conflict
+   - Test that everything still works
 
-- Portfolio example now uses "specialists" (not "agents") - it follows the Workflow pattern
-- README has been significantly cleaned up - no quickstart, cleaner philosophy
-- ClearFlow emphasizes **correctness and safety**, not minimalism
-- All quality checks are passing
+2. **Complete RAG example quality checks**
+   - Fix any remaining type errors
+   - Ensure it passes `./quality-check.sh examples/rag`
 
-Please pick up where we left off and continue with the tasks in `plan.md`.
+3. **Prepare for PR submission**
+   - See plan.md for full PR checklist
+
+## Key Context
+- We switched all examples to use pyproject.toml (no more requirements.txt)
+- All build systems now use hatchling (not setuptools)
+- Root pyproject.toml has `[project.optional-dependencies.examples]`
+- Most packages have built-in types (NumPy, OpenAI, dotenv)
+
+Please start by checking and updating all dependencies to their latest stable versions.

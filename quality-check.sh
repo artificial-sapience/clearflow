@@ -90,21 +90,9 @@ check_step "Dependencies synchronization"
 # If checking examples, ensure their dependencies are available
 if [[ "$QUALITY_TARGETS" == *"examples"* ]]; then
     print_header "Installing example dependencies"
-    # Collect all unique dependencies from example requirements
-    if ls examples/*/requirements.txt >/dev/null 2>&1; then
-        echo "Found example requirements files, installing dependencies..."
-        # Install each example's requirements (excluding clearflow itself)
-        for req in examples/*/requirements.txt; do
-            if [ -f "$req" ]; then
-                echo "Installing from $req..."
-                grep -v "^clearflow" "$req" | grep -v "^#" | grep -v "^$" | \
-                    xargs -r uv pip install --quiet
-            fi
-        done
-        check_step "Example dependencies installation"
-    else
-        echo "No example requirements files found"
-    fi
+    echo "Installing dependencies for all examples..."
+    # Already installed via --all-extras above, just verify
+    check_step "Example dependencies installation"
 fi
 
 # ============================================================

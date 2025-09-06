@@ -322,7 +322,13 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
     if not directory.exists():
         return tuple(violations)
 
+    # Directories to exclude from scanning
+    excluded_dirs = {".venv", "__pycache__", ".git", "node_modules", "venv", "env", ".env"}
+
     for file_path in directory.rglob("*.py"):
+        # Skip files in excluded directories
+        if any(part in excluded_dirs for part in file_path.parts):
+            continue
         if is_test_file(file_path):
             violations.extend(check_file(file_path))
 

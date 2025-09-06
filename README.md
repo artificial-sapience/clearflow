@@ -30,7 +30,7 @@ pip install clearflow
 |------|-------------|
 | [Chat](examples/chat/) | Simple conversational flow with OpenAI |
 | [Portfolio Analysis](examples/portfolio_analysis/) | Multi-specialist workflow for financial analysis |
-| RAG *(coming soon)* | Full retrieval-augmented generation with vector search |
+| [RAG](examples/rag/) | Full retrieval-augmented generation with vector search |
 
 ## Core Concepts
 
@@ -50,7 +50,7 @@ Holds the **new state** and an **outcome** string used for routing.
 
 ### `flow()`
 
-A function that creates a flow builder with **explicit routing**:
+A function that creates a flow with **explicit routing**:
 
 ```python
 flow("Name", start_node)

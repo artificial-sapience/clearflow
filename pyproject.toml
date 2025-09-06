@@ -49,13 +49,13 @@ Inspiration = "https://github.com/The-Pocket/PocketFlow"
 [project.optional-dependencies]
 dev = [
     # Testing
-    "pytest>=8.4.0",
+    "pytest>=8.4.2",
     "pytest-asyncio>=1.1.0",
-    "pytest-cov>=6.2.0",
+    "pytest-cov>=6.3.0",
     
     # Type checking
-    "pyright>=1.1.0",
-    "typeguard>=4.4.0",  # Runtime type-checker
+    "pyright>=1.1.405",
+    "typeguard>=4.4.4",  # Runtime type-checker
     
     # Linting & formatting
     "ruff>=0.12.0",
@@ -64,12 +64,22 @@ dev = [
     # Security & vulnerability scanning
     "pip-audit>=2.9.0",      # CVE scanner for dependencies
     "bandit[toml]>=1.8.0",   # AST security analyzer
-    "semgrep>=1.134.0",      # Pattern-based security analysis
+    # semgrep removed due to rich version conflict with dspy 3.0.3
     
     # Code quality & complexity
     "radon>=6.0.1",          # Cyclomatic complexity, maintainability index
     "xenon>=0.9.3",          # Complexity monitor (fails if too complex)
     "vulture>=2.14",         # Dead code detection
+]
+examples = [
+    # Union of all example dependencies
+    "openai>=1.106.1",
+    "python-dotenv>=1.1.1",
+    "dspy>=3.0.3",
+    "pydantic>=2.11.0",
+    "rich>=13.7.1",  # Required by dspy 3.0.3
+    "faiss-cpu>=1.9.0.post2",
+    "numpy>=2.3.2",
 ]
 
 [tool.hatch.build]
@@ -264,7 +274,7 @@ check-typed-exception = true
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
 include = ["clearflow", "tests", "examples", "linters"]
-exclude = ["**/__pycache__", ".venv"]
+exclude = ["**/__pycache__", "**/.venv", "**/venv", ".venv"]
 stubPath = "typings"  # Use our DSPy type stubs
 strictListInference = true        # list[...] inferred as precise union instead of Any
 strictDictionaryInference = true  # dict[...] inferred as precise union

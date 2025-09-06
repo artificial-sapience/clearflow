@@ -2,35 +2,39 @@
 
 ## Current Branch: `support-state-type-transformations`
 
-## Completed This Session ✅
-- ✅ Renamed portfolio example "agents" → "specialists" (Workflow pattern, not Agent pattern)
-- ✅ Cleaned up excessive disclaimers across portfolio example
-- ✅ Updated README.md:
-  - Removed quickstart section (too complex, not "Hello World" style)
-  - Added Examples section with table
-  - Removed inaccurate minimalism claims (~250 lines)
-  - Fixed redundant "state transformations" wording
-  - Added new badges (Downloads, Type: Pyright, Ruff)
-- ✅ All quality checks passing (100% coverage, type safety, linting)
+## Immediate Priority Tasks
 
-## Remaining Tasks
+### 1. Fix Dependency Conflicts 🚨
+- [ ] Resolve rich version conflict (dspy wants >=13.7.1, semgrep wants <13.6)
+- [ ] Update ALL dependencies to latest stable versions (2025 versions)
+- [ ] Test that all examples work with updated dependencies
+- [ ] Ensure pyright finds dependencies correctly with new structure
 
-### 1. Consider Creating Simple Examples
-- [ ] Evaluate if we need ultra-simple quickstart example
-- [ ] Consider creating examples/qa_pipeline/ from saved quickstart code
-- [ ] Plan RAG example implementation (full offline + online stages)
+### 2. Complete RAG Example
+- [ ] Fix remaining pyright type errors in RAG example
+- [ ] Add type stubs for numpy/openai if needed (or rely on built-in types)
+- [ ] Ensure RAG example passes all quality checks
+- [ ] Test RAG example with actual API calls
 
-### 2. Final PR Preparation 📋
+### 3. Finalize Dependency Organization
+- [ ] Verify each example's pyproject.toml is complete
+- [ ] Consider if examples should depend on local clearflow or PyPI version
+- [ ] Update example READMEs with new installation instructions
+- [ ] Document the new structure in CLAUDE.md
+
+### 4. Final PR Preparation 📋
+- [ ] Run full quality-check.sh on entire codebase
 - [ ] Create detailed PR description including:
-  - Type transformation support  
-  - Flow builder validation (reachability & duplicate routes)
-  - Custom linters for mission-critical compliance
+  - Type transformation support
+  - Flow builder validation
+  - Custom linters
   - Portfolio example refactoring (agents → specialists)
-  - README improvements and badge additions
-- [ ] Final quality-check.sh run
+  - RAG example addition
+  - Dependency reorganization with pyproject.toml
+  - Badge additions
 - [ ] Submit PR for review
 
 ## Future Considerations
 - Add timeout and max iterations support to flow execution
-- Create more examples following different design patterns (Agent, RAG, Map-Reduce)
+- Create more examples following different design patterns
 - Consider documentation site when project grows

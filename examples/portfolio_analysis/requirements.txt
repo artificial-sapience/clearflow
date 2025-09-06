@@ -1,5 +1,0 @@
-clearflow
-dspy-ai>=2.5.0
-pydantic>=2.0.0
-openai>=1.103.0
-python-dotenv>=1.1.0
