@@ -122,7 +122,7 @@ target-version = "py313"
 indent-width = 4
 preview = true
 fix = false
-extend-exclude = ["*.ipynb", "typings"]  # Exclude notebooks and auto-generated type stubs
+extend-exclude = ["*.ipynb", "typings", "**/.venv", "**/venv"]  # Exclude notebooks, type stubs, and virtual environments
 unsafe-fixes = false
 
 [tool.ruff.format]

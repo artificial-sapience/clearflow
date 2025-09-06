@@ -315,7 +315,7 @@ done
 
 # Check non-linter code with Grade A requirement
 if [ -n "$xenon_targets" ]; then
-    if ! uv run xenon --max-average A --max-modules A --max-absolute A $xenon_targets 2>&1; then
+    if ! uv run xenon --max-average A --max-modules A --max-absolute A -e "*/.venv/*,*/venv/*" $xenon_targets 2>&1; then
         echo -e "${RED}✗ Functions exceeding complexity threshold${NC}"
         echo -e "${RED}MISSION-CRITICAL: Complexity violations detected${NC}"
         echo -e "${YELLOW}⚠️  DO NOT suppress or increase complexity thresholds${NC}"
@@ -328,7 +328,7 @@ fi
 # Check linters with Grade B requirement (infrastructure code)
 if [ -n "$linter_targets" ]; then
     echo "Checking linters (infrastructure) with Grade B requirement..."
-    if ! uv run xenon --max-average B --max-modules B --max-absolute B $linter_targets 2>&1; then
+    if ! uv run xenon --max-average B --max-modules B --max-absolute B -e "*/.venv/*,*/venv/*" $linter_targets 2>&1; then
         echo -e "${RED}✗ Linter functions exceeding Grade B complexity${NC}"
         echo -e "${RED}MISSION-CRITICAL: Infrastructure complexity violations detected${NC}"
         exit 1
@@ -353,8 +353,8 @@ for target in $QUALITY_TARGETS; do
 done
 
 if [ -n "$vulture_targets" ]; then
-    # Run vulture and capture the exit code
-    vulture_output=$(uv run vulture $vulture_targets --min-confidence 80 2>&1 || true)
+    # Run vulture and capture the exit code, excluding .venv directories
+    vulture_output=$(uv run vulture $vulture_targets --exclude "*/.venv/*,*/venv/*" --min-confidence 80 2>&1 || true)
     
     # Check if vulture found any issues by looking for the word "unused" in the output
     if echo "$vulture_output" | grep -q "unused"; then
@@ -385,8 +385,8 @@ for target in $QUALITY_TARGETS; do
 done
 
 if [ -n "$radon_targets" ]; then
-    # Run radon with average complexity output
-    radon_output=$(uv run radon cc $radon_targets -a 2>&1)
+    # Run radon with average complexity output, excluding .venv directories
+    radon_output=$(uv run radon cc $radon_targets -e "*/.venv/*,*/venv/*" -a 2>&1)
     
     # Check if radon found any code to analyze
     if echo "$radon_output" | grep -q "Average complexity: "; then

@@ -1,14 +1,40 @@
 """Utilities for LLM and embedding operations."""
 
 import os
+from pathlib import Path
 from typing import cast
 
 import numpy as np
 import numpy.typing as npt
+from dotenv import load_dotenv
 from openai import OpenAI
 
+
+def _load_env() -> None:
+    """Load environment variables from .env file."""
+    # Try multiple locations for the .env file
+    env_locations = [
+        Path(".env"),  # Current directory
+        Path("../.env"),  # Parent directory
+        Path("../../.env"),  # Grandparent directory (repo root)
+    ]
+
+    for env_path in env_locations:
+        if env_path.exists():
+            load_dotenv(env_path)
+            break
+
+
+# Load environment variables before initializing client
+_load_env()
+
 # Initialize OpenAI client
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+api_key = os.environ.get("OPENAI_API_KEY")
+if not api_key:
+    msg = "OPENAI_API_KEY not found. Please set it in .env file at project root."
+    raise ValueError(msg)
+
+client = OpenAI(api_key=api_key)
 
 
 def get_embedding(text: str) -> npt.NDArray[np.float32]:
