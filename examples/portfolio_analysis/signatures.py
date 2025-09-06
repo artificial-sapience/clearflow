@@ -20,6 +20,11 @@ class QuantAnalystSignature(dspy.Signature):
 
     You are a senior quantitative analyst at a top-tier investment firm.
 
+    CRITICAL REQUIREMENT:
+    You MUST ONLY analyze and recommend the assets that are present in the provided market_data.
+    Do NOT introduce any ticker symbols that are not in the input data.
+    The available assets will be clearly listed in the market_data.assets field.
+
     REGULATORY CONSTRAINTS (must be respected):
     - Maximum 15% allocation per individual asset
     - Maximum 40% allocation per sector
@@ -33,6 +38,7 @@ class QuantAnalystSignature(dspy.Signature):
 
     Provide specific, actionable insights that respect the above constraints.
     Include confidence levels for your recommendations.
+    Your opportunities MUST reference ONLY symbols from the provided market data.
     """
 
     market_data: MarketData = dspy.InputField(
@@ -47,6 +53,11 @@ class RiskAnalystSignature(dspy.Signature):
     """Perform holistic risk analysis using professional judgment.
 
     You are a senior risk analyst evaluating portfolio risks contextually.
+
+    CRITICAL REQUIREMENT:
+    You MUST ONLY assess risks for the assets identified in the quant_insights.
+    Do NOT reference any ticker symbols that are not in the opportunities provided.
+    Focus your analysis exclusively on the symbols present in the input.
 
     Be aware of regulatory constraints:
     - Maximum 15% per asset, 40% per sector
@@ -66,6 +77,7 @@ class RiskAnalystSignature(dspy.Signature):
     - Consider market conditions when evaluating acceptability
 
     Focus on actionable risk insights, not arbitrary thresholds.
+    Your concentration_risk MUST reference ONLY symbols from the quant insights.
     """
 
     quant_insights: QuantInsights = dspy.InputField(desc="Quantitative analysis with identified opportunities")
@@ -76,6 +88,11 @@ class PortfolioManagerSignature(dspy.Signature):
     """Develop strategic portfolio allocation recommendations.
 
     You are a seasoned portfolio manager making allocation decisions.
+
+    CRITICAL REQUIREMENT:
+    You MUST ONLY recommend allocation changes for assets present in the risk_assessment.
+    Do NOT introduce any new ticker symbols not found in the input data.
+    Your allocation_changes MUST use ONLY the symbols that have been analyzed.
 
     MANDATORY REGULATORY LIMITS:
     - Maximum 15% allocation per asset
@@ -89,6 +106,7 @@ class PortfolioManagerSignature(dspy.Signature):
     - Market timing and execution strategy
 
     Balance opportunity with prudent risk management.
+    All AllocationChange entries MUST reference ONLY symbols from the risk assessment.
     """
 
     risk_assessment: RiskAssessment = dspy.InputField(desc="Risk analysis including metrics and warnings")
@@ -101,6 +119,11 @@ class ComplianceOfficerSignature(dspy.Signature):
     """Review portfolio recommendations for regulatory compliance.
 
     You are a chief compliance officer ensuring regulatory adherence.
+
+    CRITICAL REQUIREMENT:
+    You MUST ONLY review allocations for the symbols present in the recommendations.
+    Do NOT reference any ticker symbols not found in the allocation_changes.
+
     Check for:
     - Position limit violations (max 15% per asset)
     - Sector concentration limits (max 40% per sector)
@@ -109,6 +132,7 @@ class ComplianceOfficerSignature(dspy.Signature):
     - Regulatory reporting needs
 
     Be thorough and conservative in compliance assessments.
+    Focus your review ONLY on the symbols provided in the portfolio recommendations.
     """
 
     recommendations: PortfolioRecommendations = dspy.InputField(desc="Portfolio manager's allocation recommendations")
@@ -121,6 +145,11 @@ class TradingDecisionSignature(dspy.Signature):
     """Finalize trading decision based on compliance review.
 
     You are the head of trading finalizing execution plans.
+
+    CRITICAL REQUIREMENT:
+    You MUST ONLY approve changes for symbols that were in the compliance review.
+    Do NOT introduce any new ticker symbols.
+
     Determine:
     - Which allocation changes to execute
     - Detailed execution instructions
@@ -128,6 +157,7 @@ class TradingDecisionSignature(dspy.Signature):
     - Escalation needs
 
     Create a clear, actionable trading plan.
+    Your approved_changes MUST reference ONLY symbols from the compliance review.
     """
 
     compliance_review: ComplianceReview = dspy.InputField(desc="Compliance review with checks and approval status")

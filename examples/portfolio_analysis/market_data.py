@@ -139,12 +139,7 @@ def create_sample_market_data() -> MarketData:
     assets = tuple(starmap(_generate_asset_data, sample_assets))
 
     # Simulate overall market conditions
-    market_sentiments: tuple[Literal["bullish", "bearish", "neutral"], ...] = (
-        "bullish",
-        "bearish",
-        "neutral",
-    )
-    market_sentiment = random.choice(market_sentiments)
+    market_sentiment: Literal["bullish", "bearish", "neutral"] = "neutral"
 
     # Current risk-free rate (e.g., 10-year treasury)
     risk_free_rate = round(random.uniform(RISK_FREE_RATE_MIN, RISK_FREE_RATE_MAX), 4)

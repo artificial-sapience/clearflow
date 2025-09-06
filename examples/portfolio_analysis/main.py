@@ -139,10 +139,9 @@ def _print_menu() -> None:
     print("\nThis example demonstrates multi-agent portfolio analysis using DSPy")
     print("for structured outputs and Pydantic for validation.")
     print("\nSelect market scenario:")
-    print("1. Normal market conditions")
+    print("1. Normal market conditions (default)")
     print("2. Bullish market (opportunities)")
     print("3. Volatile market (risk limits)")
-    print("4. Run all scenarios")
 
 
 async def _run_scenario_by_choice(choice: str) -> None:
@@ -155,20 +154,15 @@ async def _run_scenario_by_choice(choice: str) -> None:
 
     if choice in scenarios:
         await run_portfolio_analysis(scenarios[choice])
-    elif choice == "4":
-        for scenario in ["normal", "bullish", "volatile"]:
-            await run_portfolio_analysis(scenario)
-            if scenario != "volatile":
-                input("\nPress Enter to continue to next scenario...")
     else:
-        print("Invalid choice. Running normal scenario.")
+        print("Running default scenario (normal market conditions).")
         await run_portfolio_analysis("normal")
 
 
 async def main() -> None:
     """Main entry point with menu."""
     _print_menu()
-    choice = input("\nEnter choice (1-4): ").strip()
+    choice = input("\nEnter choice (1-3, default=1): ").strip()
     await _run_scenario_by_choice(choice)
 
 

@@ -122,6 +122,13 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
             return NodeResult(error, outcome="analysis_failed")
 
         try:
+            # Extract available symbols for context
+            symbols = tuple(asset.symbol for asset in state.assets)
+            max_display = 5
+            print(
+                f"   • Analyzing {len(symbols)} assets: {', '.join(symbols[:max_display])}{'...' if len(symbols) > max_display else ''}"
+            )
+
             # Use DSPy to get structured insights
             prediction = self._predict(market_data=state)
             insights: QuantInsights = prediction.insights

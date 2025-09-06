@@ -54,10 +54,15 @@ def validate_sector_concentration(
     Returns:
         ComplianceCheck with sector concentration status
     """
-    # Simplified sector mapping for demo
+    # Simplified sector mapping for demo (using fictional tickers)
     sectors = {
-        "Technology": {"NVDA", "AAPL", "MSFT", "GOOGL", "META", "AMZN"},
-        "Finance": {"JPM", "BAC", "GS", "MS", "WFC"},
+        "Technology": {"TECH-01", "TECH-02", "TECH-03", "GROW-01", "GROW-02", "VOL-01", "MOM-01"},
+        "Finance": {"FIN-01", "FIN-02", "RISK-01"},
+        "Healthcare": {"HLTH-01", "HLTH-02"},
+        "Energy": {"ENRG-01", "ENRG-02"},
+        "Utilities": {"UTIL-01", "UTIL-02"},
+        "Consumer": {"CONS-01", "CONS-02"},
+        "Index": {"IDX-01"},
     }
 
     for sector_name, symbols in sectors.items():
