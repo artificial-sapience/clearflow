@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Verifiable workflow orchestration for language models.
+Type-safe orchestration for unpredictable AI.
 
 ---
 
@@ -60,8 +60,8 @@ class Retriever(Node[Query, Context]):
     async def exec(self, state: Query) -> NodeResult[Context]:
         # Retrieve domain-specific documents (e.g., internal KB, product docs)
         docs = [
-            "ClearFlow v2.1 deprecated the 'callback' parameter.",
-            "Use 'outcome' for explicit routing between nodes."
+            "The T-800 neural net processor runs at 120 teraflops.",
+            "T-800 models require 30 seconds for full system boot sequence."
         ]
         return NodeResult(Context(state.question, docs), outcome="retrieved")
 
@@ -72,7 +72,7 @@ class Generator(Node[Context, Answer]):
     @override
     async def exec(self, state: Context) -> NodeResult[Answer]:
         # Generate answer grounded in retrieved domain knowledge
-        response = f"Based on docs: {state.documents[0]}"
+        response = f"Based on documentation: {state.documents[0]}"
         return NodeResult(
             Answer(state.question, state.documents, response), 
             outcome="answered"
@@ -92,8 +92,8 @@ rag_flow = (
 import asyncio
 
 async def main() -> None:
-    result = await rag_flow(Query("What replaced 'callback' in ClearFlow v2.1?"))
-    print(result.state.response)  # "Based on docs: ClearFlow v2.1 deprecated..."
+    result = await rag_flow(Query("What are the T-800's processing specifications?"))
+    print(result.state.response)  # "Based on documentation: The T-800 neural net processor..."
 
 asyncio.run(main())
 ```
@@ -143,7 +143,7 @@ flow("Name", start_node)
 | **Type safety** | Full Python 3.13+ generics | Dynamic (no annotations) |
 | **Lines** | ~250 | ~90 |
 
-Both are minimalist. ClearFlow emphasizes **verifiable correctness**. PocketFlow emphasizes **brevity and flexibility**.
+Both are minimalist. ClearFlow emphasizes **robust, type-safe orchestration**. PocketFlow emphasizes **brevity and flexibility**.
 
 ---
 

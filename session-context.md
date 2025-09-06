@@ -1,59 +1,104 @@
 # Session Context
 
-## Current State
-- **Branch**: `support-state-type-transformations`
-- **Location**: `/Users/richard/Developer/github/artificial-sapience/ClearFlow`
-- **Status**: Configuration cleanup complete, README modernized
+## Branch: `support-state-type-transformations`
 
-## Latest Changes (This Session)
+### Latest Commit
+```
+1604fcc docs: add investment advice disclaimers to portfolio example
+```
 
-### 1. Type Checker Cleanup ✅
-- **Removed mypy configuration** from `pyproject.toml`
-- Deleted `[[tool.mypy.overrides]]` sections completely
-- Pyright remains as sole type checker (better PEP 695 support)
+## Major Session Accomplishments
 
-### 2. CI Workflow Alignment ✅
-- **Updated `.github/workflows/ci.yml`** to match `quality-check.sh` exactly:
-  - Renamed job: `lint-and-type-check` → `quality-checks`
-  - Added custom linters that run first (architecture, immutability, test suite)
-  - Added complexity checks: Xenon, Vulture, Radon
-  - Fixed directories: now checks `clearflow tests examples linters`
-  - Removed mypy step completely
-  - Added `PYRIGHT_PYTHON_FORCE_VERSION=latest`
-- **Security checks updated**:
-  - Uses pip-audit with PYSEC-2022-42969 ignored
-  - Bandit checks `clearflow examples linters` (excludes tests)
+### 1. Flow Builder Validation System ✅
+Implemented comprehensive build-time validation to prevent invalid flow construction:
 
-### 3. README Modernization ✅
-- **Replaced toy quickstart with RAG Pipeline**:
-  - Uses `Query` → `Context` → `Answer` state transformations
-  - Shows real AI engineering pattern everyone knows
-  - Demonstrates type transformations with `Node[TIn, TOut]`
-- **Fixed API usage throughout**:
-  - `Flow` → `flow` (function, not class)
-  - Added required `name: str` field to all node examples
-  - Used frozen dataclasses consistently
-- **Added Agent Router example**: Shows branching with multiple agents
-- **Updated testing example**: Proper pytest patterns with `@pytest.mark.asyncio`
-- **Corrected technical details**:
-  - Line count: 166 → ~250 (accurate)
-  - API surface: `Node`, `NodeResult`, `flow` (not `Flow`)
+**Reachability Validation:**
+- Nodes can only be routed from if reachable from start
+- Termination nodes must be reachable  
+- Prevents disconnected subgraphs
+- Clear error messages: "Cannot route from 'orphan' - not reachable from start"
 
-## File Status Summary
+**Duplicate Route Detection:**
+- Each (node, outcome) pair must be unique
+- Prevents silent route overwrites
+- Error: "Route already defined for outcome 'done' from node 'start'"
 
-### Modified Files
-- `pyproject.toml` - mypy sections removed
-- `.github/workflows/ci.yml` - complete alignment with quality-check.sh  
-- `README.md` - meaningful examples with correct API
-- Other workflows - checked but unchanged (no mypy refs)
+**Implementation:**
+- Added `_reachable: frozenset[str]` to `_FlowBuilder`
+- Created `_validate_and_create_route()` helper (DRY principle)
+- Context-aware errors using `is_termination` parameter
+- New test file: `test_flow_builder_validation.py`
+- 100% coverage maintained
 
-### Quality Verification
-- RAG quickstart example tested and working
-- Agent router example verified
-- All code blocks use correct API patterns
+### 2. Documentation & Branding Updates ✅
+- **New tagline**: "Type-safe orchestration for unpredictable AI"
+- Fixed confusing quickstart example (was using ClearFlow API changes as example)
+- Changed to T-800 robot specs example (clearly fictional)
+
+### 3. Code Refactoring ✅
+- Eliminated validation logic duplication
+- Handled DOC502 linter issue (doesn't understand exception propagation)
+- Added justified suppression in `pyproject.toml`
+
+### 4. Critical Issues Discovered in Portfolio Example 🚨
+
+**Market Sentiment Bug:**
+- `market_data.py:147` uses `random.choice()` for "normal" scenario
+- Should be consistent "neutral", not random
+- Causes confusion when "normal" shows as "bullish"
+
+**LLM Hallucination Issue:**
+- Portfolio Manager outputs real ETF tickers (QQQ, VOO, VXUS, XLE, XLU)
+- Input uses fictional tickers (TECH-01, FIN-01, etc.)
+- No validation constraining outputs to input symbols
+- DSPy signature doesn't prevent hallucination
+
+**Root Cause Analysis:**
+The DSPy signatures don't explicitly tell agents "you MUST use ONLY the symbols from the provided data". The agents need explicit constraints like:
+- "You must ONLY recommend allocation changes for the symbols present in the input market data"
+- "Do NOT introduce any new ticker symbols not found in the provided assets"
+- "Your recommendations must reference ONLY: [list of input symbols]"
+
+## Code Quality Status
+- ✅ All custom linters pass
+- ✅ Ruff linting/formatting clean
+- ✅ Pyright strict mode passes
+- ✅ 100% test coverage
+- ✅ Security audits pass
+- ✅ Complexity Grade A
+
+## Files Modified This Session
+1. `clearflow/__init__.py` - Validation logic
+2. `tests/test_flow_builder_validation.py` - New tests
+3. `README.md` - Tagline and examples
+4. `pyproject.toml` - DOC502 suppression
+5. `plan.md` - Updated priorities
+
+## Critical Learnings
+
+### Build-Time vs Runtime Validation
+Build-time validation (failing at flow construction) is far superior to runtime errors. Users get immediate feedback about invalid flows.
+
+### LLM Constraints Are Critical
+Unconstrained LLMs will use training knowledge rather than limiting to provided data. The portfolio example shows how DSPy signatures need explicit constraints to prevent real-world data leakage.
+
+### Linter Limitations
+DOC502 rule doesn't understand exception propagation through helpers. Documentation should describe API behavior from user's perspective, not implementation details.
 
 ## Next Session Priorities
-See `plan.md` for detailed tasks:
-1. Run full `./quality-check.sh` to verify everything passes
-2. Review `git diff` for unintended changes
-3. Create and submit PR with comprehensive description
+See `plan.md` for full list. Critical items:
+1. Fix market sentiment randomization bug
+2. Constrain Portfolio Manager to use only input symbols
+3. Add symbol validation to prevent hallucination
+4. Final review and PR submission
+
+## Branch Summary
+This branch now includes:
+- Type transformation support (Node protocol with TIn/TOut)
+- Flow builder validation (reachability & duplicates)
+- Custom linters for mission-critical compliance
+- Documentation improvements and accurate tagline
+- Portfolio example safety (with newly discovered bugs to fix)
+
+## Environment Ready
+All tests passing, quality checks clean. Ready to fix portfolio bugs in next session.

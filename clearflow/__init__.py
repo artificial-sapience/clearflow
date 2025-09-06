@@ -176,6 +176,38 @@ class _FlowBuilder[TStartIn, TStartOut]:
     _name: str
     _start: Node[TStartIn, TStartOut]
     _routes: MappingProxyType[RouteKey, NodeBase | None]
+    _reachable: frozenset[str]  # Node names that are reachable from start
+
+    def _validate_and_create_route(
+        self, from_node: NodeBase, outcome: str, *, is_termination: bool = False
+    ) -> RouteKey:
+        """Validate that a route can be added from the given node.
+
+        Args:
+            from_node: The node to route from
+            outcome: The outcome that triggers this route
+            is_termination: Whether this is a termination route
+
+        Returns:
+            The route key for this route
+
+        Raises:
+            ValueError: If from_node is not reachable or route already exists
+
+        """
+        # Check reachability
+        if from_node.name not in self._reachable:
+            action = "end at" if is_termination else "route from"
+            msg = f"Cannot {action} '{from_node.name}' - not reachable from start"
+            raise ValueError(msg)
+
+        # Check for duplicate routes
+        route_key: RouteKey = (from_node.name, outcome)
+        if route_key in self._routes:
+            msg = f"Route already defined for outcome '{outcome}' from node '{from_node.name}'"
+            raise ValueError(msg)
+
+        return route_key
 
     def route(
         self,
@@ -193,14 +225,21 @@ class _FlowBuilder[TStartIn, TStartOut]:
         Returns:
             Builder for continued route definition and flow completion
 
+        Raises:
+            ValueError: If from_node is not reachable or route already exists
+
         """
-        route_key: RouteKey = (from_node.name, outcome)
+        route_key = self._validate_and_create_route(from_node, outcome)
+
+        # Add route and mark to_node as reachable
         new_routes = {**self._routes, route_key: to_node}
+        new_reachable = self._reachable | {to_node.name}
 
         return _FlowBuilder[TStartIn, TStartOut](
             _name=self._name,
             _start=self._start,
             _routes=MappingProxyType(new_routes),
+            _reachable=new_reachable,
         )
 
     def end[TEndIn, TEndOut](
@@ -220,8 +259,12 @@ class _FlowBuilder[TStartIn, TStartOut]:
         Returns:
             A flow node that transforms TStartIn to TEndOut
 
+        Raises:
+            ValueError: If end node is not reachable or route already exists
+
         """
-        route_key: RouteKey = (end.name, outcome)
+        route_key = self._validate_and_create_route(end, outcome, is_termination=True)
+
         new_routes = {**self._routes, route_key: None}
 
         return _Flow[TStartIn, TEndOut](
@@ -249,4 +292,5 @@ def flow[TStartIn, TStartOut](
         _name=name,
         _start=start,
         _routes=MappingProxyType({}),
+        _reachable=frozenset({start.name}),  # Start node is initially reachable
     )

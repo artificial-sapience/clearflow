@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "clearflow"
 version = "0.0.0"  # Version dynamically set by CI/CD pipeline
-description = "Reliable async workflow orchestration for language models. Zero dependencies, 100% test coverage."
+description = "Type-safe orchestration for unpredictable AI."
 authors = [
   {name = "Richard Beauchamp", email = "rbeauchamp@users.noreply.github.com"}
 ]
@@ -195,6 +195,8 @@ max-complexity = 7  # A grade maximum
 [tool.ruff.lint.per-file-ignores]
 # Package initialization files
 "__init__.py" = ["F401", "D104"]  # Allow unused imports and missing docstrings
+# Methods that raise exceptions through validated helper methods still document them for API users
+"clearflow/__init__.py" = ["DOC502"]  # ValueError raised by _validate_and_create_route helper
 # Test files have different requirements
 "tests/**/*.py" = [
   "S101",    # Use of assert (required for pytest)
