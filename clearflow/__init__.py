@@ -292,5 +292,5 @@ def flow[TStartIn, TStartOut](
         _name=name,
         _start=start,
         _routes=MappingProxyType({}),
-        _reachable=frozenset({start.name}),  # Start node is initially reachable
+        _reachable=frozenset({start.name}),  # Start node is always reachable
     )
