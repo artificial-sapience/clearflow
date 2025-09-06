@@ -1,8 +1,4 @@
-"""Market data simulator for portfolio analysis example.
-
-IMPORTANT: All data is simulated for educational purposes only.
-Ticker symbols are fictional. Not for actual investment decisions.
-"""
+"""Market data simulator for portfolio analysis example."""
 
 # ruff: noqa: S311 - Using random for example data generation, not cryptographic purposes
 # ruff: noqa: DTZ005 - Timezone not needed for example market date strings
@@ -70,10 +66,10 @@ TECH_FINANCE_SECTORS = {"Technology", "Finance"}
 
 
 def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetData:
-    """Generate simulated market data for a single FICTIONAL asset.
+    """Generate simulated market data for a single asset.
 
     Returns:
-        AssetData with randomized simulated values.
+        AssetData with randomized values.
     """
     # Add some market volatility
     price_variance = random.uniform(PRICE_VARIANCE_MIN, PRICE_VARIANCE_MAX)
@@ -118,7 +114,7 @@ def create_sample_market_data() -> MarketData:
         MarketData with normal market conditions.
     """
 
-    # Define FICTIONAL assets across sectors (not real tickers)
+    # Define assets across sectors
     sample_assets = [
         ("TECH-01", "Technology", 175.50),
         ("TECH-02", "Technology", 380.25),
@@ -159,7 +155,7 @@ def create_volatile_market_data() -> MarketData:
         MarketData with high volatility and bearish sentiment.
     """
 
-    # FICTIONAL tickers for educational demonstration
+    # Asset definitions
     sample_assets = [
         ("TECH-01", "Technology", 175.50),
         ("TECH-02", "Technology", 380.25),
@@ -221,7 +217,7 @@ def create_bullish_market_data() -> MarketData:
         MarketData with positive momentum and bullish sentiment.
     """
 
-    # FICTIONAL tickers for educational demonstration
+    # Asset definitions
     sample_assets = [
         ("TECH-01", "Technology", 175.50),
         ("TECH-02", "Technology", 380.25),

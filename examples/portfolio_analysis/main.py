@@ -17,7 +17,7 @@ from examples.portfolio_analysis.specialists.portfolio.models import AllocationC
 def print_market_overview(market_data: MarketData) -> None:
     """Print market data overview."""
     print("\n" + "=" * 80)
-    print("📊 SIMULATED MARKET DATA (Educational Example)")
+    print("📊 MARKET DATA")
     print("=" * 80)
 
     for asset in market_data.assets:
@@ -84,14 +84,12 @@ def _print_trading_decision(decision: TradingDecision) -> None:
 def print_final_decision(result: NodeResult[TradingDecision]) -> None:
     """Print the final trading decision or error."""
     print("\n" + "=" * 80)
-    print("📋 EXAMPLE OUTPUT (Not Investment Advice)")
+    print("📋 FINAL DECISION")
     print("=" * 80)
 
     _print_trading_decision(result.state)
 
     print("\n" + "=" * 80)
-    print("⚠️  Educational example only. Not for actual investment decisions.")
-    print("=" * 80)
 
 
 async def run_portfolio_analysis(scenario: str = "normal") -> None:
@@ -103,20 +101,20 @@ async def run_portfolio_analysis(scenario: str = "normal") -> None:
     # Create market data based on scenario
     if scenario == "bullish":
         market_data = create_bullish_market_data()
-        print("\n🚀 Running BULLISH market scenario (simulated data)...")
+        print("\n🚀 Running BULLISH market scenario...")
     elif scenario == "volatile":
         market_data = create_volatile_market_data()
-        print("\n⚡ Running VOLATILE market scenario (simulated data)...")
+        print("\n⚡ Running VOLATILE market scenario...")
     else:
         market_data = create_sample_market_data()
-        print("\n📈 Running NORMAL market scenario (simulated data)...")
+        print("\n📈 Running NORMAL market scenario...")
 
     # Display market overview
     print_market_overview(market_data)
 
     # Create and run the flow
     print("\n" + "=" * 80)
-    print("🤖 AI TEAM ANALYSIS (Educational Demonstration)")
+    print("🤖 SPECIALIST WORKFLOW ANALYSIS")
     print("=" * 80)
 
     flow = create_portfolio_analysis_flow()
@@ -129,11 +127,10 @@ async def run_portfolio_analysis(scenario: str = "normal") -> None:
 def _print_menu() -> None:
     """Print menu options."""
     print("\n" + "=" * 80)
-    print("🎯 EDUCATIONAL PORTFOLIO ANALYSIS EXAMPLE")
+    print("🎯 PORTFOLIO ANALYSIS EXAMPLE")
     print("=" * 80)
-    print("\n⚠️  DISCLAIMER: This is an educational example using simulated data.")
-    print("    Not for actual investment decisions. Not investment advice.")
-    print("\nThis example demonstrates multi-specialist portfolio analysis using DSPy")
+    print("\n📊 Example using simulated market data")
+    print("\nMulti-specialist portfolio analysis using DSPy")
     print("for structured outputs and Pydantic for validation.")
     print("\nSelect market scenario:")
     print("1. Normal market conditions (default)")

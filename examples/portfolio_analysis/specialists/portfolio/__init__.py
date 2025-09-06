@@ -1,4 +1,4 @@
-"""Portfolio Manager agent module."""
+"""Portfolio Manager specialist module."""
 
 from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange, PortfolioRecommendations
 from examples.portfolio_analysis.specialists.portfolio.node import PortfolioManager

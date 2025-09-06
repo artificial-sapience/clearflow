@@ -1,4 +1,4 @@
-"""Compliance Officer agent module."""
+"""Compliance Officer specialist module."""
 
 from examples.portfolio_analysis.specialists.compliance.models import ComplianceCheck, ComplianceError, ComplianceReview
 from examples.portfolio_analysis.specialists.compliance.node import ComplianceOfficer

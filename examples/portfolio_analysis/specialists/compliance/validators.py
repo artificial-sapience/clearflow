@@ -52,7 +52,7 @@ def validate_sector_concentration(
     Returns:
         ComplianceCheck with sector concentration status
     """
-    # Simplified sector mapping for demo (using fictional tickers)
+    # Simplified sector mapping for demo
     sectors = {
         "Technology": {"TECH-01", "TECH-02", "TECH-03", "GROW-01", "GROW-02", "VOL-01", "MOM-01"},
         "Finance": {"FIN-01", "FIN-02", "RISK-01"},

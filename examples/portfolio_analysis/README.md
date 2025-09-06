@@ -1,13 +1,10 @@
-# Portfolio Analysis Workflow Example (Educational)
+# Portfolio Analysis Workflow Example
 
-**DISCLAIMER**: This is an educational example using simulated data with fictional tickers.
-Not for actual investment decisions. This is not investment advice.
+*Educational example using simulated market data.*
 
 ## Overview
 
-This educational example demonstrates a **multi-specialist workflow** analyzing simulated market conditions to make example portfolio allocation decisions. Each node represents a specialized analysis stage with domain-specific reasoning capabilities.
-
-**All data is simulated. Ticker symbols are fictional. For educational purposes only.**
+This example demonstrates a **multi-specialist workflow** analyzing market conditions to make portfolio allocation decisions. Each node represents a specialized analysis stage with domain-specific reasoning capabilities.
 
 ## Educational Value
 
@@ -47,17 +44,31 @@ Each specialist node uses language model intelligence for domain-specific financ
 - Validates position limits and client mandates
 - Ensures adherence to investment policies
 
+### 5. **DecisionNode**
+
+- Synthesizes all analyses into final trading decision
+- Creates structured execution plan with monitoring requirements
+- Maintains complete audit trail for compliance
+
+### 6. **ErrorHandler**
+
+- Converts any analysis errors into conservative hold decisions
+- Ensures workflow always produces a valid trading decision
+- Provides detailed error context for debugging
+
 ## Setup
 
 ```bash
-pip install -r requirements.txt
+# From project root
+uv sync --all-extras
 export OPENAI_API_KEY="your-key"
 ```
 
 ## Usage
 
 ```bash
-python main.py
+# From examples/portfolio_analysis directory
+uv run python main.py
 ```
 
 The educational demonstration will:
@@ -74,25 +85,25 @@ The educational demonstration will:
 ```mermaid
 graph LR
     Start([Market Data]) --> Q[QuantAnalyst]
-    Q -->|insights| R[RiskAnalyst]
+    Q -->|analysis_complete| R[RiskAnalyst]
     Q -->|analysis_failed| E[ErrorHandler]
-    R -->|risk_assessed| P[PortfolioManager]
-    R -->|high_risk| E
-    P -->|recommendations| C[ComplianceOfficer]
-    P -->|no_opportunities| D[DecisionNode]
-    C -->|approved| D[DecisionNode]
-    C -->|rejected| E
-    E -->|handled| D
+    R -->|risk_acceptable| P[PortfolioManager]
+    R -->|risk_limits_exceeded| E
+    P -->|recommendations_ready| C[ComplianceOfficer]
+    P -->|analysis_failed| E
+    C -->|compliance_approved| D[DecisionNode]
+    C -->|compliance_failed| E
+    E -->|error_handled| D
     D -->|decision_ready| End([Final Decision])
 ```
 
 **Specialist Outcomes:**
 
-- `QuantAnalyst`: insights/analysis_failed
-- `RiskAnalyst`: risk_assessed/high_risk  
-- `PortfolioManager`: recommendations/no_opportunities
-- `ComplianceOfficer`: approved/rejected
-- `ErrorHandler`: handled
+- `QuantAnalyst`: analysis_complete / analysis_failed
+- `RiskAnalyst`: risk_acceptable / risk_limits_exceeded  
+- `PortfolioManager`: recommendations_ready / analysis_failed
+- `ComplianceOfficer`: compliance_approved / compliance_failed
+- `ErrorHandler`: error_handled
 - `DecisionNode`: decision_ready (→ End)
 
 ## Key Features
@@ -103,39 +114,6 @@ graph LR
 - **Validation patterns** - Demonstrates validation approaches
 - **Educational workflow** - Learn orchestration patterns
 
-## Example Output
-
-```text
-📚 EDUCATIONAL PORTFOLIO ANALYSIS EXAMPLE
-════════════════════════════════
-⚠️ Using simulated data with fictional tickers
-
-📊 Example Analysis (TECH-01, FIN-01, etc.):
-• Simulated momentum: Example bullish trend
-• Simulated volatility: Example elevated levels  
-• Example opportunities: Demonstration only
-
-⚠️ Example Risk Assessment:
-• Example VaR calculation: Simulated values
-• Example concentration: Demonstration only
-• Example correlation: Educational purposes
-
-🎯 Example Recommendations:
-• Example: Adjust TECH-01 allocation
-• Example: Consider UTIL-01 positions
-• Example: Review ENRG-01 exposure
-
-✅ Example Validation:
-• Demonstration of validation steps
-• Example limit checks
-• Example criteria review
-
-💼 Example Output: DEMONSTRATION COMPLETE
-• Educational example only
-• Not investment advice
-• All data simulated
-```
-
 ## Customization
 
 - **Market Data**: Modify `market_data.py` to simulate different market conditions
@@ -143,4 +121,4 @@ graph LR
 - **Investment Strategy**: Update logic in `PortfolioManager` node  
 - **Compliance Rules**: Configure policies in `ComplianceOfficer` node
 
-This educational example demonstrates how ClearFlow orchestrates **specialist workflows** following the Workflow design pattern, not the Agent pattern. Each specialist is a specialized processor, not an autonomous agent. All data is simulated with fictional tickers for educational purposes only.
+This example demonstrates how ClearFlow orchestrates **specialist workflows** following the Workflow design pattern, not the Agent pattern. Each specialist is a specialized processor, not an autonomous agent.

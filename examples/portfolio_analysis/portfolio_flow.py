@@ -1,4 +1,4 @@
-"""Educational portfolio analysis example using DSPy-powered nodes."""
+"""Portfolio analysis example using DSPy-powered nodes."""
 
 from clearflow import Node, flow
 from examples.portfolio_analysis.shared import MarketData, configure_dspy
