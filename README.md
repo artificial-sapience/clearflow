@@ -1,24 +1,22 @@
 # ClearFlow
 
-[![Coverage Status](https://coveralls.io/repos/github/consent-ai/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/consent-ai/ClearFlow?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
+[![type: pyright](https://img.shields.io/badge/type-pyright-blue)](https://github.com/microsoft/pyright)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Type-safe async workflow orchestration for language models. **Explicit routing, immutable state, zero dependencies.**
-
----
+Type-safe orchestration for unpredictable AI.
 
 ## Why ClearFlow?
 
-- **Predictable control flow** – explicit routes, no hidden magic  
-- **Immutable, typed state** – frozen state passed via `NodeResult`  
-- **One exit rule** – exactly one termination route enforced  
-- **Tiny surface area** – one file, three concepts: `Node`, `NodeResult`, `Flow`  
-- **100% test coverage** – every line tested  
-- **Zero runtime deps** – bring your own clients (OpenAI, Anthropic, etc.)  
-
----
+- **100% test coverage** – Every path proven to work
+- **Type-safe transformations** – Errors caught at development time, not runtime
+- **Immutable state** – No hidden mutations
+- **Zero dependencies** – No hidden failure modes
+- **Single exit enforcement** – No ambiguous endings
 
 ## Installation
 
@@ -26,197 +24,74 @@ Type-safe async workflow orchestration for language models. **Explicit routing, 
 pip install clearflow
 ```
 
----
+> **Upgrading from v0.x?** See the [Migration Guide](MIGRATION.md) for breaking changes.
 
-## 60-second Quickstart
+## Examples
 
-```python
-from typing import TypedDict
-from clearflow import Flow, Node, NodeResult
-
-# 1) Define typed state
-class ChatState(TypedDict):
-    messages: list[dict[str, str]]
-
-# 2) Define a node
-class ChatNode(Node[ChatState]):
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        # Call your LLM here
-        # reply = await llm.chat(state["messages"])
-        reply = {"role": "assistant", "content": "Hello!"}
-        new_state: ChatState = {"messages": [*state["messages"], reply]}
-        return NodeResult(new_state, outcome="success")
-
-# 3) Build flow with explicit routing
-chat = ChatNode()
-flow = (
-    Flow[ChatState]("ChatBot")
-    .start_with(chat)
-    .route(chat, "success", None)  # terminate on success
-    .build()
-)
-
-# 4) Run it
-async def main() -> None:
-    result = await flow({"messages": [{"role": "user", "content": "Hi"}]})
-    print(result.state["messages"][-1]["content"])  # "Hello!"
-
-import asyncio
-asyncio.run(main())
-```
-
----
+| Name | Description |
+|------|-------------|
+| [Chat](examples/chat/) | Simple conversational flow with OpenAI |
+| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-specialist workflow for financial analysis |
+| [RAG](examples/rag/) | Full retrieval-augmented generation with vector search |
 
 ## Core Concepts
 
-### `Node[T]`
+### `Node[TIn, TOut]`
 
-A unit that transforms state of type `T`.
+A unit that transforms state from `TIn` to `TOut` (or `Node[T]` when types are the same).
 
-- `prep(state: T) -> T` – optional pre-work/validation  
-- `exec(state: T) -> NodeResult[T]` – **required**; return new state + outcome  
-- `post(result: NodeResult[T]) -> NodeResult[T]` – optional cleanup/logging  
+- `prep(state: TIn) -> TIn` – optional pre-work/validation  
+- `exec(state: TIn) -> NodeResult[TOut]` – **required**; return new state + outcome  
+- `post(result: NodeResult[TOut]) -> NodeResult[TOut]` – optional cleanup/logging  
 
-Nodes are `async` and **pure** (no shared mutable state).
+Nodes are frozen dataclasses that execute async transformations without mutating input state.
 
 ### `NodeResult[T]`
 
 Holds the **new state** and an **outcome** string used for routing.
 
-### `Flow[T]`
+### `flow()`
 
-A fluent builder that wires nodes together with **explicit routing**:
-
-```python
-Flow[T]("Name")
-  .start_with(a)
-  .route(a, "ok", b)
-  .route(b, "done", None)  # exactly one termination
-  .build()                 # -> returns a Node[T] you can await
-```
-
-**Routing**: next node is `(from_node.name, outcome)`. If no name set, uses class name.  
-**Nested flows**: a built flow is itself a `Node[T]` – compose flows within flows.
-
----
-
-## Example: Multi-step Pipeline
+A function that creates a flow with **explicit routing**:
 
 ```python
-from typing import TypedDict
-from clearflow import Flow, Node, NodeResult
-
-class State(TypedDict):
-    value: int
-
-class Validate(Node[State]):
-    async def exec(self, s: State) -> NodeResult[State]:
-        return NodeResult(s, "valid" if s["value"] >= 0 else "invalid")
-
-class Process(Node[State]):
-    async def exec(self, s: State) -> NodeResult[State]:
-        return NodeResult({"value": s["value"] * 2}, "success")
-
-class Output(Node[State]):
-    async def exec(self, s: State) -> NodeResult[State]:
-        print("Final:", s["value"])
-        return NodeResult(s, "done")
-
-flow = (
-    Flow[State]("Pipeline")
-    .start_with(Validate())
-    .route(Validate(), "valid", Process())
-    .route(Validate(), "invalid", Output())  # route invalid to output
-    .route(Process(), "success", Output())
-    .route(Output(), "done", None)  # single termination point
-    .build()
-)
-
-await flow({"value": 21})  # Final: 42
+flow("Name", start_node)
+  .route(start_node, "outcome1", next_node)
+  .route(next_node, "outcome2", final_node)
+  .end(final_node, "done")  # exactly one termination
 ```
 
-See more: [Chat example](examples/chat/) | [Structured output](examples/structured_output/)
-
----
-
-## Testing Example
-
-Nodes are easy to test in isolation because they are pure functions over typed state:
-
-```python
-import pytest
-from clearflow import Node, NodeResult
-
-class N(Node[int]):
-    async def exec(self, x: int) -> NodeResult[int]:
-        return NodeResult(x + 1, "ok")
-
-@pytest.mark.asyncio
-async def test_n() -> None:
-    res = await N()(0)
-    assert res.state == 1 and res.outcome == "ok"
-```
-
----
-
-## When to Use ClearFlow
-
-- LLM workflows where you need explicit control  
-- Systems requiring clear error handling paths  
-- Projects with strict dependency requirements  
-- Applications where debugging matters  
-
----
+**Routing**: Routes are `(node, outcome)` pairs. Each outcome must have exactly one route.  
+**Type inference**: The flow infers types from start to end, supporting transformations.  
+**Composability**: A flow is itself a `Node` – compose flows within flows.
 
 ## ClearFlow vs PocketFlow
 
 | Aspect | ClearFlow | PocketFlow |
 |--------|-----------|------------|
-| **State** | Immutable, passed via `NodeResult` | Shared store (mutable dict) |
-| **Routing** | Explicit `(node, outcome)` routes | Graph with labeled edges |
-| **Termination** | Exactly one `None` route enforced | Multiple exit patterns |
-| **Type safety** | Full Python 3.13+ generics | Dynamic |
-| **Lines** | 166 | 100 |
+| **State** | Immutable, passed via `NodeResult` | Mutable, passed via `shared` param |
+| **Routing** | Outcome-based explicit routes | Action-based graph edges |
+| **Termination** | Exactly one exit enforced | Multiple exits allowed |
+| **Type safety** | Full Python 3.13+ generics | Dynamic (no annotations) |
 
-Both are minimalist. ClearFlow emphasizes **type safety and explicit control**. PocketFlow emphasizes **brevity and shared state**.
-
----
-
-## Recipes
-
-- **Guardrails**: validate node routes `"invalid"` → termination  
-- **Retries**: node returns `"retry"` outcome → routes back to itself  
-- **Sub-flows**: build child flow, use as node in parent  
-- **Parallel**: multiple validate nodes → single process node  
-
----
+ClearFlow emphasizes **robust, type-safe orchestration** with validation and guardrails. PocketFlow emphasizes **brevity and flexibility** with minimal overhead.
 
 ## Development
 
 ```bash
 # Install uv (if not already installed)
-pip install --user uv   # or: pipx install uv
+pipx install uv
 
 # Clone and set up development environment
-git clone https://github.com/consent-ai/ClearFlow.git
+git clone https://github.com/artificial-sapience/ClearFlow.git
 cd ClearFlow
-uv sync --group dev      # Creates venv and installs deps automatically
+uv sync --all-extras     # Creates venv and installs deps automatically
 ./quality-check.sh       # Run all checks
 ```
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md)
-
----
 
 ## License
 
 [MIT](LICENSE)
-
----
 
 ## Acknowledgments
 

@@ -4,30 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Philosophy
 
-ClearFlow provides reliable language model orchestration with type safety and 100% test coverage. Focus on what's guaranteed:
-- **100% test coverage** is non-negotiable
-- **Type safety** with mypy/pyright strict mode is mandatory
-- **Immutability** is enforced
-- **Explicit routing** - given an outcome, the next step is always the same (NOT deterministic execution)
-- **Zero dependencies**
+ClearFlow provides mission-critical AI orchestration with verifiable correctness. Built for Python engineers who demand:
 
-Target audience: Developers building multi-step language model workflows who need type-safe state management and testable orchestration.
+- **Deep immutability** - All state transformations create new immutable data structures
+- **Immutable transformations** - Nodes transform state without mutation (though they may perform I/O)
+- **Type safety** - Full static typing with pyright strict mode (mypy removed)
+- **100% test coverage** - Every path tested, no exceptions
+- **Explicit routing** - Given an outcome, the next step is always the same
+- **Zero dependencies** - Stdlib only for maximum reliability
+
+Target audience: Python engineers building mission-critical AI systems who require verifiable orchestration with explicit control flow.
 
 ## Development Commands
 
 ```bash
 # Install dependencies
 uv sync                    # Install runtime dependencies
-uv sync --group dev        # Install with dev dependencies
+uv sync --all-extras        # Install with dev dependencies
 
 # Run quality checks (enforced before commits)
-./quality-check.sh         # Runs all checks: lint, format, type check, tests
+./quality-check.sh         # Runs all checks: custom linters, lint, format, type check, tests
+
+# Custom linters (mission-critical compliance)
+python3 linters/check-architecture-compliance.py  # Architecture violations
+python3 linters/check-immutability.py            # Deep immutability enforcement
+python3 linters/check-test-suite-compliance.py   # Test isolation and resource management
 
 # Individual quality commands
 uv run ruff check --fix clearflow tests                 # Auto-fix linting (no unsafe fixes)
 uv run ruff format clearflow tests                      # Format code
-uv run mypy --strict clearflow tests                    # Type check (mypy)
-uv run pyright clearflow tests                          # Type check (pyright) - TAKES PRECEDENCE
+uv run pyright clearflow tests                          # Type check (pyright - only type checker)
 uv run pytest -x -v tests                              # Run all tests
 uv run pytest -x -v tests -k "specific_test"           # Run specific test
 
@@ -42,7 +48,8 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
 ### Core Concepts
 
 1. **Nodes**: Async functions that transform state
-   - Inherit from `Node[T]` and override `exec()` method
+   - Inherit from `Node[T]` or `Node[TIn, TOut]` and override `exec()` method
+   - Nodes are frozen dataclasses with a `name` field
    - Input: state of type `T` (any type: dict, TypedDict, dataclass, primitives)
    - Output: `NodeResult[T](state, outcome)`
    - Designed for explicit transformations
@@ -55,15 +62,17 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
    - Works with dict, TypedDict, dataclass, primitives
 
 3. **Flow**: Type-safe workflow builder
+   - Create with `flow("name", start_node)` function
+   - Chain with `.route(from_node, outcome, to_node)`
+   - End with `.end(final_node, outcome)` for single termination
    - Single termination rule: exactly one route to `None`
-   - Trustworthy orchestration with full generic support
-   - Build-time validation of flow structure
+   - Full generic support with type inference
 
 ### Key Facts
 
-- **Code size**: <200 lines (currently 188)
+- **Code size**: ~250 lines total, ~185 non-comment lines
 - **Test coverage**: 100% required
-- **Type safety**: No `Any` or `type: ignore` allowed
+- **Type safety**: No unnecessary `Any` (required for metaclass patterns)
 - **Immutability**: All dataclasses frozen
 - **Routing**: Explicit (NOT deterministic execution)
 - **Single termination**: Exactly one route to `None` per flow
@@ -71,46 +80,85 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
 ### Common Patterns
 
 ```python
-# Creating nodes with OO approach
+from dataclasses import dataclass
+from typing import override
+from clearflow import Node, NodeResult, flow
+
+# Creating nodes - Node is a frozen dataclass
+@dataclass(frozen=True)
 class DocumentLoader(Node[DocumentState]):
-    def __init__(self) -> None:
-        super().__init__(name="loader")
+    name: str = "loader"
     
+    @override
     async def exec(self, state: DocumentState) -> NodeResult[DocumentState]:
         content = await load_document(state["path"])
         new_state: DocumentState = {**state, "content": content}
         return NodeResult(new_state, outcome="loaded")
 
 # Building a flow with single termination
-complete = CompleteNode()  # Convergence point
+loader = DocumentLoader()
+processor = ProcessorNode()
+complete = CompleteNode()
 
-flow = (
-    Flow[DocumentState]("Pipeline")
-    .start_with(loader)
+flow_instance = (
+    flow("Pipeline", loader)
     .route(loader, "loaded", processor)
     .route(loader, "error", complete)
     .route(processor, "processed", complete)
-    .route(complete, "done", None)  # Single termination
-    .build()
+    .end(complete, "done")  # Single termination
 )
 ```
 
 ### Testing Requirements
 
 - **100% coverage**: No exceptions, ever
-- **Test all outcomes**: Every node outcome must have a test
-- **Verify immutability**: Test that state transformations don't mutate
-- **Domain-relevant**: Use real language model scenarios, not foo/bar
+- **Deep immutability**: Use frozen dataclasses or tuples for all test state
+- **Real AI scenarios**: Model actual AI orchestration patterns (RAG, agents, tool use)
+- **Functional purity**: Test that transformations are pure with no side effects
+- **Precise types**: Every test knows exact TIn and TOut types
+- **Educational tests**: Tests should demonstrate best practices for mission-critical AI
 
 ### Code Quality Standards
 
 **CRITICAL**: These standards maintain trust:
+
 - All linting rules must pass without suppression
-- Both mypy and pyright must pass in strict mode
-- **Pyright takes precedence** when tools conflict
-- No `type: ignore` comments in core library code
-- No `Any` types where proper types can be used
+- Pyright must pass in strict mode (sole type checker)
+- Minimal `# pyright: ignore` comments (only for documented limitations)
+- No `Any` types except where required (e.g., metaclass patterns)
 - Prefer boring, obvious code over clever solutions
+
+**LINTER SUPPRESSION POLICY**:
+
+- **NEVER add linter suppressions without explicit user approval**
+- This includes: `# noqa`, `# pyright: ignore`, etc.
+- All approved suppressions MUST include a justification comment
+- Example: `# noqa: C901  # Display function complexity acceptable for UI`
+- Always fix the root cause instead of suppressing when possible
+
+#### Custom Linters
+
+ClearFlow uses three custom linters to enforce mission-critical standards:
+
+1. **Architecture Compliance** (`linters/check-architecture-compliance.py`)
+   - No patching/mocking of internal components in tests
+   - No imports from private modules (`_internal`)
+   - No use of `TYPE_CHECKING` (indicates circular dependencies)
+   - No `object` or `Any` types in parameters
+
+2. **Immutability Compliance** (`linters/check-immutability.py`)
+   - All dataclasses must have `frozen=True`
+   - No `list` in type annotations (use `tuple[T, ...]`)
+   - No mutable default arguments
+   - No list building with `.append()` in production code
+
+3. **Test Suite Compliance** (`linters/check-test-suite-compliance.py`)
+   - No `asyncio.run()` in tests (use `@pytest.mark.asyncio`)
+   - No manual event loop creation without cleanup
+   - All async tests must have `@pytest.mark.asyncio`
+   - All resources must use context managers
+
+These linters run automatically as part of `./quality-check.sh` and enforce zero-tolerance policies for violations.
 
 ### Contributing Guidelines
 
@@ -135,6 +183,7 @@ flow = (
 ### Documentation Style
 
 **CRITICAL**: All documentation must be:
+
 - **Factual and concise** - No verbosity or repetition
 - **Free of "we/our" language** - Use neutral technical language
 - **Focused on what matters** - Essential information only
@@ -142,6 +191,7 @@ flow = (
 - **Ego-free** - No defensiveness, no overselling, no anxiety
 
 Examples:
+
 - ❌ "We provide trustworthy orchestration for mission-critical systems"
 - ✅ "Reliable language model orchestration. Type-safe with 100% test coverage."
 - ❌ "Our philosophy is trust through proof"
@@ -154,6 +204,7 @@ If documentation sounds anxious, defensive, or like it's trying to impress, rewr
 Good documentation states facts without emotion.
 
 When responding to users:
+
 - Be direct and factual
 - State limitations without defensiveness
 - Use technical language, not marketing speak
@@ -185,6 +236,7 @@ When responding to users:
 ### Before Any Change
 
 Ask:
+
 - Can this be tested completely?
 - Does this make behavior more explicit?
 - Is this simpler than the alternative?
@@ -197,6 +249,7 @@ If any answer is "no", don't do it.
 2. **Conventional Commits**: Use `fix:`, `feat:`, `docs:`, `ci:` prefixes
 3. **Local Protection**: Pre-commit hook prevents direct commits to main
 4. **PR Process**:
+
    ```bash
    git checkout -b type/description
    # Make changes
@@ -212,9 +265,9 @@ ClearFlow provides explicit routing with single termination enforcement. Keep th
 
 ## Documentation Size Limits
 
-ClearFlow is ~166 lines. Documentation should be proportional:
+ClearFlow is ~250 lines. Documentation should be proportional:
+
 - README.md: Keep concise but complete (~200 lines is reasonable for user-facing docs)
-- CONTRIBUTING.md: <50 lines  
 - Individual docs: <100 lines
 - Total documentation: <500 lines
 
@@ -233,17 +286,25 @@ ClearFlow uses automated release management:
    - Converts draft to published GitHub release
 
 **Known Issues**:
+
 - Draft release IDs can become stale - always fetch fresh by tag name
 - PyPI trusted publisher requires exact workflow path match
 - Version must be updated in pyproject.toml before building
 
-**PyPI Package**: https://pypi.org/project/clearflow/
+**PyPI Package**: <https://pypi.org/project/clearflow/>
 
-## Critical Technical Distinction
+## Critical Technical Distinctions
 
 **Explicit routing ≠ Deterministic execution**
 
 ClearFlow provides explicit routing (given outcome X, next step is always Y) but NOT deterministic execution (nodes execute arbitrary async code with unpredictable timing).
+
+**Type Stub Best Practices**
+
+- Stub only what you use (e.g., 6 DSPy APIs, not 127 files)
+- Metaclass field descriptors must return `Any` (standard practice)
+- Document why in stubs: `# Returns Any for metaclass transformation`
+- Minimal stubs are maintainable; complete stubs are not
 
 Always use precise technical terms. Users are engineers who will verify claims.
 
@@ -255,3 +316,7 @@ Always use precise technical terms. Users are engineers who will verify claims.
 4. **Show, don't tell** - Code examples > philosophical manifestos
 5. **Trust the code** - A well-written 200-line library doesn't need 450-line guides
 6. **Be boring** - Boring, obvious code and docs are better than clever ones
+7. **Mypy vs Pyright** - Pyright supports PEP 695 defaults, mypy doesn't. Use pyright only.
+8. **Type stub maintenance** - Keep only what you use. 127 stubs for 6 APIs is waste.
+9. **Metaclass patterns** - Must return `Any` from field constructors (industry standard)
+10. **DSPy signatures** - They're Pydantic models with metaclass transformation

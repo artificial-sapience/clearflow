@@ -144,9 +144,4 @@ audit.json
 # local scripts
 git-sync-remote.sh
 
-# Session context files (local development only)
-session-context.md
-continue-session-prompt.md
-*-session-*.md
-
 .ruff_cache/

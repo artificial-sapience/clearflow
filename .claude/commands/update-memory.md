@@ -13,7 +13,7 @@ Please review our collaboration session and update @CLAUDE.md with any important
    - Documentation principles we established
    - Any project-specific knowledge gained
 
-## Guidelines for updates:
+## Guidelines for updates
 
 - **Be concise** - Only add what's truly valuable for future sessions
 - **Be specific** - Include concrete examples, commands, or code patterns
@@ -21,7 +21,7 @@ Please review our collaboration session and update @CLAUDE.md with any important
 - **Stay factual** - No opinions or philosophy, just technical facts
 - **Keep it proportional** - CLAUDE.md should stay under 300 lines
 
-## Areas to consider:
+## Areas to consider
 
 - [ ] **Technical patterns**: New code patterns or architectural decisions
 - [ ] **Workflow improvements**: Git, PR, or release process refinements  
@@ -30,7 +30,7 @@ Please review our collaboration session and update @CLAUDE.md with any important
 - [ ] **Tool usage**: Specific commands or tool configurations that work well
 - [ ] **Project conventions**: Naming, structure, or organization patterns
 
-## Example additions:
+## Example additions
 
 ```markdown
 ## Session: [Date]
@@ -43,6 +43,7 @@ Please review our collaboration session and update @CLAUDE.md with any important
 ```
 
 After updating, commit with:
+
 ```bash
 git commit -m "docs: update CLAUDE.md with session learnings"
 ```
