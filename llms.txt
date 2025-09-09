@@ -8,25 +8,25 @@
 
 ## Documentation
 
-- [README](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/README.md): Complete overview and quickstart guide
+- [README](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/README.md)
 - [Core API](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/clearflow/__init__.py): Complete implementation - Node, NodeResult, Flow, and exceptions in a single module
-- [CLAUDE Guidelines](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/CLAUDE.md): Development guidelines and architectural principles
+- [CLAUDE Guidelines](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/CLAUDE.md): This file provides guidance to Claude Code (claude.ai/code) when working with code in this repositor
 
 ## Examples
 
 - [Chat](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/chat/README.md): Simple conversational flow with OpenAI integration
-- [Portfolio Analysis](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/portfolio_analysis/README.md): Financial data processing with type-safe transformations
-- [RAG Pipeline](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/rag/README.md): Retrieval-augmented generation workflow implementation
+- [Portfolio Analysis](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/portfolio_analysis/README.md): Simple conversational flow with OpenAI integration
+- [RAG Pipeline](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/rag/README.md): Simple conversational flow with OpenAI integration
 
 ## Testing
 
-- [Flow Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow.py): Complete flow orchestration patterns
-- [Node Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_node.py): Node lifecycle and behavior
-- [Error Handling](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_error_handling.py): Error handling patterns
-- [Type Transformations](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_type_transformations.py): Type-safe state transformations
-- [Flow Validation](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow_builder_validation.py): Routing and validation rules
+- [Error Handling](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_error_handling.py): Test error handling and edge cases for ClearFlow
+- [Flow Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow.py): Test Flow orchestration features of ClearFlow
+- [Flow Validation](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow_builder_validation.py): Test flow builder validation for reachability and duplicate routes
+- [Node Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_node.py): Test Node abstraction features of ClearFlow
+- [Type Transformations](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_type_transformations.py): Test type transformation features of ClearFlow
 
 ## Optional
 
-- [Migration Guide](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/MIGRATION.md): Upgrading from v0.x to v1.x
+- [Migration Guide](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/MIGRATION.md): This guide covers breaking changes and migration steps for ClearFlow v1.0.
 - [License](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/LICENSE): MIT License
