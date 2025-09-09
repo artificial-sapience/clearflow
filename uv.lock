@@ -259,8 +259,15 @@ examples = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "bandit" },
     { name = "llms-txt" },
     { name = "mcpdoc" },
+    { name = "pip-audit" },
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "radon" },
+    { name = "vulture" },
+    { name = "xenon" },
 ]
 
 [package.metadata]
@@ -289,8 +296,15 @@ provides-extras = ["dev", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "bandit", extras = ["toml"], specifier = ">=1.8.6" },
     { name = "llms-txt", specifier = ">=0.0.4" },
     { name = "mcpdoc", specifier = ">=0.0.10" },
+    { name = "pip-audit", specifier = ">=2.9.0" },
+    { name = "pyright", specifier = ">=1.1.405" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "radon", specifier = ">=6.0.1" },
+    { name = "vulture", specifier = ">=2.14" },
+    { name = "xenon", specifier = ">=0.9.3" },
 ]
 
 [[package]]

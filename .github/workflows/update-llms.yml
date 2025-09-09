@@ -36,14 +36,14 @@ jobs:
         run: |
           uv sync --all-extras
       
-      - name: Generate llms-full.txt
+      - name: Generate llms.txt and llms-full.txt
         run: |
-          uv run llms_txt2ctx --optional true llms.txt > llms-full.txt
+          uv run python scripts/generate_llms_txt_files.py
       
       - name: Check for changes
         id: check_changes
         run: |
-          if git diff --quiet llms-full.txt; then
+          if git diff --quiet llms.txt llms-full.txt; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -54,6 +54,6 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add llms-full.txt
-          git commit -m "ci: auto-update llms-full.txt from llms.txt changes"
+          git add llms.txt llms-full.txt
+          git commit -m "ci: auto-update llms.txt and llms-full.txt"
           git push

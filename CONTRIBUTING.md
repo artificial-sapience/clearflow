@@ -50,8 +50,8 @@ Follow conventional commits format:
 
 When making significant changes to documentation or API:
 
-- [ ] Update llms.txt if new documentation files are added
-- [ ] Regenerate llms-full.txt using `python scripts/generate_llms_full.py`
+- [ ] Update llms.txt content in `scripts/generate_llms_txt_files.py` if new documentation files are added
+- [ ] Regenerate both files using `python scripts/generate_llms_txt_files.py`
 - [ ] Verify all URLs in llms.txt are valid and accessible
 - [ ] Test with an AI assistant to ensure proper understanding
 

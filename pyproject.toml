@@ -238,6 +238,12 @@ max-complexity = 7  # A grade maximum
   "T203",    # pprint statements for debugging output
   "C901",    # Infrastructure code requires higher complexity for AST analysis (max: 9, down from 27)
 ]
+# Scripts are utility tools with different requirements
+"scripts/**/*.py" = [
+  "T201",    # Print statements are needed for user feedback
+  "INP001",  # Scripts don't need to be packages
+  "D",       # Allow missing docstrings in scripts
+]
 
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
@@ -273,7 +279,7 @@ check-typed-exception = true
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-include = ["clearflow", "tests", "examples", "linters"]
+include = ["clearflow", "tests", "examples", "linters", "scripts"]
 exclude = ["**/__pycache__", "**/.venv", "**/venv", ".venv"]
 stubPath = "typings"  # Use our DSPy type stubs
 strictListInference = true        # list[...] inferred as precise union instead of Any
@@ -347,8 +353,15 @@ skips = ["*/test_*.py", "*_test.py"]  # Allow assert in tests
 
 [dependency-groups]
 dev = [
+    "bandit[toml]>=1.8.6",
     "llms-txt>=0.0.4",
     "mcpdoc>=0.0.10",
+    "pip-audit>=2.9.0",
+    "pyright>=1.1.405",
+    "pytest>=8.4.2",
+    "radon>=6.0.1",
+    "vulture>=2.14",
+    "xenon>=0.9.3",
 ]
 
 # Note: vulture, xenon, and radon don't read pyproject.toml automatically

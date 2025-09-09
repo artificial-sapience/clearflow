@@ -34,7 +34,7 @@ if [ $# -gt 0 ]; then
     QUALITY_TARGETS="$DIRS $FILES"
 else
     # No arguments - check everything
-    QUALITY_TARGETS="clearflow tests examples linters"
+    QUALITY_TARGETS="clearflow tests examples linters scripts"
 fi
 
 # Ensure we have something to check
@@ -152,7 +152,7 @@ print_header "Running pyright type checks"
 if [ $# -gt 0 ]; then
     PYRIGHT_ARGS="$QUALITY_TARGETS"
 else
-    PYRIGHT_ARGS="clearflow tests examples linters"  # Default directories
+    PYRIGHT_ARGS="clearflow tests examples linters scripts"  # Default directories
 fi
 # Force pyright to use latest version to avoid version warnings
 if ! PYRIGHT_PYTHON_FORCE_VERSION=latest uv run pyright $PYRIGHT_ARGS; then

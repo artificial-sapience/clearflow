@@ -3,6 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
+[![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
@@ -15,9 +16,11 @@ Compose type-safe flows for emergent AI.
 - **Immutable state** – No hidden mutations
 - **Zero dependencies** – No hidden failure modes
 - **Single exit enforcement** – No ambiguous endings
-- **AI Assistant Ready** – Full llms.txt support for optimal LLM integration
+- **AI-Ready Documentation** – llms.txt for optimal coding assistant integration
 
-## Installation
+## Quick Start
+
+### 1. Install
 
 ```bash
 pip install clearflow
@@ -25,7 +28,20 @@ pip install clearflow
 
 > **Upgrading from v0.x?** See the [Migration Guide](MIGRATION.md) for breaking changes.
 
-## Examples
+### 2. Configure Your AI Assistant
+
+```bash
+# Enable ClearFlow in Claude Code, Cursor, Windsurf:
+mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt
+
+# Or for persistent configuration:
+uv run python scripts/configure-mcpdoc.py
+```
+
+Your AI assistant now understands ClearFlow's complete API. Try asking it to create a flow!
+
+### 3. Explore Examples
+
 
 | Name | Description |
 |------|-------------|

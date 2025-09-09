@@ -1,6 +1,6 @@
 # ClearFlow
 
-> Compose type-safe flows for emergent AI. Type-safe workflow composition. Zero dependencies.
+> Compose type-safe flows for emergent AI.
 
 ## Quick Start
 
@@ -20,8 +20,11 @@
 
 ## Testing
 
-- [Test Suite](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow.py): Comprehensive test coverage demonstrating all patterns
-- [Node Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_node.py): Unit tests for Node behavior
+- [Flow Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow.py): Complete flow orchestration patterns
+- [Node Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_node.py): Node lifecycle and behavior
+- [Error Handling](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_error_handling.py): Error handling patterns
+- [Type Transformations](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_type_transformations.py): Type-safe state transformations
+- [Flow Validation](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow_builder_validation.py): Routing and validation rules
 
 ## Optional
 

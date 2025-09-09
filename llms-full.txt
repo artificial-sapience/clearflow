@@ -1,4 +1,4 @@
-<project title="ClearFlow">> Compose type-safe flows for emergent AI. Type-safe workflow composition. Zero dependencies.<quick start><doc title="Install from PyPI" desc="pip install clearflow"><!DOCTYPE html>
+<project title="ClearFlow">> Compose type-safe flows for emergent AI.<quick start><doc title="Install from PyPI" desc="pip install clearflow"><!DOCTYPE html>
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
@@ -2864,7 +2864,7 @@ Each transformation creates new immutable state: `RAGState → ChunkedState → 
 - `nodes.py` - All node implementations
 - `rag_flow.py` - Flow definitions and routing
 - `models.py` - State type definitions
-- `utils.py` - OpenAI and chunking utilities</doc></examples><testing><doc title="Test Suite" desc="Comprehensive test coverage demonstrating all patterns">"""Test Flow orchestration features of ClearFlow.
+- `utils.py` - OpenAI and chunking utilities</doc></examples><testing><doc title="Flow Tests" desc="Complete flow orchestration patterns">"""Test Flow orchestration features of ClearFlow.
 
 This module tests the Flow class functionality including linear flows,
 branching, single termination enforcement, and flow composition.
@@ -3266,7 +3266,7 @@ class TestFlow:
         )
         result = await pipeline(doc_input)
         assert result.outcome == "indexed"
-        assert result.state.stored == "true"</doc><doc title="Node Tests" desc="Unit tests for Node behavior">"""Test Node abstraction features of ClearFlow.
+        assert result.state.stored == "true"</doc><doc title="Node Tests" desc="Node lifecycle and behavior">"""Test Node abstraction features of ClearFlow.
 
 This module tests the Node class functionality including lifecycle hooks,
 lifecycle hooks, and routing patterns for mission-critical AI orchestration.
@@ -3497,7 +3497,683 @@ class TestNode:
         result = await node(general_state)
 
         assert result.outcome == "direct_response"
-        assert "understand your request" in result.state.messages[-1].content</doc></testing><optional><doc title="Migration Guide" desc="Upgrading from v0.x to v1.x"># Migration Guide: v0.x to v1.0
+        assert "understand your request" in result.state.messages[-1].content</doc><doc title="Error Handling" desc="Error handling patterns">"""Test error handling and edge cases for ClearFlow.
+
+This module tests error conditions, edge cases, and validation logic
+to ensure robust behavior in mission-critical scenarios.
+
+"""
+
+from dataclasses import dataclass, replace
+from dataclasses import dataclass as dc
+from typing import override
+
+import pytest
+
+from clearflow import Node, NodeResult, flow
+
+
+@dataclass(frozen=True)
+class SimpleState:
+    """Simple typed state for testing."""
+
+    test: str
+
+
+@dataclass(frozen=True)
+class ErrorState:
+    """State for error handling tests."""
+
+    simulate_error: bool
+    error: str = ""
+    response: str = ""
+    handled: bool = False
+    message: str = ""
+    processed: bool = False
+
+
+class TestErrorHandling:
+    """Test error handling and edge cases."""
+
+    @staticmethod
+    async def test_missing_route() -> None:
+        """Test that undefined routes raise an error."""
+
+        @dc(frozen=True)
+        class UnpredictableNode(Node[dict[str, str]]):
+            """Node with variable outcomes."""
+
+            name: str = "unpredictable"
+
+            @override
+            async def exec(self, state: dict[str, str]) -> NodeResult[dict[str, str]]:
+                # Return an outcome that might not be routed
+                outcome = state.get("force_outcome", "unexpected")
+                return NodeResult(state, outcome=outcome)
+
+        @dc(frozen=True)
+        class TerminalNode(Node[dict[str, str]]):
+            """Terminal node for expected outcome."""
+
+            name: str = "terminal"
+
+            @override
+            async def exec(self, state: dict[str, str]) -> NodeResult[dict[str, str]]:
+                return NodeResult(state, outcome="completed")
+
+        unpredictable = UnpredictableNode()
+        terminal = TerminalNode()
+
+        # Flow with incomplete routing - unexpected outcome not routed
+        incomplete_flow = (
+            flow("IncompleteFlow", unpredictable).route(unpredictable, "expected", terminal).end(terminal, "completed")
+            # "unexpected" outcome not routed - should raise error
+        )
+
+        # Should raise ValueError for unhandled outcome
+        with pytest.raises(ValueError, match="No route defined for outcome 'unexpected' from node 'unpredictable'"):
+            await incomplete_flow({"force_outcome": "unexpected"})
+
+    @staticmethod
+    async def test_empty_node_name() -> None:
+        """Test that node names must be non-empty."""
+
+        @dc(frozen=True)
+        class BadNode(Node[SimpleState]):
+            name: str = ""  # Empty name
+
+            @override
+            async def exec(self, state: SimpleState) -> NodeResult[SimpleState]:
+                return NodeResult(state, outcome="done")
+
+        with pytest.raises(ValueError, match="non-empty string"):
+            BadNode()
+
+        @dc(frozen=True)
+        class WhitespaceNode(Node[SimpleState]):
+            name: str = "   "  # Whitespace name
+
+            @override
+            async def exec(self, state: SimpleState) -> NodeResult[SimpleState]:
+                return NodeResult(state, outcome="done")
+
+        with pytest.raises(ValueError, match="non-empty string"):
+            WhitespaceNode()
+
+    @staticmethod
+    async def test_node_with_valid_name() -> None:
+        """Test that nodes must have explicit names."""
+
+        @dc(frozen=True)
+        class MyCustomNode(Node[SimpleState]):
+            name: str = "custom_node"
+
+            @override
+            async def exec(self, state: SimpleState) -> NodeResult[SimpleState]:
+                return NodeResult(state, outcome="done")
+
+        # Node with explicit name
+        node = MyCustomNode()
+        assert node.name == "custom_node"
+
+        # Override name in instantiation
+        named_node = MyCustomNode(name="override_name")
+        assert named_node.name == "override_name"
+
+    @staticmethod
+    async def test_single_node_flow() -> None:
+        """Test a flow with a single node that terminates immediately."""
+
+        @dataclass(frozen=True)
+        class ProcessState:
+            test: str
+            processed: bool
+
+        @dc(frozen=True)
+        class StandaloneNode(Node[ProcessState]):
+            name: str = "standalone"
+
+            @override
+            async def exec(self, state: ProcessState) -> NodeResult[ProcessState]:
+                new_state = replace(state, processed=True)
+                return NodeResult(new_state, outcome="complete")
+
+        node = StandaloneNode()
+
+        # Create flow with single node that terminates
+        single_flow = flow("SingleNodeFlow", node).end(node, "complete")
+
+        # Execute
+        initial_state = ProcessState(test="value", processed=False)
+        result = await single_flow(initial_state)
+        assert result.outcome == "complete"
+        assert result.state.test == "value"
+        assert result.state.processed is True
+
+    @staticmethod
+    async def test_complex_error_flow() -> None:
+        """Test error handling in AI workflows."""
+
+        @dataclass(frozen=True)
+        class LLMState:
+            simulate_error: bool = False
+            error: str = ""
+            response: str = ""
+            handled: bool = False
+            message: str = ""
+            processed: bool = False
+
+        @dc(frozen=True)
+        class LLMNode(Node[LLMState]):
+            """Simulates LLM API that can fail."""
+
+            name: str = "llm"
+
+            @override
+            async def exec(self, state: LLMState) -> NodeResult[LLMState]:
+                if state.simulate_error:
+                    error_state = replace(state, error="API timeout")
+                    return NodeResult(error_state, outcome="error")
+                success_state = replace(state, response="Generated text")
+                return NodeResult(success_state, outcome="success")
+
+        @dc(frozen=True)
+        class ErrorHandler(Node[LLMState]):
+            """Handles errors from LLM."""
+
+            name: str = "error_handler"
+
+            @override
+            async def exec(self, state: LLMState) -> NodeResult[LLMState]:
+                error = state.error or "Unknown error"
+                new_state = replace(
+                    state,
+                    handled=True,
+                    message=f"Error handled: {error}",
+                )
+                return NodeResult(new_state, outcome="handled")
+
+        @dc(frozen=True)
+        class SuccessHandler(Node[LLMState]):
+            """Processes successful LLM responses."""
+
+            name: str = "success_handler"
+
+            @override
+            async def exec(self, state: LLMState) -> NodeResult[LLMState]:
+                new_state = replace(state, processed=True)
+                return NodeResult(new_state, outcome="complete")
+
+        llm = LLMNode()
+        error_handler = ErrorHandler()
+        success_handler = SuccessHandler()
+
+        # Flow with error handling
+        error_flow = (
+            flow("ErrorHandlingFlow", llm)
+            .route(llm, "error", error_handler)
+            .route(llm, "success", success_handler)
+            .end(error_handler, "handled")
+            # Note: success_handler has a different termination, showcasing flexibility
+        )
+
+        # Test error path
+        error_input = LLMState(simulate_error=True)
+        error_result = await error_flow(error_input)
+        assert error_result.outcome == "handled"
+        assert error_result.state.handled is True
+        assert "API timeout" in error_result.state.message</doc><doc title="Type Transformations" desc="Type-safe state transformations">"""Test type transformation features of ClearFlow.
+
+This module tests Node[TIn, TOut] type transformations for real AI pipelines,
+demonstrating how to avoid "god objects" through type-safe transformations.
+
+"""
+
+from dataclasses import dataclass as dc
+from typing import override
+
+from clearflow import Node, NodeResult
+from tests.conftest import Document
+
+
+# RAG pipeline types
+@dc(frozen=True)
+class Query:
+    """User query for RAG system."""
+
+    text: str
+    max_results: int = 5
+
+
+@dc(frozen=True)
+class SearchResults:
+    """Retrieved documents with scores."""
+
+    query: Query
+    documents: tuple[tuple[Document, float], ...]  # (doc, relevance_score)
+
+
+@dc(frozen=True)
+class Context:
+    """Prepared context for generation."""
+
+    query: Query
+    relevant_texts: tuple[str, ...]
+    total_tokens: int
+
+
+@dc(frozen=True)
+class Response:
+    """Final generated response."""
+
+    query: Query
+    answer: str
+    sources: tuple[str, ...]
+
+
+@dc(frozen=True)
+class RetrievalNode(Node[Query, SearchResults]):
+    """Retrieves relevant documents."""
+
+    name: str = "retriever"
+
+    @override
+    async def exec(self, state: Query) -> NodeResult[SearchResults]:
+        # Simulate retrieval
+        mock_docs = (
+            (Document("AI is transforming industries", "doc1.pdf"), 0.95),
+            (Document("Machine learning applications", "doc2.pdf"), 0.87),
+        )
+        results = SearchResults(query=state, documents=mock_docs[: state.max_results])
+        return NodeResult(results, outcome="retrieved")
+
+
+@dc(frozen=True)
+class ContextBuilder(Node[SearchResults, Context]):
+    """Builds context from search results."""
+
+    name: str = "context_builder"
+
+    @override
+    async def exec(self, state: SearchResults) -> NodeResult[Context]:
+        texts = tuple(doc.content for doc, _ in state.documents)
+        tokens = sum(len(text.split()) for text in texts)
+        context = Context(query=state.query, relevant_texts=texts, total_tokens=tokens)
+        outcome = "context_ready" if tokens < 1000 else "context_too_long"
+        return NodeResult(context, outcome=outcome)
+
+
+@dc(frozen=True)
+class GenerationNode(Node[Context, Response]):
+    """Generates response from context."""
+
+    name: str = "generator"
+
+    @override
+    async def exec(self, state: Context) -> NodeResult[Response]:
+        # Simulate generation
+        answer = f"Based on {len(state.relevant_texts)} sources: " + state.relevant_texts[0][:50]
+        sources = tuple(f"doc{i + 1}.pdf" for i in range(len(state.relevant_texts)))
+        response = Response(query=state.query, answer=answer, sources=sources)
+        return NodeResult(response, outcome="generated")
+
+
+class TestTypeTransformations:
+    """Test Node[TIn, TOut] type transformations for real AI pipelines."""
+
+    @staticmethod
+    async def test_rag_retrieval_transformation() -> None:
+        """Test Query to SearchResults transformation."""
+        query = Query(text="How is AI transforming industries?", max_results=2)
+        retrieval = RetrievalNode()
+        result = await retrieval(query)
+        assert isinstance(result.state, SearchResults)
+        assert len(result.state.documents) == 2
+
+    @staticmethod
+    async def test_rag_context_building() -> None:
+        """Test SearchResults to Context transformation."""
+        query = Query(text="AI query", max_results=2)
+        mock_results = SearchResults(
+            query=query,
+            documents=(
+                (Document("AI content", "doc1.pdf"), 0.95),
+                (Document("ML content", "doc2.pdf"), 0.87),
+            ),
+        )
+        builder = ContextBuilder()
+        result = await builder(mock_results)
+        assert isinstance(result.state, Context)
+        assert result.state.total_tokens > 0
+
+    @staticmethod
+    async def test_rag_generation() -> None:
+        """Test Context to Response transformation."""
+        query = Query(text="test", max_results=1)
+        context = Context(query=query, relevant_texts=("Test content",), total_tokens=2)
+        generator = GenerationNode()
+        result = await generator(context)
+        assert isinstance(result.state, Response)
+        assert result.state.query == query
+        assert len(result.state.sources) > 0
+
+    @staticmethod
+    async def test_tool_planning() -> None:
+        """Test tool planning transformation."""
+
+        # Tool types
+        @dc(frozen=True)
+        class ToolQuery:
+            question: str
+            context: str = ""
+
+        @dc(frozen=True)
+        class ToolPlan:
+            query: ToolQuery
+            selected_tool: str
+            parameters: tuple[tuple[str, str], ...]
+
+        @dc(frozen=True)
+        class SimplePlanner(Node[ToolQuery, ToolPlan]):
+            name: str = "planner"
+
+            @override
+            async def exec(self, state: ToolQuery) -> NodeResult[ToolPlan]:
+                tool = "calculator" if "calculate" in state.question.lower() else "none"
+                params = (("expr", state.question),) if tool != "none" else ()
+                plan = ToolPlan(query=state, selected_tool=tool, parameters=params)
+                return NodeResult(plan, outcome="planned")
+
+        query = ToolQuery(question="Calculate 6 * 7")
+        planner = SimplePlanner()
+        result = await planner(query)
+        assert isinstance(result.state, ToolPlan)
+        assert result.state.selected_tool == "calculator"
+
+    @staticmethod
+    async def test_tool_execution() -> None:
+        """Test tool execution transformation."""
+
+        @dc(frozen=True)
+        class ToolQuery:
+            question: str
+
+        @dc(frozen=True)
+        class ToolPlan:
+            query: ToolQuery
+            selected_tool: str
+
+        @dc(frozen=True)
+        class ToolResult:
+            plan: ToolPlan
+            output: str
+            success: bool
+
+        @dc(frozen=True)
+        class SimpleExecutor(Node[ToolPlan, ToolResult]):
+            name: str = "executor"
+
+            @override
+            async def exec(self, state: ToolPlan) -> NodeResult[ToolResult]:
+                output = "Result: 42" if state.selected_tool == "calculator" else "None"
+                success = state.selected_tool == "calculator"
+                result = ToolResult(plan=state, output=output, success=success)
+                return NodeResult(result, outcome="executed")
+
+        query = ToolQuery(question="test")
+        plan = ToolPlan(query=query, selected_tool="calculator")
+        executor = SimpleExecutor()
+        result = await executor(plan)
+        assert isinstance(result.state, ToolResult)
+        assert result.state.success is True</doc><doc title="Flow Validation" desc="Routing and validation rules">"""Test flow builder validation for reachability and duplicate routes.
+
+This module tests that the flow builder enforces:
+1. Nodes can only be routed from if reachable from start
+2. Routes cannot be duplicated
+3. Termination nodes must be reachable
+
+"""
+
+from dataclasses import dataclass
+from typing import override
+
+import pytest
+
+from clearflow import Node, NodeResult, flow
+
+
+@dataclass(frozen=True)
+class SimpleState:
+    """Simple state for testing."""
+
+    value: str
+
+
+@dataclass(frozen=True)
+class SimpleNode(Node[SimpleState]):
+    """Basic node for testing."""
+
+    name: str
+
+    @override
+    async def exec(self, state: SimpleState) -> NodeResult[SimpleState]:
+        return NodeResult(state, outcome="done")
+
+
+class TestReachabilityValidation:
+    """Test that nodes must be reachable to be used."""
+
+    @staticmethod
+    async def test_valid_linear_flow() -> None:
+        """Test that a properly connected linear flow works."""
+        start = SimpleNode(name="start")
+        middle = SimpleNode(name="middle")
+        end = SimpleNode(name="end")
+
+        # This should work - all nodes are reachable
+        valid_flow = flow("ValidFlow", start).route(start, "done", middle).route(middle, "done", end).end(end, "done")
+
+        result = await valid_flow(SimpleState("test"))
+        assert result.state.value == "test"
+
+    @staticmethod
+    async def test_valid_branching_flow() -> None:
+        """Test that branching flows work when all nodes are reachable."""
+        branch_a = SimpleNode(name="branch_a")
+        branch_b = SimpleNode(name="branch_b")
+        final = SimpleNode(name="final")
+
+        @dataclass(frozen=True)
+        class BranchingNode(Node[SimpleState]):
+            name: str = "start"
+
+            @override
+            async def exec(self, state: SimpleState) -> NodeResult[SimpleState]:
+                if state.value == "a":
+                    return NodeResult(state, outcome="path_a")
+                return NodeResult(state, outcome="path_b")
+
+        start_branching = BranchingNode()
+
+        # All branches properly connected
+        branching_flow = (
+            flow("BranchingFlow", start_branching)
+            .route(start_branching, "path_a", branch_a)
+            .route(start_branching, "path_b", branch_b)
+            .route(branch_a, "done", final)
+            .route(branch_b, "done", final)
+            .end(final, "done")
+        )
+
+        result = await branching_flow(SimpleState("a"))
+        assert result.state.value == "a"
+
+    @staticmethod
+    def test_routing_from_unreachable_node() -> None:
+        """Test that routing from an unreachable node raises an error."""
+        start = SimpleNode(name="start")
+        orphan = SimpleNode(name="orphan")
+        end = SimpleNode(name="end")
+
+        # This should fail - orphan is never routed to
+        with pytest.raises(ValueError, match="Cannot route from 'orphan' - not reachable"):
+            flow("InvalidFlow", start).route(orphan, "done", end).end(end, "done")
+
+    @staticmethod
+    def test_ending_at_unreachable_node() -> None:
+        """Test that ending at an unreachable node raises an error."""
+        start = SimpleNode(name="start")
+        middle = SimpleNode(name="middle")
+        unreachable_end = SimpleNode(name="unreachable_end")
+
+        # This should fail - unreachable_end is never routed to
+        with pytest.raises(ValueError, match="Cannot end at 'unreachable_end' - not reachable"):
+            flow("InvalidFlow", start).route(start, "done", middle).end(unreachable_end, "done")
+
+    @staticmethod
+    def test_disconnected_subgraph() -> None:
+        """Test that disconnected subgraphs are detected."""
+        start = SimpleNode(name="start")
+        middle = SimpleNode(name="middle")
+
+        # Create disconnected nodes
+        island1 = SimpleNode(name="island1")
+        island2 = SimpleNode(name="island2")
+
+        # This should fail - island1 is not reachable from start
+        with pytest.raises(ValueError, match="Cannot route from 'island1' - not reachable"):
+            (
+                flow("DisconnectedFlow", start)
+                .route(start, "done", middle)
+                .route(island1, "done", island2)  # Disconnected subgraph!
+                .end(middle, "done")
+            )
+
+    @staticmethod
+    def test_complex_reachability() -> None:
+        """Test reachability with more complex routing patterns."""
+        start = SimpleNode(name="start")
+        a = SimpleNode(name="a")
+        b = SimpleNode(name="b")
+        c = SimpleNode(name="c")
+        d = SimpleNode(name="d")
+
+        # Build a flow where d is only reachable through a specific path
+        complex_flow = (
+            flow("ComplexFlow", start)
+            .route(start, "to_a", a)
+            .route(start, "to_b", b)
+            .route(a, "to_c", c)
+            .route(c, "to_d", d)
+            # b can also go to d - this should work since d is reachable via a->c->d
+            .route(b, "to_d", d)
+            .end(d, "done")
+        )
+
+        # This should work - all nodes are properly connected
+        assert complex_flow is not None
+
+
+class TestDuplicateRouteDetection:
+    """Test that duplicate routes are detected and prevented."""
+
+    @staticmethod
+    def test_duplicate_route_same_outcome() -> None:
+        """Test that defining the same route twice raises an error."""
+        start = SimpleNode(name="start")
+        option1 = SimpleNode(name="option1")
+        option2 = SimpleNode(name="option2")
+
+        # This should fail - can't route "done" from start twice
+        with pytest.raises(ValueError, match="Route already defined for outcome 'done' from node 'start'"):
+            (
+                flow("DuplicateRoute", start).route(start, "done", option1).route(start, "done", option2)  # Duplicate!
+            )
+
+    @staticmethod
+    def test_same_outcome_different_nodes_allowed() -> None:
+        """Test that same outcome from different nodes is allowed."""
+        start = SimpleNode(name="start")
+        middle1 = SimpleNode(name="middle1")
+        middle2 = SimpleNode(name="middle2")
+        end = SimpleNode(name="end")
+
+        # This should work - same outcome but from different nodes
+        valid_flow = (
+            flow("ValidSameOutcome", start)
+            .route(start, "path1", middle1)
+            .route(start, "path2", middle2)
+            .route(middle1, "done", end)  # "done" from middle1
+            .route(middle2, "done", end)  # "done" from middle2 - OK!
+            .end(end, "done")
+        )
+
+        assert valid_flow is not None
+
+    @staticmethod
+    def test_duplicate_termination_route() -> None:
+        """Test that trying to add a route that conflicts with termination fails."""
+        start = SimpleNode(name="start")
+        middle = SimpleNode(name="middle")
+        end = SimpleNode(name="end")
+
+        # Try to route and terminate with the same outcome from same node
+        with pytest.raises(ValueError, match="Route already defined for outcome 'done' from node 'end'"):
+            (
+                flow("DuplicateTermination", start)
+                .route(start, "done", end)
+                .route(end, "done", middle)  # First route from end
+                .end(end, "done")  # Can't terminate with same outcome!
+            )
+
+    @staticmethod
+    def test_route_then_terminate_same_outcome() -> None:
+        """Test that routing and terminating with same outcome fails."""
+        start = SimpleNode(name="start")
+        middle = SimpleNode(name="middle")
+
+        # This should fail - can't have both route and termination for same outcome
+        with pytest.raises(ValueError, match="Route already defined for outcome 'done' from node 'middle'"):
+            (
+                flow("RouteAndTerminate", start)
+                .route(start, "done", middle)
+                .route(middle, "done", start)  # Creates a loop
+                .end(middle, "done")  # Same outcome as the route above!
+            )
+
+    @staticmethod
+    async def test_multiple_outcomes_single_node() -> None:
+        """Test that a node can have multiple different outcomes."""
+
+        @dataclass(frozen=True)
+        class MultiOutcomeNode(Node[SimpleState]):
+            name: str = "multi"
+
+            @override
+            async def exec(self, state: SimpleState) -> NodeResult[SimpleState]:
+                if state.value == "error":
+                    return NodeResult(state, outcome="error")
+                if state.value == "retry":
+                    return NodeResult(state, outcome="retry")
+                return NodeResult(state, outcome="success")
+
+        multi = MultiOutcomeNode()
+        error_handler = SimpleNode(name="error_handler")
+        retry_handler = SimpleNode(name="retry_handler")
+        success_handler = SimpleNode(name="success_handler")
+
+        # This should work - different outcomes from same node
+        multi_flow = (
+            flow("MultiOutcome", multi)
+            .route(multi, "error", error_handler)
+            .route(multi, "retry", retry_handler)
+            .route(multi, "success", success_handler)
+            .end(error_handler, "done")
+            # Note: other handlers not terminated for this test
+        )
+
+        result = await multi_flow(SimpleState("error"))
+        assert result.state.value == "error"</doc></testing><optional><doc title="Migration Guide" desc="Upgrading from v0.x to v1.x"># Migration Guide: v0.x to v1.0
 
 This guide covers breaking changes and migration steps for ClearFlow v1.0.
 
