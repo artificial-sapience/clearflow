@@ -1,0 +1,3747 @@
+<project title="ClearFlow">> Compose type-safe flows for emergent AI. Type-safe workflow composition. Zero dependencies.<quick start><doc title="Install from PyPI" desc="pip install clearflow"><!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="defaultLanguage" content="en">
+    <meta name="availableLanguages"
+          content="en, es, fr, ja, pt_BR, uk, el, de, zh_Hans, zh_Hant, ru, he, eo, ko">
+    <title>clearflow · PyPI</title>
+    <meta name="description"
+          content="Type-safe orchestration for unpredictable AI.">
+    <link rel="stylesheet"
+          href="/static/css/warehouse-ltr.9c2acdac.css">
+    <link rel="stylesheet"
+          href="/static/css/fontawesome.080e1050.css">
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css?family=Source+Sans+3:400,400italic,600,600italic,700,700italic%7CSource+Code+Pro:500">
+    <noscript>
+      <link rel="stylesheet"
+            href="/static/css/noscript.0673c9ea.css">
+    </noscript>
+    <link rel="icon"
+          href="/static/images/favicon.35549fe8.ico"
+          type="image/x-icon">
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS: 40 latest updates"
+          href="/rss/updates.xml">
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS: 40 newest packages"
+          href="/rss/packages.xml">
+<link rel="alternate"
+        type="application/rss+xml"
+        title="RSS: latest releases for clearflow"
+        href="/rss/project/clearflow/releases.xml">      <link rel="canonical" href="https://pypi.org/project/clearflow/">
+    <meta property="og:url"
+          content="https://pypi.org/project/clearflow/">
+    <meta property="og:site_name" content="PyPI">
+    <meta property="og:type" content="website">
+    <meta property="og:image"
+          content="https://pypi.org/static/images/twitter.abaf4b19.webp">
+    <meta property="og:title"
+          content="clearflow">
+    <meta property="og:description" content="Type-safe orchestration for unpredictable AI.">
+    <link rel="search"
+          type="application/opensearchdescription+xml"
+          title="PyPI"
+          href="/opensearch.xml">
+    <script async src="/static/js/warehouse.10ad6916.js">
+    </script>
+  <script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+  },
+};
+  </script>
+  <script async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"
+          integrity="sha256-1CldwzdEg2k1wTmf7s5RWVd7NMXI/7nxxjJM2C4DqII="
+          crossorigin="anonymous"></script>
+      <script defer
+              data-domain="pypi.org"
+              src="https://analytics.python.org/js/script.js"></script>
+    <script defer
+            src="https://www.fastly-insights.com/insights.js?k=6a52360a-f306-421e-8ed5-7417d0d4a4e9&dnt=true"></script>
+    <script async
+            src="https://media.ethicalads.io/media/client/v1.4.0/ethicalads.min.js"
+            integrity="sha256-U3hKDidudIaxBDEzwGJApJgPEf2mWk6cfMWghrAa6i0= sha384-UcmsCqcNRSLW/dV3Lo1oCi2/VaurXbib6p4HyUEOeIa/4OpsrnucrugAefzVZJfI sha512-q4t1L4xEjGV2R4hzqCa41P8jrgFUS8xTb8rdNv4FGvw7FpydVj/kkxBJHOiaoxHa8olCcx1Slk9K+3sNbsM4ug=="
+            crossorigin="anonymous"></script>
+  </head>
+  <body data-controller="viewport-toggle"
+        data-allowed-domains="685f47e049ad24ab8a31ece19f3f7aab5786af2f81932b0d3e2d3c690fbae0bf,0f7d680ecbe7cd522160a547b9ecc5e8f6c67772f2e6dd109187f56255ddace6,44512ff97f6d712110c14a421f4d0ee0ff1883bf0a7850011dd61cae06e0da65,ba1a5bb7af31b13a8c90b9e333cdf13475f633c2c2cbb69b239ee12fac30f105,52701adf3e5da81c71f28e9db3c97227c893894b6e3e8fad15f9027c7e1aefb9"
+        data-request-nonce="504F3f6wvB0vTcp_8zsYoPV9CG-oS_1GHTsbjXqd_zU">
+      <!-- Accessibility: this link should always be the first piece of content inside the body-->
+      <a href="#content" class="skip-to-content">Skip to main content</a>
+      <button type="button"
+              class="button button--primary button--switch-to-mobile hidden"
+              data-viewport-toggle-target="switchToMobile"
+              data-action="viewport-toggle#switchToMobile">Switch to mobile version</button>
+      <div id="sticky-notifications" class="stick-to-top js-stick-to-top">
+        <!-- Add browser warning. Will show for ie9 and below -->
+        <!--[if IE]>
+      <div class="notification-bar notification-bar--warning" role="status">
+        <span class="notification-bar__icon">
+          <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+          <span class="sr-only">Warning</span>
+        </span>
+        <span class="notification-bar__message">You are using an unsupported browser, upgrade to a newer version.</span>
+      </div>
+      <![endif]-->
+        <noscript>
+          <div class="notification-bar notification-bar--warning" role="status">
+            <span class="notification-bar__icon">
+              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+              <span class="sr-only">Warning</span>
+            </span>
+            <span class="notification-bar__message">Some features may not work without JavaScript. Please try enabling it if you encounter problems.</span>
+          </div>
+        </noscript>
+<div data-html-include="/_includes/unauthed/notification-banners/"></div>    </div>
+<div data-html-include="/_includes/unauthed/flash-messages/"></div><div data-html-include="/_includes/authed/session-notifications/"></div><header class="site-header ">
+  <div class="site-container">
+    <div class="split-layout">
+        <div class="split-layout">
+          <div>
+            <a class="site-header__logo" href="/">
+              <img alt="PyPI"
+                   src="/static/images/logo-small.8998e9d1.svg">
+            </a>
+          </div>
+          <form class="search-form search-form--primary"
+                action="/search/"
+                role="search">
+            <label for="search" class="sr-only">Search PyPI</label>
+            <input id="search"
+                   class="search-form__search"
+                   type="text"
+                   name="q"
+                   placeholder="Type '/' to search projects"
+                   value=""
+                   autocomplete="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   data-controller="search-focus"
+                   data-action="keydown@window->search-focus#focusSearchField"
+                   data-search-focus-target="searchField">
+            <button type="submit" class="search-form__button">
+              <i class="fa fa-search" aria-hidden="true"></i>
+              <span class="sr-only">Search</span>
+            </button>
+          </form>
+        </div>
+<div data-html-include="/_includes/authed/current-user-indicator/">      <div id="user-indicator"
+       class="horizontal-menu horizontal-menu--light horizontal-menu--tall">
+    <nav class="horizontal-menu horizontal-menu--light horizontal-menu--tall hide-on-tablet"
+         aria-label="Main navigation">
+      <ul>
+        <li class="horizontal-menu__item">
+          <a href="/help/" class="horizontal-menu__link">Help</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="https://docs.pypi.org/" class="horizontal-menu__link">Docs</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="/sponsors/"
+             class="horizontal-menu__link">Sponsors</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="/account/login/?next=https%3A%2F%2Fpypi.org%2Fproject%2Fclearflow%2F"
+             class="horizontal-menu__link">Log in</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="/account/register/"
+             class="horizontal-menu__link">Register</a>
+        </li>
+      </ul>
+    </nav>
+    <nav class="dropdown dropdown--on-menu hidden show-on-tablet"
+         aria-label="Main navigation">
+      <button type="button"
+              class="horizontal-menu__link dropdown__trigger"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="View menu">
+Menu        <span class="dropdown__trigger-caret">
+          <i class="fa fa-caret-down" aria-hidden="true"></i>
+        </span>
+      </button>
+      <ul class="dropdown__content"
+          aria-hidden="true"
+          aria-label="Main menu">
+        <li>
+          <a class="dropdown__link" href="/help/">Help</a>
+        </li>
+        <li>
+          <a class="dropdown__link" href="https://docs.pypi.org/">Docs</a>
+        </li>
+        <li>
+          <a class="dropdown__link" href="/sponsors/">Sponsors</a>
+        </li>
+        <li>
+          <a class="dropdown__link"
+             href="/account/login/">Log in</a>
+        </li>
+        <li>
+          <a class="dropdown__link"
+             href="/account/register/">Register</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>  </div>
+</div>
+</header>
+  <div class="mobile-search">
+    <form class="search-form search-form--fullwidth"
+          action="/search/"
+          role="search">
+      <label for="mobile-search" class="sr-only">Search PyPI</label>
+      <input id="mobile-search"
+             class="search-form__search"
+             type="text"
+             name="q"
+             placeholder="Search projects"
+             value=""
+             autocomplete="off"
+             autocapitalize="off"
+             spellcheck="false">
+      
+      <button type="submit" class="search-form__button">
+        <i class="fa fa-search" aria-hidden="true"></i>
+        <span class="sr-only">Search</span>
+      </button>
+    </form>
+  </div>
+<main id="content">
+    <div class="hidden"
+         data-controller="github-repo-stats"
+         data-github-repo-stats-github-repo-info-outlet=".github-repo-info"
+         data-github-repo-stats-url-value="https://api.github.com/repos/artificial-sapience/ClearFlow"
+         data-github-repo-stats-issue-url-value="https://api.github.com/search/issues?q=repo:artificial-sapience/ClearFlow+type:issue+state:open&amp;per_page=1"></div>
+  <div class="banner">
+    <div class="package-header">
+      <div class="package-header__left">
+        <h1 class="package-header__name">clearflow 1.0.0</h1>
+          <div data-controller="clipboard">
+            <p class="package-header__pip-instructions">
+              <span id="pip-command" data-clipboard-target="source">pip install clearflow</span>
+              <button type="button"
+                      class="copy-tooltip copy-tooltip-s"
+                      data-action="clipboard#copy"
+                      data-clipboard-target="tooltip"
+                      data-clipboard-tooltip-value="Copy to clipboard">
+                <i class="fa fa-copy" aria-hidden="true"></i>
+                <span class="sr-only">Copy PIP instructions</span>
+              </button>
+            </p>
+          </div>
+      </div>
+      <div class="package-header__right">
+            <a class="status-badge status-badge--good"
+               href="/project/clearflow/">
+              <span>Latest version</span>
+            </a>
+        <p class="package-header__date">
+Released: <time datetime="2025-09-06T20:11:38+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 6, 2025
+  </time>        </p>
+      </div>
+    </div>
+  </div>
+  <div class="horizontal-section horizontal-section--grey horizontal-section--thin">
+    <div class="site-container">
+<div data-html-include="/_includes/authed/administer-project-include/clearflow"></div>    <div class="split-layout split-layout--middle package-description">
+        <p class="package-description__summary">Type-safe orchestration for unpredictable AI.</p>
+<div data-html-include="/_includes/authed/edit-project-button/clearflow"></div>  </div>
+</div>
+</div>
+<div data-controller="project-tabs">
+  <div class="tabs-container">
+    <div class="vertical-tabs">
+      <div class="vertical-tabs__tabs">
+        <div class="sidebar-section">
+          <h3 class="sidebar-section__title">Navigation</h3>
+          <nav aria-label="Navigation for clearflow">
+            <ul class="vertical-tabs__list" role="tablist">
+              <li role="tab">
+                <a id="description-tab"
+                   href="#description"
+                   data-project-tabs-target="tab"
+                   data-action="project-tabs#onTabClick"
+                   class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--is-active"
+                   aria-selected="true"
+                   aria-label="Project description. Focus will be moved to the description.">
+                  <i class="fa fa-align-left" aria-hidden="true"></i>
+Project description                </a>
+              </li>
+              <li role="tab">
+                <a id="history-tab"
+                   href="#history"
+                   data-project-tabs-target="tab"
+                   data-action="project-tabs#onTabClick"
+                   class="vertical-tabs__tab vertical-tabs__tab--with-icon"
+                   aria-label="Release history. Focus will be moved to the history panel.">
+                  <i class="fa fa-history" aria-hidden="true"></i>
+Release history                </a>
+              </li>
+                <li role="tab">
+                  <a id="files-tab"
+                     href="#files"
+                     data-project-tabs-target="tab"
+                     data-action="project-tabs#onTabClick"
+                     class="vertical-tabs__tab vertical-tabs__tab--with-icon"
+                     aria-label="Download files. Focus will be moved to the project files.">
+                    <i class="fa fa-download" aria-hidden="true"></i>
+Download files                  </a>
+                </li>
+            </ul>
+          </nav>
+        </div>
+<div class="sidebar-section verified">
+  <h3 class="sidebar-section__title">
+Verified details    <i class="fa fa-circle-check check"
+       title="Verified by PyPI on 2025-09-06"></i>
+  </h3>
+  <small><i>These details have been <a href="https://docs.pypi.org/project_metadata/#verified-details">verified by PyPI</a></i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow/tree/main/examples"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Examples</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow"
+               rel="nofollow">  <i class="fas fa-home" aria-hidden="true"></i>Homepage</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow/issues"
+               rel="nofollow">  <i class="fas fa-bug" aria-hidden="true"></i>Issues</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow.git"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Repository</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Source</a>
+          </li>
+    </ul>
+    <h6>GitHub Statistics</h6>
+    <div class="hidden github-repo-info" data-controller="github-repo-info">
+      <ul class="vertical-tabs__list">
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             rel="noopener"
+             href="https://github.com/artificial-sapience/ClearFlow">
+            <i class="fab fa-github" aria-hidden="true"></i>
+            <strong>Repository</strong>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="stargazersUrl"
+             rel="noopener">
+            <i class="fa fa-star" aria-hidden="true"></i>
+            <strong>Stars:</strong>
+            <span data-github-repo-info-target="stargazersCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="forksUrl"
+             rel="noopener">
+            <i class="fa fa-code-branch" aria-hidden="true"></i>
+            <strong>Forks:</strong>
+            <span data-github-repo-info-target="forksCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="openIssuesUrl"
+             rel="noopener">
+            <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+            <strong>Open issues:</strong>
+            <span data-github-repo-info-target="openIssuesCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="openPRsUrl"
+             rel="noopener">
+            <i class="fa fa-code-pull-request" aria-hidden="true"></i>
+            <strong>Open PRs:</strong>
+            <span data-github-repo-info-target="openPRsCount"></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <h6>Maintainers</h6>
+      <span class="sidebar-section__maintainer">
+        <a href="/user/rbeauchamp/"
+           aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="https://pypi-camo.freetls.fastly.net/6d644abf80dbf1937e29724d2a076f043b1ee68d/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f61376238336463633932613437623261633334353161626462623065366135643f73697a653d3530"
+                 height="50"
+                 width="50"
+                 alt="Avatar for rbeauchamp from gravatar.com"
+                 title="Avatar for rbeauchamp from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">rbeauchamp</span>
+        </a>
+      </span>
+</div>
+<div class="sidebar-section unverified">
+  <h3 class="sidebar-section__title">Unverified details</h3>
+  <small><i>These details have <b>not</b> been verified by PyPI</i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/The-Pocket/PocketFlow"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Inspiration</a>
+          </li>
+    </ul>
+    <div class="sidebar-section unverified">
+      <h6>Meta</h6>
+      <ul>
+          <li>
+            <span>
+              <strong>License Expression:</strong> MIT
+              <br>
+              <small>
+                <i>
+                  <a target="_blank" href="https://spdx.org/licenses/">SPDX</a>
+                  <a target="_blank"
+                     href="https://spdx.github.io/spdx-spec/v2-draft/SPDX-license-expressions/">License Expression</a>
+                </i>
+              </small>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Author:</strong> <a href="mailto:rbeauchamp@users.noreply.github.com">Richard Beauchamp</a>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Maintainer:</strong> ClearFlow Contributors
+            </span>
+          </li>
+          <li class="tags">
+            <span>
+              <i class="fa fa-tags" aria-hidden="true"></i>
+              <span class="sr-only">Tags</span>
+                <span class="package-keyword">
+                  agents
+,                </span>
+                <span class="package-keyword">
+                  ai-agents
+,                </span>
+                <span class="package-keyword">
+                  async
+,                </span>
+                <span class="package-keyword">
+                  language-models
+,                </span>
+                <span class="package-keyword">
+                  orchestration
+,                </span>
+                <span class="package-keyword">
+                  reliable
+,                </span>
+                <span class="package-keyword">
+                  type-safe
+,                </span>
+                <span class="package-keyword">
+                  zero-dependencies
+                </span>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Requires:</strong> Python &gt;=3.13
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Provides-Extra:</strong>
+                <code>dev</code>
+,                <code>examples</code>
+            </span>
+          </li>
+      </ul>
+    </div>
+    <div class="sidebar-section unverified">
+      <h6 class="sidebar-section__title">Classifiers</h6>
+      <ul class="sidebar-section__classifiers">
+          <li>
+            <strong>Development Status</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Development+Status+%3A%3A+4+-+Beta">
+                    4 - Beta
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Intended Audience</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Intended+Audience+%3A%3A+Developers">
+                    Developers
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>License</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=License+%3A%3A+OSI+Approved+%3A%3A+MIT+License">
+                    OSI Approved :: MIT License
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Operating System</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Operating+System+%3A%3A+OS+Independent">
+                    OS Independent
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Programming Language</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3">
+                    Python :: 3
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3.13">
+                    Python :: 3.13
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Topic</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Scientific%2FEngineering+%3A%3A+Artificial+Intelligence">
+                    Scientific/Engineering :: Artificial Intelligence
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Scientific%2FEngineering+%3A%3A+Information+Analysis">
+                    Scientific/Engineering :: Information Analysis
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Libraries+%3A%3A+Application+Frameworks">
+                    Software Development :: Libraries :: Application Frameworks
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Libraries+%3A%3A+Python+Modules">
+                    Software Development :: Libraries :: Python Modules
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Text+Processing+%3A%3A+Linguistic">
+                    Text Processing :: Linguistic
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Typing</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Typing+%3A%3A+Typed">
+                    Typed
+                  </a>
+                </li>
+            </ul>
+          </li>
+      </ul>
+    </div>
+</div>  <div class="sidebar-section"
+       data-ea-publisher="psf"
+       data-ea-type="psf"
+       data-ea-keywords="pypi-sidebar"></div>
+        <div class="sidebar-section">
+          <a class="button button--full-width button--warning"
+             href="https://pypi.org/project/clearflow/submit-malware-report/"
+             role="button">Report project as malware</a>
+        </div>
+      </div>
+      <div class="vertical-tabs__panel">
+        <!-- mobile menu -->
+        <nav aria-label="Navigation for clearflow">
+          <ul class="vertical-tabs__list" role="tablist">
+            <li role="tab">
+              <a id="mobile-description-tab"
+                 href="#description"
+                 data-project-tabs-target="mobileTab"
+                 data-action="project-tabs#onTabClick"
+                 class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile vertical-tabs__tab--no-top-border vertical-tabs__tab--is-active"
+                 aria-selected="true"
+                 aria-label="Project description. Focus will be moved to the description.">
+                <i class="fa fa-align-left" aria-hidden="true"></i>
+Project description              </a>
+            </li>
+            <li role="tab">
+              <a id="mobile-data-tab"
+                 href="#data"
+                 data-project-tabs-target="mobileTab"
+                 data-action="project-tabs#onTabClick"
+                 class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile"
+                 aria-label="Project details. Focus will be moved to the project details.">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+Project details              </a>
+            </li>
+            <li role="tab">
+              <a id="mobile-history-tab"
+                 href="#history"
+                 data-project-tabs-target="mobileTab"
+                 data-action="project-tabs#onTabClick"
+                 class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile"
+                 aria-label="Release history. Focus will be moved to the history panel.">
+                <i class="fa fa-history" aria-hidden="true"></i>
+Release history              </a>
+            </li>
+              <li role="tab">
+                <a id="mobile-files-tab"
+                   href="#files"
+                   data-project-tabs-target="mobileTab"
+                   data-action="project-tabs#onTabClick"
+                   class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile"
+                   aria-label="Download files. Focus will be moved to the project files.">
+                  <i class="fa fa-download" aria-hidden="true"></i>
+Download files                </a>
+              </li>
+          </ul>
+        </nav>
+        <div id="description"
+             data-project-tabs-target="content"
+             class="vertical-tabs__content"
+             role="tabpanel"
+             aria-labelledby="description-tab mobile-description-tab"
+             tabindex="-1">
+    <h2 class="page-title">Project description</h2>
+      <div class="project-description"><h1>ClearFlow</h1>
+<p><a href="https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/28b5ce4a397d91dcfc58c296f05633d98811957c/68747470733a2f2f636f766572616c6c732e696f2f7265706f732f6769746875622f6172746966696369616c2d73617069656e63652f436c656172466c6f772f62616467652e7376673f6272616e63683d6d61696e" alt="Coverage Status"></a>
+<a href="https://pypi.org/project/clearflow/" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/8b9a0c496a555d2babbb87aa52e05d0d8ee43b42/68747470733a2f2f62616467652e667572792e696f2f70792f636c656172666c6f772e737667" alt=PyPI></a>
+<a href="https://pepy.tech/projects/clearflow" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/408c6662e1c1aac7706a85699044274f7f2bfb86/68747470733a2f2f7374617469632e706570792e746563682f706572736f6e616c697a65642d62616467652f636c656172666c6f773f706572696f643d746f74616c26756e6974733d494e5445524e4154494f4e414c5f53595354454d266c6566745f636f6c6f723d424c41434b2672696768745f636f6c6f723d475245454e266c6566745f746578743d646f776e6c6f616473" alt="PyPI Downloads"></a>
+<a href="https://github.com/microsoft/pyright" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/d239fe8460c40e1acf1bf0a816710d5d47153c60/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f747970652d707972696768742d626c7565" alt="type: pyright"></a>
+<a href="https://github.com/astral-sh/ruff" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/7514d28188ac22939b8c251d96f44c9e33c327cc/68747470733a2f2f696d672e736869656c64732e696f2f656e64706f696e743f75726c3d68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f61737472616c2d73682f727566662f6d61696e2f6173736574732f62616467652f76322e6a736f6e" alt=Ruff></a>
+<img src="https://pypi-camo.freetls.fastly.net/4221cdcd35e2950e5b055140fb55783195e5d6ee/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f507974686f6e2d332e31332532422d626c7565" alt=Python>
+<img src="https://pypi-camo.freetls.fastly.net/a2a40f4ac4d3b2fd9d23621544b979885fb523c2/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4c6963656e73652d4d49542d79656c6c6f77" alt=License></p>
+<p>Type-safe orchestration for unpredictable AI.</p>
+<h2>Why ClearFlow?</h2>
+<ul>
+<li><strong>100% test coverage</strong> – Every path proven to work</li>
+<li><strong>Type-safe transformations</strong> – Errors caught at development time, not runtime</li>
+<li><strong>Immutable state</strong> – No hidden mutations</li>
+<li><strong>Zero dependencies</strong> – No hidden failure modes</li>
+<li><strong>Single exit enforcement</strong> – No ambiguous endings</li>
+</ul>
+<h2>Installation</h2>
+<pre lang=bash>pip<span class=w> </span>install<span class=w> </span>clearflow
+</pre>
+<blockquote>
+<p><strong>Upgrading from v0.x?</strong> See the <a href=MIGRATION.md rel=nofollow>Migration Guide</a> for breaking changes.</p>
+</blockquote>
+<h2>Examples</h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="examples/chat/" rel=nofollow>Chat</a></td>
+<td>Simple conversational flow with OpenAI</td>
+</tr>
+<tr>
+<td><a href="examples/portfolio_analysis/" rel=nofollow>Portfolio Analysis</a></td>
+<td>Multi-specialist workflow for financial analysis</td>
+</tr>
+<tr>
+<td><a href="examples/rag/" rel=nofollow>RAG</a></td>
+<td>Full retrieval-augmented generation with vector search</td>
+</tr>
+</tbody>
+</table>
+<h2>Core Concepts</h2>
+<h3><code>Node[TIn, TOut]</code></h3>
+<p>A unit that transforms state from <code>TIn</code> to <code>TOut</code> (or <code>Node[T]</code> when types are the same).</p>
+<ul>
+<li><code>prep(state: TIn) -&gt; TIn</code> – optional pre-work/validation</li>
+<li><code>exec(state: TIn) -&gt; NodeResult[TOut]</code> – <strong>required</strong>; return new state + outcome</li>
+<li><code>post(result: NodeResult[TOut]) -&gt; NodeResult[TOut]</code> – optional cleanup/logging</li>
+</ul>
+<p>Nodes are frozen dataclasses that execute async transformations without mutating input state.</p>
+<h3><code>NodeResult[T]</code></h3>
+<p>Holds the <strong>new state</strong> and an <strong>outcome</strong> string used for routing.</p>
+<h3><code>flow()</code></h3>
+<p>A function that creates a flow with <strong>explicit routing</strong>:</p>
+<pre lang=python3><span class=n>flow</span><span class=p>(</span><span class=s2>"Name"</span><span class=p>,</span> <span class=n>start_node</span><span class=p>)</span>
+  <span class=o>.</span><span class=n>route</span><span class=p>(</span><span class=n>start_node</span><span class=p>,</span> <span class=s2>"outcome1"</span><span class=p>,</span> <span class=n>next_node</span><span class=p>)</span>
+  <span class=o>.</span><span class=n>route</span><span class=p>(</span><span class=n>next_node</span><span class=p>,</span> <span class=s2>"outcome2"</span><span class=p>,</span> <span class=n>final_node</span><span class=p>)</span>
+  <span class=o>.</span><span class=n>end</span><span class=p>(</span><span class=n>final_node</span><span class=p>,</span> <span class=s2>"done"</span><span class=p>)</span>  <span class=c1># exactly one termination</span>
+</pre>
+<p><strong>Routing</strong>: Routes are <code>(node, outcome)</code> pairs. Each outcome must have exactly one route.<br>
+<strong>Type inference</strong>: The flow infers types from start to end, supporting transformations.<br>
+<strong>Composability</strong>: A flow is itself a <code>Node</code> – compose flows within flows.</p>
+<h2>ClearFlow vs PocketFlow</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>ClearFlow</th>
+<th>PocketFlow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>State</strong></td>
+<td>Immutable, passed via <code>NodeResult</code></td>
+<td>Mutable, passed via <code>shared</code> param</td>
+</tr>
+<tr>
+<td><strong>Routing</strong></td>
+<td>Outcome-based explicit routes</td>
+<td>Action-based graph edges</td>
+</tr>
+<tr>
+<td><strong>Termination</strong></td>
+<td>Exactly one exit enforced</td>
+<td>Multiple exits allowed</td>
+</tr>
+<tr>
+<td><strong>Type safety</strong></td>
+<td>Full Python 3.13+ generics</td>
+<td>Dynamic (no annotations)</td>
+</tr>
+</tbody>
+</table>
+<p>ClearFlow emphasizes <strong>robust, type-safe orchestration</strong> with validation and guardrails. PocketFlow emphasizes <strong>brevity and flexibility</strong> with minimal overhead.</p>
+<h2>Development</h2>
+<pre lang=bash><span class=c1># Install uv (if not already installed)</span>
+pipx<span class=w> </span>install<span class=w> </span>uv
+
+<span class=c1># Clone and set up development environment</span>
+git<span class=w> </span>clone<span class=w> </span>https://github.com/artificial-sapience/ClearFlow.git
+<span class=nb>cd</span><span class=w> </span>ClearFlow
+uv<span class=w> </span>sync<span class=w> </span>--all-extras<span class=w>     </span><span class=c1># Creates venv and installs deps automatically</span>
+./quality-check.sh<span class=w>       </span><span class=c1># Run all checks</span>
+</pre>
+<h2>License</h2>
+<p><a href=LICENSE rel=nofollow>MIT</a></p>
+<h2>Acknowledgments</h2>
+<p>Inspired by <a href="https://github.com/The-Pocket/PocketFlow" rel=nofollow>PocketFlow</a>'s Node-Flow-State pattern.</p>
+</div>
+  </div>
+  <div id="data"
+       data-project-tabs-target="content"
+       class="vertical-tabs__content"
+       role="tabpanel"
+       aria-labelledby="mobile-data-tab"
+       tabindex="-1">
+    <h2 class="page-title">Project details</h2>
+<div class="sidebar-section verified">
+  <h3 class="sidebar-section__title">
+Verified details    <i class="fa fa-circle-check check"
+       title="Verified by PyPI on 2025-09-06"></i>
+  </h3>
+  <small><i>These details have been <a href="https://docs.pypi.org/project_metadata/#verified-details">verified by PyPI</a></i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow/tree/main/examples"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Examples</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow"
+               rel="nofollow">  <i class="fas fa-home" aria-hidden="true"></i>Homepage</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow/issues"
+               rel="nofollow">  <i class="fas fa-bug" aria-hidden="true"></i>Issues</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow.git"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Repository</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/ClearFlow"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Source</a>
+          </li>
+    </ul>
+    <h6>GitHub Statistics</h6>
+    <div class="hidden github-repo-info" data-controller="github-repo-info">
+      <ul class="vertical-tabs__list">
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             rel="noopener"
+             href="https://github.com/artificial-sapience/ClearFlow">
+            <i class="fab fa-github" aria-hidden="true"></i>
+            <strong>Repository</strong>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="stargazersUrl"
+             rel="noopener">
+            <i class="fa fa-star" aria-hidden="true"></i>
+            <strong>Stars:</strong>
+            <span data-github-repo-info-target="stargazersCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="forksUrl"
+             rel="noopener">
+            <i class="fa fa-code-branch" aria-hidden="true"></i>
+            <strong>Forks:</strong>
+            <span data-github-repo-info-target="forksCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="openIssuesUrl"
+             rel="noopener">
+            <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+            <strong>Open issues:</strong>
+            <span data-github-repo-info-target="openIssuesCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="openPRsUrl"
+             rel="noopener">
+            <i class="fa fa-code-pull-request" aria-hidden="true"></i>
+            <strong>Open PRs:</strong>
+            <span data-github-repo-info-target="openPRsCount"></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <h6>Maintainers</h6>
+      <span class="sidebar-section__maintainer">
+        <a href="/user/rbeauchamp/"
+           aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="https://pypi-camo.freetls.fastly.net/6d644abf80dbf1937e29724d2a076f043b1ee68d/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f61376238336463633932613437623261633334353161626462623065366135643f73697a653d3530"
+                 height="50"
+                 width="50"
+                 alt="Avatar for rbeauchamp from gravatar.com"
+                 title="Avatar for rbeauchamp from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">rbeauchamp</span>
+        </a>
+      </span>
+</div>
+<div class="sidebar-section unverified">
+  <h3 class="sidebar-section__title">Unverified details</h3>
+  <small><i>These details have <b>not</b> been verified by PyPI</i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/The-Pocket/PocketFlow"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Inspiration</a>
+          </li>
+    </ul>
+    <div class="sidebar-section unverified">
+      <h6>Meta</h6>
+      <ul>
+          <li>
+            <span>
+              <strong>License Expression:</strong> MIT
+              <br>
+              <small>
+                <i>
+                  <a target="_blank" href="https://spdx.org/licenses/">SPDX</a>
+                  <a target="_blank"
+                     href="https://spdx.github.io/spdx-spec/v2-draft/SPDX-license-expressions/">License Expression</a>
+                </i>
+              </small>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Author:</strong> <a href="mailto:rbeauchamp@users.noreply.github.com">Richard Beauchamp</a>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Maintainer:</strong> ClearFlow Contributors
+            </span>
+          </li>
+          <li class="tags">
+            <span>
+              <i class="fa fa-tags" aria-hidden="true"></i>
+              <span class="sr-only">Tags</span>
+                <span class="package-keyword">
+                  agents
+,                </span>
+                <span class="package-keyword">
+                  ai-agents
+,                </span>
+                <span class="package-keyword">
+                  async
+,                </span>
+                <span class="package-keyword">
+                  language-models
+,                </span>
+                <span class="package-keyword">
+                  orchestration
+,                </span>
+                <span class="package-keyword">
+                  reliable
+,                </span>
+                <span class="package-keyword">
+                  type-safe
+,                </span>
+                <span class="package-keyword">
+                  zero-dependencies
+                </span>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Requires:</strong> Python &gt;=3.13
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Provides-Extra:</strong>
+                <code>dev</code>
+,                <code>examples</code>
+            </span>
+          </li>
+      </ul>
+    </div>
+    <div class="sidebar-section unverified">
+      <h6 class="sidebar-section__title">Classifiers</h6>
+      <ul class="sidebar-section__classifiers">
+          <li>
+            <strong>Development Status</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Development+Status+%3A%3A+4+-+Beta">
+                    4 - Beta
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Intended Audience</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Intended+Audience+%3A%3A+Developers">
+                    Developers
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>License</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=License+%3A%3A+OSI+Approved+%3A%3A+MIT+License">
+                    OSI Approved :: MIT License
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Operating System</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Operating+System+%3A%3A+OS+Independent">
+                    OS Independent
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Programming Language</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3">
+                    Python :: 3
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3.13">
+                    Python :: 3.13
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Topic</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Scientific%2FEngineering+%3A%3A+Artificial+Intelligence">
+                    Scientific/Engineering :: Artificial Intelligence
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Scientific%2FEngineering+%3A%3A+Information+Analysis">
+                    Scientific/Engineering :: Information Analysis
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Libraries+%3A%3A+Application+Frameworks">
+                    Software Development :: Libraries :: Application Frameworks
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Libraries+%3A%3A+Python+Modules">
+                    Software Development :: Libraries :: Python Modules
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Text+Processing+%3A%3A+Linguistic">
+                    Text Processing :: Linguistic
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Typing</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Typing+%3A%3A+Typed">
+                    Typed
+                  </a>
+                </li>
+            </ul>
+          </li>
+      </ul>
+    </div>
+</div>    <br>
+  </div>
+  <div id="history"
+       data-project-tabs-target="content"
+       class="vertical-tabs__content"
+       role="tabpanel"
+       aria-labelledby="history-tab mobile-history-tab"
+       tabindex="-1">
+    <h2 class="page-title split-layout">
+      <span>Release history</span>
+      <span class="reset-text margin-top">
+        <a href="/help/#project-release-notifications">Release notifications</a> |
+        <a href="/rss/project/clearflow/releases.xml">RSS feed <i class="fa fa-rss" aria-hidden="true"></i></a>
+      </span>
+    </h2>
+    <div class="release-timeline">
+        <div class="release release--latest release--current">
+          <div class="release__meta">
+              <span class="badge">This version</span>
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/blue-cube.572a5bfb.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/1.0.0/">
+            <p class="release__version">
+              1.0.0
+            </p>
+            <p class="release__version-date"><time datetime="2025-09-06T20:11:38+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 6, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.6/">
+            <p class="release__version">
+              0.0.6
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-16T22:44:36+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 16, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.5/">
+            <p class="release__version">
+              0.0.5
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-16T21:42:19+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 16, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.4/">
+            <p class="release__version">
+              0.0.4
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-15T14:18:17+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 15, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.3/">
+            <p class="release__version">
+              0.0.3
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-07T14:49:15+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 7, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.2/">
+            <p class="release__version">
+              0.0.2
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-07T14:42:28+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 7, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release release--oldest">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.1/">
+            <p class="release__version">
+              0.0.1
+                <span class="badge badge--danger">yanked</span>
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-07T13:36:48+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 7, 2025
+  </time></p>
+              <div class="callout-block callout-block--danger release__yanked-reason">
+                <p>Reason this release was yanked:</p>
+                <p>documentation was incorrect</p>
+              </div>
+          </a>
+        </div>
+    </div>
+  </div>
+    <div id="files"
+         data-project-tabs-target="content"
+         class="vertical-tabs__content"
+         role="tabpanel"
+         aria-labelledby="files-tab mobile-files-tab"
+         tabindex="-1">
+      <h2 class="page-title">Download files</h2>
+      <p>
+Download the file for your platform. If you're not sure which to choose, learn more about <a href="https://packaging.python.org/tutorials/installing-packages/" title="External link" target="_blank" rel="noopener">installing packages</a>.      </p>
+      <h3>
+Source Distribution    </h3>
+          <div class="file">
+      <div class="file__graphic">
+        <i class="far fa-file" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+        <a href="https://files.pythonhosted.org/packages/2d/96/47281e6943ac1b4c5d4cb0837a49effde96a4e5e25f59eb7e41795db9791/clearflow-1.0.0.tar.gz">clearflow-1.0.0.tar.gz</a>
+        (55.2 kB
+        <a href="#clearflow-1.0.0.tar.gz"
+           data-project-tabs-target="tab"
+           data-action="project-tabs#onTabClick">view details</a>)
+        <p class="file__meta">
+          Uploaded <time datetime="2025-09-06T20:11:40+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 6, 2025
+  </time>
+<code>Source</code>        </p>
+      </div>
+    </div>
+
+      <h3>
+Built Distribution    </h3>
+        <div class="file">
+      <div class="file__graphic">
+        <i class="far fa-file" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+        <a href="https://files.pythonhosted.org/packages/c3/cf/a78145a26e169919a4383366f5d333a1cef9d6058ccd6d031942444c0a5b/clearflow-1.0.0-py3-none-any.whl">clearflow-1.0.0-py3-none-any.whl</a>
+        (7.3 kB
+        <a href="#clearflow-1.0.0-py3-none-any.whl"
+           data-project-tabs-target="tab"
+           data-action="project-tabs#onTabClick">view details</a>)
+        <p class="file__meta">
+          Uploaded <time datetime="2025-09-06T20:11:38+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 6, 2025
+  </time>
+<code>Python 3</code>        </p>
+      </div>
+    </div>
+
+</div>
+<div id="clearflow-1.0.0.tar.gz"
+     data-project-tabs-target="content"
+     class="vertical-tabs__content"
+     role="tabpanel"
+     aria-labelledby="file-tab mobile-file-tab"
+     tabindex="-1">
+  <h2 class="page-title">File details</h2>
+  <p>
+    Details for the file <code>clearflow-1.0.0.tar.gz</code>.
+  </p>
+  <h3>File metadata</h3>
+  <div>
+    <ul>
+      <li>
+        Download URL: <a href="https://files.pythonhosted.org/packages/2d/96/47281e6943ac1b4c5d4cb0837a49effde96a4e5e25f59eb7e41795db9791/clearflow-1.0.0.tar.gz">clearflow-1.0.0.tar.gz</a>
+      </li>
+      <li>Upload date: <time datetime="2025-09-06T20:11:40+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 6, 2025
+  </time></li>
+      <li>
+Size: 55.2 kB      </li>
+      <li>Tags: Source</li>
+      <li>
+Uploaded using Trusted Publishing? Yes    </li>
+      <li>Uploaded via: twine/6.1.0 CPython/3.13.7</li>
+  </ul>
+</div>
+<h3>File hashes</h3>
+<div>
+  <table class="table table--hashes">
+    <caption class="sr-only">Hashes for clearflow-1.0.0.tar.gz</caption>
+    <thead>
+      <tr>
+        <th scope="col">Algorithm</th>
+        <th scope="col">Hash digest</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-controller="clipboard">
+        <th scope="row">SHA256</th>
+        <td>
+          <code data-clipboard-target="source">c70286fd4adb58f0af354a4acfa2fb4b9c92e702eb1e86a6b0ed94ef3a98d107</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">MD5</th>
+        <td>
+          <code data-clipboard-target="source">472d22986be059a6b4166d09c5bc92d2</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">BLAKE2b-256</th>
+        <td>
+          <code data-clipboard-target="source">2d9647281e6943ac1b4c5d4cb0837a49effde96a4e5e25f59eb7e41795db9791</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+<a href="https://pip.pypa.io/en/stable/topics/secure-installs/#hash-checking-mode" title="External link" target="_blank" rel="noopener">See more details on using hashes here.</a></p>
+</div>
+  <h3>Provenance</h3>
+  <p>
+    The following attestation bundles were made for <code>clearflow-1.0.0.tar.gz</code>:
+  </p>
+    <div class="file">
+      <div class="file__graphic">
+        <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+            <p>
+      Publisher: <a href="https://github.com/artificial-sapience/ClearFlow/blob/HEAD/.github/workflows/release.yml">
+      <i class="fa-brands fa-github" aria-hidden="true"></i>
+      <code>release.yml</code> on artificial-sapience/ClearFlow
+    </a>
+  </p>
+
+        Attestations:
+        <small>
+          <i>Values shown here reflect the state when the release was signed and may no longer be current.</i>
+        </small>
+        <ul>
+            <li>
+              Statement:
+              <ul>
+                <li>
+                  Statement type: <a href="https://in-toto.io/Statement/v1"><code>https://in-toto.io/Statement/v1</code></a>
+                </li>
+                <li>
+                  Predicate type: <a href="https://docs.pypi.org/attestations/publish/v1"><code>https://docs.pypi.org/attestations/publish/v1</code></a>
+                </li>
+                <li>
+                  Subject name: <code>clearflow-1.0.0.tar.gz</code>
+                </li>
+                <li>
+                  Subject digest: <code>c70286fd4adb58f0af354a4acfa2fb4b9c92e702eb1e86a6b0ed94ef3a98d107</code>
+                </li>
+                <li>
+                  Sigstore transparency entry: <a href="https://search.sigstore.dev/?logIndex=480356620">480356620</a>
+                </li>
+                <li>Sigstore integration time: <time datetime="2025-09-06T20:11:37+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="true">
+    Sep 6, 2025
+  </time></li>
+              </ul>
+                Source repository:
+                <ul>
+                  <li>
+                    Permalink: <a href="https://github.com/artificial-sapience/ClearFlow/tree/8924659a8f5accb0747bf1c77f5db23c57a37d59">
+                    <code>artificial-sapience/ClearFlow@8924659a8f5accb0747bf1c77f5db23c57a37d59</code>
+                  </a>
+                </li>
+                <li>
+                  Branch / Tag: <a href="https://github.com/artificial-sapience/ClearFlow/tree/refs/heads/main">
+                  <code>refs/heads/main</code>
+                </a>
+              </li>
+              <li>
+                Owner: <a href="https://github.com/artificial-sapience">https://github.com/artificial-sapience</a>
+              </li>
+              <li>
+                Access: <code>public</code>
+              </li>
+            </ul>
+          Publication detail:
+          <ul>
+            <li>
+              Token Issuer: <code>https://token.actions.githubusercontent.com</code>
+            </li>
+              <li>
+                Runner Environment: <code>github-hosted</code>
+              </li>
+              <li>
+                Publication workflow:
+                <a href="https://github.com/artificial-sapience/ClearFlow/blob/8924659a8f5accb0747bf1c77f5db23c57a37d59/.github/workflows/release.yml">
+                  <code>release.yml@8924659a8f5accb0747bf1c77f5db23c57a37d59</code>
+                </a>
+              </li>
+              <li>
+                Trigger Event: <code>workflow_dispatch</code>
+              </li>
+          </ul>
+        </li>
+    </ul>
+  </div>
+</div>
+</div><div id="clearflow-1.0.0-py3-none-any.whl"
+     data-project-tabs-target="content"
+     class="vertical-tabs__content"
+     role="tabpanel"
+     aria-labelledby="file-tab mobile-file-tab"
+     tabindex="-1">
+  <h2 class="page-title">File details</h2>
+  <p>
+    Details for the file <code>clearflow-1.0.0-py3-none-any.whl</code>.
+  </p>
+  <h3>File metadata</h3>
+  <div>
+    <ul>
+      <li>
+        Download URL: <a href="https://files.pythonhosted.org/packages/c3/cf/a78145a26e169919a4383366f5d333a1cef9d6058ccd6d031942444c0a5b/clearflow-1.0.0-py3-none-any.whl">clearflow-1.0.0-py3-none-any.whl</a>
+      </li>
+      <li>Upload date: <time datetime="2025-09-06T20:11:38+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 6, 2025
+  </time></li>
+      <li>
+Size: 7.3 kB      </li>
+      <li>Tags: Python 3</li>
+      <li>
+Uploaded using Trusted Publishing? Yes    </li>
+      <li>Uploaded via: twine/6.1.0 CPython/3.13.7</li>
+  </ul>
+</div>
+<h3>File hashes</h3>
+<div>
+  <table class="table table--hashes">
+    <caption class="sr-only">Hashes for clearflow-1.0.0-py3-none-any.whl</caption>
+    <thead>
+      <tr>
+        <th scope="col">Algorithm</th>
+        <th scope="col">Hash digest</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-controller="clipboard">
+        <th scope="row">SHA256</th>
+        <td>
+          <code data-clipboard-target="source">8074aca09d1fa84ef9350200aef8fbc4aa5613b069ed9406a6f95903888bfded</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">MD5</th>
+        <td>
+          <code data-clipboard-target="source">47a3318934c06fad5129261b0b09dea0</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">BLAKE2b-256</th>
+        <td>
+          <code data-clipboard-target="source">c3cfa78145a26e169919a4383366f5d333a1cef9d6058ccd6d031942444c0a5b</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+<a href="https://pip.pypa.io/en/stable/topics/secure-installs/#hash-checking-mode" title="External link" target="_blank" rel="noopener">See more details on using hashes here.</a></p>
+</div>
+  <h3>Provenance</h3>
+  <p>
+    The following attestation bundles were made for <code>clearflow-1.0.0-py3-none-any.whl</code>:
+  </p>
+    <div class="file">
+      <div class="file__graphic">
+        <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+            <p>
+      Publisher: <a href="https://github.com/artificial-sapience/ClearFlow/blob/HEAD/.github/workflows/release.yml">
+      <i class="fa-brands fa-github" aria-hidden="true"></i>
+      <code>release.yml</code> on artificial-sapience/ClearFlow
+    </a>
+  </p>
+
+        Attestations:
+        <small>
+          <i>Values shown here reflect the state when the release was signed and may no longer be current.</i>
+        </small>
+        <ul>
+            <li>
+              Statement:
+              <ul>
+                <li>
+                  Statement type: <a href="https://in-toto.io/Statement/v1"><code>https://in-toto.io/Statement/v1</code></a>
+                </li>
+                <li>
+                  Predicate type: <a href="https://docs.pypi.org/attestations/publish/v1"><code>https://docs.pypi.org/attestations/publish/v1</code></a>
+                </li>
+                <li>
+                  Subject name: <code>clearflow-1.0.0-py3-none-any.whl</code>
+                </li>
+                <li>
+                  Subject digest: <code>8074aca09d1fa84ef9350200aef8fbc4aa5613b069ed9406a6f95903888bfded</code>
+                </li>
+                <li>
+                  Sigstore transparency entry: <a href="https://search.sigstore.dev/?logIndex=480356639">480356639</a>
+                </li>
+                <li>Sigstore integration time: <time datetime="2025-09-06T20:11:37+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="true">
+    Sep 6, 2025
+  </time></li>
+              </ul>
+                Source repository:
+                <ul>
+                  <li>
+                    Permalink: <a href="https://github.com/artificial-sapience/ClearFlow/tree/8924659a8f5accb0747bf1c77f5db23c57a37d59">
+                    <code>artificial-sapience/ClearFlow@8924659a8f5accb0747bf1c77f5db23c57a37d59</code>
+                  </a>
+                </li>
+                <li>
+                  Branch / Tag: <a href="https://github.com/artificial-sapience/ClearFlow/tree/refs/heads/main">
+                  <code>refs/heads/main</code>
+                </a>
+              </li>
+              <li>
+                Owner: <a href="https://github.com/artificial-sapience">https://github.com/artificial-sapience</a>
+              </li>
+              <li>
+                Access: <code>public</code>
+              </li>
+            </ul>
+          Publication detail:
+          <ul>
+            <li>
+              Token Issuer: <code>https://token.actions.githubusercontent.com</code>
+            </li>
+              <li>
+                Runner Environment: <code>github-hosted</code>
+              </li>
+              <li>
+                Publication workflow:
+                <a href="https://github.com/artificial-sapience/ClearFlow/blob/8924659a8f5accb0747bf1c77f5db23c57a37d59/.github/workflows/release.yml">
+                  <code>release.yml@8924659a8f5accb0747bf1c77f5db23c57a37d59</code>
+                </a>
+              </li>
+              <li>
+                Trigger Event: <code>workflow_dispatch</code>
+              </li>
+          </ul>
+        </li>
+    </ul>
+  </div>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+</main>
+<footer class="footer">
+  <div class="footer__logo">
+    <img src="/static/images/white-cube.2351a86c.svg"
+         alt=""
+         class="-js-white-cube">
+  </div>
+  <div class="footer__menus">
+    <div class="footer__menu">
+      <h2>Help</h2>
+      <nav aria-label="Help navigation">
+        <ul>
+          <li>
+            <a href="https://packaging.python.org/tutorials/installing-packages/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Installing packages</a>
+          </li>
+          <li>
+            <a href="https://packaging.python.org/tutorials/packaging-projects/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Uploading packages</a>
+          </li>
+          <li>
+            <a href="https://packaging.python.org/"
+               title="External link"
+               target="_blank"
+               rel="noopener">User guide</a>
+          </li>
+          <li>
+            <a href="https://www.python.org/dev/peps/pep-0541/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Project name retention</a>
+          </li>
+          <li>
+            <a href="/help/">FAQs</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>About PyPI</h2>
+      <nav aria-label="About PyPI navigation">
+        <ul>
+          <li>
+            <a href="https://blog.pypi.org"
+               title="External link"
+               target="_blank"
+               rel="noopener">PyPI Blog</a>
+          </li>
+          <li>
+            <a href="https://dtdg.co/pypi"
+               title="External link"
+               target="_blank"
+               rel="noopener">Infrastructure dashboard</a>
+          </li>
+          <li>
+            <a href="/stats/">Statistics</a>
+          </li>
+          <li>
+            <a href="/trademarks/">Logos & trademarks</a>
+          </li>
+          <li>
+            <a href="/sponsors/">Our sponsors</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>Contributing to PyPI</h2>
+      <nav aria-label="How to contribute navigation">
+        <ul>
+          <li>
+            <a href="/help/#feedback">Bugs and feedback</a>
+          </li>
+          <li>
+            <a href="https://github.com/pypi/warehouse"
+               title="External link"
+               target="_blank"
+               rel="noopener">Contribute on GitHub</a>
+          </li>
+          <li>
+            <a href="https://hosted.weblate.org/projects/pypa/warehouse/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Translate PyPI</a>
+          </li>
+          <li>
+            <a href="/sponsors/">Sponsor PyPI</a>
+          </li>
+          <li>
+            <a href="https://github.com/pypi/warehouse/graphs/contributors"
+               title="External link"
+               target="_blank"
+               rel="noopener">Development credits</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>Using PyPI</h2>
+      <nav aria-label="Using PyPI navigation">
+        <ul>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Terms-of-Service/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Terms of Service</a>
+          </li>
+          <li>
+            <a href="/security/">Report security issue</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/python.org/code-of-conduct/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Code of conduct</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Privacy-Notice/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Privacy Notice</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Acceptable-Use-Policy/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Acceptable Use Policy</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+  <hr class="footer__divider">
+  <div class="footer__text">
+      <p>
+Status:<a href="https://status.python.org/"
+   title="External link"
+   target="_blank"
+   rel="noopener">
+        <span data-statuspage-domain="https://2p66nmmycsj3.statuspage.io">all systems operational</span></a>
+    </p>
+  <p>
+Developed and maintained by the Python community, for the Python community.    <br>
+    <a href="https://donate.pypi.org">Donate today!</a>
+  </p>
+  <p>
+    "PyPI", "Python Package Index", and the blocks logos are registered <a href="/trademarks/">trademarks</a> of the <a href="https://www.python.org/psf-landing" target="_blank" rel="noopener">Python Software Foundation</a>.
+    <br>
+  </p>
+  <p>
+    © 2025 <a href="https://www.python.org/psf-landing/"
+    title="External link"
+    target="_blank"
+    rel="noopener">Python Software Foundation</a>
+    <br>
+    <a href="/sitemap/">Site map</a>
+  </p>
+</div>
+<div class="centered hide-on-desktop">
+  <button type="button"
+          class="button button--switch-to-desktop hidden"
+          data-viewport-toggle-target="switchToDesktop"
+          data-action="viewport-toggle#switchToDesktop">Switch to desktop version</button>
+</div>
+</footer>
+<div class="language-switcher">
+  <form action="/locale/">
+    <ul>
+        <li>
+          <button class="language-switcher__selected"                  name="locale_id"
+                  value="en"
+                  type="submit">English</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="es"
+                  type="submit">español</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="fr"
+                  type="submit">français</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="ja"
+                  type="submit">日本語</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="pt_BR"
+                  type="submit">português (Brasil)</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="uk"
+                  type="submit">українська</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="el"
+                  type="submit">Ελληνικά</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="de"
+                  type="submit">Deutsch</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="zh_Hans"
+                  type="submit">中文 (简体)</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="zh_Hant"
+                  type="submit">中文 (繁體)</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="ru"
+                  type="submit">русский</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="he"
+                  type="submit">עברית</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="eo"
+                  type="submit">Esperanto</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="ko"
+                  type="submit">한국어</button>
+        </li>
+    </ul>
+  </form>
+</div>
+<div class="sponsors">
+  <p class="sponsors__title">Supported by</p>
+  <div class="sponsors__divider"></div>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://aws.amazon.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/ed7074cadad1a06f56bc520ad9bd3e00d0704c5b/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f6177732d77686974652d6c6f676f2d7443615473387a432e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">AWS</span>
+          <span class="sponsors__service">
+              Cloud computing and Security Sponsor
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://www.datadoghq.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/8855f7c063a3bdb5b0ce8d91bfc50cf851cc5c51/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f64617461646f672d77686974652d6c6f676f2d6668644c4e666c6f2e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Datadog</span>
+          <span class="sponsors__service">
+              Monitoring
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://www.fastly.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/df6fe8829cbff2d7f668d98571df1fd011f36192/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f666173746c792d77686974652d6c6f676f2d65684d3077735f6f2e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Fastly</span>
+          <span class="sponsors__service">
+              CDN
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://careers.google.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/420cc8cf360bac879e24c923b2f50ba7d1314fb0/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f676f6f676c652d77686974652d6c6f676f2d616734424e3774332e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Google</span>
+          <span class="sponsors__service">
+              Download Analytics
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://www.pingdom.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/d01053c02f3a626b73ffcb06b96367fdbbf9e230/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f70696e67646f6d2d77686974652d6c6f676f2d67355831547546362e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Pingdom</span>
+          <span class="sponsors__service">
+              Monitoring
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://getsentry.com/for/python">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/67af7117035e2345bacb5a82e9aa8b5b3e70701d/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f73656e7472792d77686974652d6c6f676f2d4a2d6b64742d706e2e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Sentry</span>
+          <span class="sponsors__service">
+              Error logging
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://statuspage.io">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/b611884ff90435a0575dbab7d9b0d3e60f136466/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f737461747573706167652d77686974652d6c6f676f2d5467476c6a4a2d502e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">StatusPage</span>
+          <span class="sponsors__service">
+              Status page
+          </span>
+        </a>
+</div></body>
+</html></doc></quick start><documentation><doc title="README" desc="Complete overview and quickstart guide"># ClearFlow
+
+[![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
+[![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
+[![type: pyright](https://img.shields.io/badge/type-pyright-blue)](https://github.com/microsoft/pyright)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+Type-safe orchestration for unpredictable AI.
+
+## Why ClearFlow?
+
+- **100% test coverage** – Every path proven to work
+- **Type-safe transformations** – Errors caught at development time, not runtime
+- **Immutable state** – No hidden mutations
+- **Zero dependencies** – No hidden failure modes
+- **Single exit enforcement** – No ambiguous endings
+
+## Installation
+
+```bash
+pip install clearflow
+```
+
+> **Upgrading from v0.x?** See the [Migration Guide](MIGRATION.md) for breaking changes.
+
+## Examples
+
+| Name | Description |
+|------|-------------|
+| [Chat](examples/chat/) | Simple conversational flow with OpenAI |
+| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-specialist workflow for financial analysis |
+| [RAG](examples/rag/) | Full retrieval-augmented generation with vector search |
+
+## Core Concepts
+
+### `Node[TIn, TOut]`
+
+A unit that transforms state from `TIn` to `TOut` (or `Node[T]` when types are the same).
+
+- `prep(state: TIn) -> TIn` – optional pre-work/validation  
+- `exec(state: TIn) -> NodeResult[TOut]` – **required**; return new state + outcome  
+- `post(result: NodeResult[TOut]) -> NodeResult[TOut]` – optional cleanup/logging  
+
+Nodes are frozen dataclasses that execute async transformations without mutating input state.
+
+### `NodeResult[T]`
+
+Holds the **new state** and an **outcome** string used for routing.
+
+### `flow()`
+
+A function that creates a flow with **explicit routing**:
+
+```python
+flow("Name", start_node)
+  .route(start_node, "outcome1", next_node)
+  .route(next_node, "outcome2", final_node)
+  .end(final_node, "done")  # exactly one termination
+```
+
+**Routing**: Routes are `(node, outcome)` pairs. Each outcome must have exactly one route.  
+**Type inference**: The flow infers types from start to end, supporting transformations.  
+**Composability**: A flow is itself a `Node` – compose flows within flows.
+
+## ClearFlow vs PocketFlow
+
+| Aspect | ClearFlow | PocketFlow |
+|--------|-----------|------------|
+| **State** | Immutable, passed via `NodeResult` | Mutable, passed via `shared` param |
+| **Routing** | Outcome-based explicit routes | Action-based graph edges |
+| **Termination** | Exactly one exit enforced | Multiple exits allowed |
+| **Type safety** | Full Python 3.13+ generics | Dynamic (no annotations) |
+
+ClearFlow emphasizes **robust, type-safe orchestration** with validation and guardrails. PocketFlow emphasizes **brevity and flexibility** with minimal overhead.
+
+## Development
+
+```bash
+# Install uv (if not already installed)
+pipx install uv
+
+# Clone and set up development environment
+git clone https://github.com/artificial-sapience/ClearFlow.git
+cd ClearFlow
+uv sync --all-extras     # Creates venv and installs deps automatically
+./quality-check.sh       # Run all checks
+```
+
+## License
+
+[MIT](LICENSE)
+
+## Acknowledgments
+
+Inspired by [PocketFlow](https://github.com/The-Pocket/PocketFlow)'s Node-Flow-State pattern.</doc><doc title="Core API" desc="Complete implementation - Node, NodeResult, Flow, and exceptions in a single module">"""ClearFlow: Zero-dependency async workflow orchestration framework.
+
+Provides type-safe workflow composition with explicit routing and single termination.
+Built for mission-critical AI orchestration.
+"""
+
+from abc import ABC, abstractmethod
+from collections.abc import Mapping
+from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Protocol, cast, final, override
+
+__all__ = [
+    "Node",
+    "NodeResult",
+    "flow",
+]
+
+RouteKey = tuple[str, str]  # (node_name, outcome)
+
+
+class NodeBase(Protocol):
+    """Non-generic base protocol for all nodes.
+
+    Provides the common interface without type parameters,
+    allowing heterogeneous collections of nodes.
+    """
+
+    name: str
+
+    async def __call__(
+        self,
+        state: object,  # clearflow: ignore[ARCH009]  # Type erasure needed for heterogeneous collections
+    ) -> "NodeResult[object]":  # clearflow: ignore[ARCH009]  # Type erasure needed for heterogeneous collections
+        """Execute the node with any state type."""
+        ...
+
+
+@final
+@dataclass(frozen=True)
+class NodeResult[T]:
+    """Result of node execution.
+
+    Attributes:
+        state: The transformed state from node execution.
+        outcome: The routing outcome determining next node.
+
+    """
+
+    state: T
+    outcome: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class Node[TIn, TOut = TIn](ABC, NodeBase):
+    """Abstract base for workflow nodes.
+
+    Subclass and implement async exec() to process state and return outcomes for routing.
+    Supports optional prep() and post() hooks for setup and cleanup.
+
+    Type parameters:
+        TIn: Input state type
+        TOut: Output state type (defaults to TIn for non-transforming nodes)
+
+    """
+
+    name: str
+
+    def __post_init__(self) -> None:
+        """Validate node configuration after initialization.
+
+        Raises:
+            ValueError: If node name is empty or contains only whitespace.
+
+        """
+        if not self.name or not self.name.strip():
+            msg = f"Node name must be a non-empty string, got: {self.name!r}"
+            raise ValueError(msg)
+
+    @override
+    async def __call__(self, state: TIn) -> NodeResult[TOut]:  # pyright: ignore[reportIncompatibleMethodOverride]  # NodeBase uses object for type erasure but Node preserves type safety
+        """Execute node lifecycle.
+
+        Returns:
+            NodeResult containing transformed state and routing outcome.
+
+        """
+        state = await self.prep(state)
+        result = await self.exec(state)
+        return await self.post(result)
+
+    async def prep(self, state: TIn) -> TIn:  # noqa: PLR6301  # Template method hook for subclasses
+        """Pre-execution hook.
+
+        Returns:
+            State passed through unchanged by default.
+
+        """
+        return state
+
+    @abstractmethod
+    async def exec(self, state: TIn) -> NodeResult[TOut]:
+        """Execute main node logic - must be implemented by subclasses."""
+        ...
+
+    async def post(self, result: NodeResult[TOut]) -> NodeResult[TOut]:  # noqa: PLR6301  # Template method hook for subclasses
+        """Post-execution hook.
+
+        Returns:
+            Result passed through unchanged by default.
+
+        """
+        return result
+
+
+@final
+@dataclass(frozen=True, kw_only=True)
+class _Flow[TStartIn, TEndOut = TStartIn](Node[TStartIn, TEndOut]):
+    """Internal flow implementation that transforms TStartIn to TEndOut.
+
+    Implementation note: We use 'object' for node types internally because
+    Python's type system cannot track types through runtime-determined paths.
+    Type safety is maintained at the public API boundaries - exec() guarantees
+    TStartIn→TEndOut transformation through construction-time validation.
+    """
+
+    start: NodeBase
+    routes: Mapping[RouteKey, NodeBase | None]
+
+    @override
+    async def exec(self, state: TStartIn) -> NodeResult[TEndOut]:
+        """Execute the flow by routing through nodes based on outcomes.
+
+        Returns:
+            Final node result containing transformed state and None outcome.
+
+        Raises:
+            ValueError: If no route is defined for an outcome from a node.
+
+        """
+        current_node = self.start
+        current_state: object = state  # clearflow: ignore[ARCH009]  # Type erasure needed for dynamic routing
+
+        while True:
+            # Execute node
+            result = await current_node(current_state)
+            key = (current_node.name, result.outcome)
+
+            # Raise error if no route defined - all outcomes must be explicitly handled
+            if key not in self.routes:
+                msg = f"No route defined for outcome '{result.outcome}' from node '{current_node.name}'"
+                raise ValueError(msg)
+
+            # Check next node
+            next_node = self.routes[key]
+            if next_node is None:
+                return cast("NodeResult[TEndOut]", result)
+
+            # Continue
+            current_node = next_node
+            current_state = result.state
+
+
+@final
+@dataclass(frozen=True, kw_only=True)
+class _FlowBuilder[TStartIn, TStartOut]:
+    """Flow builder for composing node routes.
+
+    Type parameters:
+        TStartIn: The input type the flow accepts (from start node)
+        TStartOut: The output type of the start node
+
+    Call end() to specify where the flow ends and get the completed flow.
+    """
+
+    _name: str
+    _start: Node[TStartIn, TStartOut]
+    _routes: MappingProxyType[RouteKey, NodeBase | None]
+    _reachable: frozenset[str]  # Node names that are reachable from start
+
+    def _validate_and_create_route(
+        self, from_node: NodeBase, outcome: str, *, is_termination: bool = False
+    ) -> RouteKey:
+        """Validate that a route can be added from the given node.
+
+        Args:
+            from_node: The node to route from
+            outcome: The outcome that triggers this route
+            is_termination: Whether this is a termination route
+
+        Returns:
+            The route key for this route
+
+        Raises:
+            ValueError: If from_node is not reachable or route already exists
+
+        """
+        # Check reachability
+        if from_node.name not in self._reachable:
+            action = "end at" if is_termination else "route from"
+            msg = f"Cannot {action} '{from_node.name}' - not reachable from start"
+            raise ValueError(msg)
+
+        # Check for duplicate routes
+        route_key: RouteKey = (from_node.name, outcome)
+        if route_key in self._routes:
+            msg = f"Route already defined for outcome '{outcome}' from node '{from_node.name}'"
+            raise ValueError(msg)
+
+        return route_key
+
+    def route(
+        self,
+        from_node: NodeBase,
+        outcome: str,
+        to_node: NodeBase,
+    ) -> "_FlowBuilder[TStartIn, TStartOut]":
+        """Connect nodes: from_node --outcome--> to_node.
+
+        Args:
+            from_node: Source node
+            outcome: Outcome that triggers this route
+            to_node: Destination node (use end() for flow completion)
+
+        Returns:
+            Builder for continued route definition and flow completion
+
+        Raises:
+            ValueError: If from_node is not reachable or route already exists
+
+        """
+        route_key = self._validate_and_create_route(from_node, outcome)
+
+        # Add route and mark to_node as reachable
+        new_routes = {**self._routes, route_key: to_node}
+        new_reachable = self._reachable | {to_node.name}
+
+        return _FlowBuilder[TStartIn, TStartOut](
+            _name=self._name,
+            _start=self._start,
+            _routes=MappingProxyType(new_routes),
+            _reachable=new_reachable,
+        )
+
+    def end[TEndIn, TEndOut](
+        self,
+        end: Node[TEndIn, TEndOut],
+        outcome: str,
+    ) -> Node[TStartIn, TEndOut]:
+        """End the flow at the specified node and outcome.
+
+        This completes the flow definition by specifying where it ends.
+        The flow's output type is determined by the final node's output type.
+
+        Args:
+            end: The node where the flow ends
+            outcome: The outcome from this node that completes the flow
+
+        Returns:
+            A flow node that transforms TStartIn to TEndOut
+
+        Raises:
+            ValueError: If end node is not reachable or route already exists
+
+        """
+        route_key = self._validate_and_create_route(end, outcome, is_termination=True)
+
+        new_routes = {**self._routes, route_key: None}
+
+        return _Flow[TStartIn, TEndOut](
+            name=self._name,
+            start=self._start,
+            routes=MappingProxyType(new_routes),
+        )
+
+
+def flow[TStartIn, TStartOut](
+    name: str,
+    start: Node[TStartIn, TStartOut],
+) -> _FlowBuilder[TStartIn, TStartOut]:
+    """Create a flow with the given name and starting node.
+
+    Args:
+        name: The name of the flow
+        start: The starting node that accepts TStartIn and outputs TStartOut
+
+    Returns:
+        Builder for route definition and flow completion
+
+    """
+    return _FlowBuilder[TStartIn, TStartOut](
+        _name=name,
+        _start=start,
+        _routes=MappingProxyType({}),
+        _reachable=frozenset({start.name}),  # Start node is always reachable
+    )</doc><doc title="CLAUDE Guidelines" desc="Development guidelines and architectural principles"># CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Core Philosophy
+
+ClearFlow provides mission-critical AI orchestration with verifiable correctness. Built for Python engineers who demand:
+
+- **Deep immutability** - All state transformations create new immutable data structures
+- **Immutable transformations** - Nodes transform state without mutation (though they may perform I/O)
+- **Type safety** - Full static typing with pyright strict mode (mypy removed)
+- **100% test coverage** - Every path tested, no exceptions
+- **Explicit routing** - Given an outcome, the next step is always the same
+- **Zero dependencies** - Stdlib only for maximum reliability
+
+Target audience: Python engineers building mission-critical AI systems who require verifiable orchestration with explicit control flow.
+
+## Development Commands
+
+```bash
+# Install dependencies
+uv sync                    # Install runtime dependencies
+uv sync --all-extras        # Install with dev dependencies
+
+# Run quality checks (enforced before commits)
+./quality-check.sh         # Runs all checks: custom linters, lint, format, type check, tests
+
+# Custom linters (mission-critical compliance)
+python3 linters/check-architecture-compliance.py  # Architecture violations
+python3 linters/check-immutability.py            # Deep immutability enforcement
+python3 linters/check-test-suite-compliance.py   # Test isolation and resource management
+
+# Individual quality commands
+uv run ruff check --fix clearflow tests                 # Auto-fix linting (no unsafe fixes)
+uv run ruff format clearflow tests                      # Format code
+uv run pyright clearflow tests                          # Type check (pyright - only type checker)
+uv run pytest -x -v tests                              # Run all tests
+uv run pytest -x -v tests -k "specific_test"           # Run specific test
+
+# Coverage requirements
+uv run pytest --cov=clearflow --cov-report=term-missing --cov-fail-under=100
+```
+
+## Architecture Overview
+
+ClearFlow is a minimal orchestration framework with functional patterns and **zero third-party dependencies**. It implements a **Node-Flow-State** pattern for managing workflows that include language model calls and other async operations.
+
+### Core Concepts
+
+1. **Nodes**: Async functions that transform state
+   - Inherit from `Node[T]` or `Node[TIn, TOut]` and override `exec()` method
+   - Nodes are frozen dataclasses with a `name` field
+   - Input: state of type `T` (any type: dict, TypedDict, dataclass, primitives)
+   - Output: `NodeResult[T](state, outcome)`
+   - Designed for explicit transformations
+   - Lifecycle hooks: `prep()`, `exec()`, `post()`
+
+2. **State**: Unconstrained - use any type T
+   - Type-safe with `T` where T is any Python type
+   - Natural Python operations: `{**state, "key": "value"}`
+   - Encourages immutable patterns
+   - Works with dict, TypedDict, dataclass, primitives
+
+3. **Flow**: Type-safe workflow builder
+   - Create with `flow("name", start_node)` function
+   - Chain with `.route(from_node, outcome, to_node)`
+   - End with `.end(final_node, outcome)` for single termination
+   - Single termination rule: exactly one route to `None`
+   - Full generic support with type inference
+
+### Key Facts
+
+- **Code size**: ~250 lines total, ~185 non-comment lines
+- **Test coverage**: 100% required
+- **Type safety**: No unnecessary `Any` (required for metaclass patterns)
+- **Immutability**: All dataclasses frozen
+- **Routing**: Explicit (NOT deterministic execution)
+- **Single termination**: Exactly one route to `None` per flow
+
+### Common Patterns
+
+```python
+from dataclasses import dataclass
+from typing import override
+from clearflow import Node, NodeResult, flow
+
+# Creating nodes - Node is a frozen dataclass
+@dataclass(frozen=True)
+class DocumentLoader(Node[DocumentState]):
+    name: str = "loader"
+    
+    @override
+    async def exec(self, state: DocumentState) -> NodeResult[DocumentState]:
+        content = await load_document(state["path"])
+        new_state: DocumentState = {**state, "content": content}
+        return NodeResult(new_state, outcome="loaded")
+
+# Building a flow with single termination
+loader = DocumentLoader()
+processor = ProcessorNode()
+complete = CompleteNode()
+
+flow_instance = (
+    flow("Pipeline", loader)
+    .route(loader, "loaded", processor)
+    .route(loader, "error", complete)
+    .route(processor, "processed", complete)
+    .end(complete, "done")  # Single termination
+)
+```
+
+### Testing Requirements
+
+- **100% coverage**: No exceptions, ever
+- **Deep immutability**: Use frozen dataclasses or tuples for all test state
+- **Real AI scenarios**: Model actual AI orchestration patterns (RAG, agents, tool use)
+- **Functional purity**: Test that transformations are pure with no side effects
+- **Precise types**: Every test knows exact TIn and TOut types
+- **Educational tests**: Tests should demonstrate best practices for mission-critical AI
+
+### Code Quality Standards
+
+**CRITICAL**: These standards maintain trust:
+
+- All linting rules must pass without suppression
+- Pyright must pass in strict mode (sole type checker)
+- Minimal `# pyright: ignore` comments (only for documented limitations)
+- No `Any` types except where required (e.g., metaclass patterns)
+- Prefer boring, obvious code over clever solutions
+
+**LINTER SUPPRESSION POLICY**:
+
+- **NEVER add linter suppressions without explicit user approval**
+- This includes: `# noqa`, `# pyright: ignore`, etc.
+- All approved suppressions MUST include a justification comment
+- Example: `# noqa: C901  # Display function complexity acceptable for UI`
+- Always fix the root cause instead of suppressing when possible
+
+#### Custom Linters
+
+ClearFlow uses three custom linters to enforce mission-critical standards:
+
+1. **Architecture Compliance** (`linters/check-architecture-compliance.py`)
+   - No patching/mocking of internal components in tests
+   - No imports from private modules (`_internal`)
+   - No use of `TYPE_CHECKING` (indicates circular dependencies)
+   - No `object` or `Any` types in parameters
+
+2. **Immutability Compliance** (`linters/check-immutability.py`)
+   - All dataclasses must have `frozen=True`
+   - No `list` in type annotations (use `tuple[T, ...]`)
+   - No mutable default arguments
+   - No list building with `.append()` in production code
+
+3. **Test Suite Compliance** (`linters/check-test-suite-compliance.py`)
+   - No `asyncio.run()` in tests (use `@pytest.mark.asyncio`)
+   - No manual event loop creation without cleanup
+   - All async tests must have `@pytest.mark.asyncio`
+   - All resources must use context managers
+
+These linters run automatically as part of `./quality-check.sh` and enforce zero-tolerance policies for violations.
+
+### Contributing Guidelines
+
+1. **PR Standards**
+   - Must maintain 100% test coverage
+   - Must pass all type checks
+   - Must use frozen dataclasses
+   - Must handle all outcomes explicitly
+
+2. **Documentation**
+   - Focus on guarantees and limitations
+   - No marketing language
+   - Examples must work exactly as shown
+   - Be explicit about what we don't do
+
+3. **Feature Requests**
+   - Reject anything that compromises type safety
+   - Reject anything that reduces testability
+   - Reject anything that adds implicit behavior
+   - "No" is a complete answer
+
+### Documentation Style
+
+**CRITICAL**: All documentation must be:
+
+- **Factual and concise** - No verbosity or repetition
+- **Free of "we/our" language** - Use neutral technical language
+- **Focused on what matters** - Essential information only
+- **Proportional** - Documentation should be shorter than the code (200 lines)
+- **Ego-free** - No defensiveness, no overselling, no anxiety
+
+Examples:
+
+- ❌ "We provide trustworthy orchestration for mission-critical systems"
+- ✅ "Reliable language model orchestration. Type-safe with 100% test coverage."
+- ❌ "Our philosophy is trust through proof"
+- ✅ "100% test coverage required"
+- ❌ "This guide explains how to create high-quality examples"
+- ✅ "Creating Examples"
+
+**Documentation Smell Test**:
+If documentation sounds anxious, defensive, or like it's trying to impress, rewrite it.
+Good documentation states facts without emotion.
+
+When responding to users:
+
+- Be direct and factual
+- State limitations without defensiveness
+- Use technical language, not marketing speak
+- Keep responses concise
+- Don't explain why you can't do something (preachy)
+
+### Red Flags to Avoid
+
+1. **Never claim**:
+   - "Deterministic orchestration" or "deterministic execution" (we only provide explicit routing)
+   - "Exhaustive outcome handling" (we don't enforce this)
+   - "Compile-time safety" (Python doesn't have this)
+   - "Makes language model agents reliable" (we only provide orchestration structure)
+   - "Production-ready agents" (we provide orchestration, not complete agents)
+   - "You can't test LLM outputs" (you can test them, just not deterministically)
+
+2. **Never add**:
+   - Claims about execution order or timing guarantees
+   - Methods that hide what happens between node calls
+   - Optional parameters that change flow behavior
+   - Dependencies that could introduce unpredictability
+
+3. **Language to avoid**:
+   - "Deterministic" when describing the framework (use "explicit routing" instead)
+   - "Unreasonable AI" or other hyperbolic characterizations of LLMs
+   - Absolute statements about what users can't do
+   - Marketing language that can't be verified
+
+### Before Any Change
+
+Ask:
+
+- Can this be tested completely?
+- Does this make behavior more explicit?
+- Is this simpler than the alternative?
+
+If any answer is "no", don't do it.
+
+### Git Workflow
+
+1. **Branch Protection**: Main branch requires PR with passing checks
+2. **Conventional Commits**: Use `fix:`, `feat:`, `docs:`, `ci:` prefixes
+3. **Local Protection**: Pre-commit hook prevents direct commits to main
+4. **PR Process**:
+
+   ```bash
+   git checkout -b type/description
+   # Make changes
+   ./quality-check.sh
+   git commit -m "type: clear description"
+   git push -u origin type/description
+   gh pr create --title "type: description" --body "concise explanation"
+   ```
+
+## Remember
+
+ClearFlow provides explicit routing with single termination enforcement. Keep the code minimal, the documentation concise, and the claims verifiable.
+
+## Documentation Size Limits
+
+ClearFlow is ~250 lines. Documentation should be proportional:
+
+- README.md: Keep concise but complete (~200 lines is reasonable for user-facing docs)
+- Individual docs: <100 lines
+- Total documentation: <500 lines
+
+Balance completeness with conciseness. The README needs to properly onboard users while staying focused.
+
+## Release Process
+
+ClearFlow uses automated release management:
+
+1. **Version Management**: GitVersion calculates versions based on git history
+2. **Draft Releases**: Release Drafter maintains draft with changelog from PR merges
+3. **Publishing**: Manual trigger of release.yml workflow:
+   - Builds package with calculated version
+   - Creates git tag
+   - Publishes to PyPI via trusted publisher
+   - Converts draft to published GitHub release
+
+**Known Issues**:
+
+- Draft release IDs can become stale - always fetch fresh by tag name
+- PyPI trusted publisher requires exact workflow path match
+- Version must be updated in pyproject.toml before building
+
+**PyPI Package**: <https://pypi.org/project/clearflow/>
+
+## Critical Technical Distinctions
+
+**Explicit routing ≠ Deterministic execution**
+
+ClearFlow provides explicit routing (given outcome X, next step is always Y) but NOT deterministic execution (nodes execute arbitrary async code with unpredictable timing).
+
+**Type Stub Best Practices**
+
+- Stub only what you use (e.g., 6 DSPy APIs, not 127 files)
+- Metaclass field descriptors must return `Any` (standard practice)
+- Document why in stubs: `# Returns Any for metaclass transformation`
+- Minimal stubs are maintainable; complete stubs are not
+
+Always use precise technical terms. Users are engineers who will verify claims.
+
+## Lessons Learned
+
+1. **Documentation debt is real** - A 200-line library had 783 lines of docs (reduced to 150)
+2. **Ego leaks into docs** - Watch for defensive language, "we/our", trying to sound important
+3. **Less is more** - If you can say it in 20 lines instead of 100, do it
+4. **Show, don't tell** - Code examples > philosophical manifestos
+5. **Trust the code** - A well-written 200-line library doesn't need 450-line guides
+6. **Be boring** - Boring, obvious code and docs are better than clever ones
+7. **Mypy vs Pyright** - Pyright supports PEP 695 defaults, mypy doesn't. Use pyright only.
+8. **Type stub maintenance** - Keep only what you use. 127 stubs for 6 APIs is waste.
+9. **Metaclass patterns** - Must return `Any` from field constructors (industry standard)
+10. **DSPy signatures** - They're Pydantic models with metaclass transformation</doc></documentation><examples><doc title="Chat" desc="Simple conversational flow with OpenAI integration"># Chat Example: Intelligent Entity Conversation
+
+Demonstrates ClearFlow's power for modeling conversation as interaction between intelligent entities, a human and a language model, each with their own I/O capabilities and cognitive processes.
+
+## Core Concept: Node == Intelligent Entity
+
+Each node represents a **complete intelligent entity**:
+
+- **HumanNode**: Human participant with console I/O and decision-making
+- **LlmNode**: AI participant with API I/O and reasoning capabilities
+
+This creates a natural conversation pattern between two intelligent entities.
+
+## Flow
+
+```mermaid
+graph LR
+    Start([Initial State]) --> human[HumanNode]
+    human -->|responded| llm[LlmNode]
+    human -->|quit| End([Terminate])
+    llm -->|responded| human
+```
+
+## Quick Start
+
+```bash
+# From project root directory
+
+# 1. Set up your OpenAI API key
+cp .env.example .env
+# Edit .env and add your API key
+
+# 2. Install dependencies
+uv sync --all-extras
+
+# 3. Run the example
+cd examples/chat
+python main.py  # If venv is activated
+# Or: uv run python main.py
+```
+
+## How It Works
+
+This example models conversation as interaction between two intelligent entities:
+
+### HumanNode - Complete Human Intelligence
+
+- **Input**: Gets console input from user
+- **Output**: Displays AI responses on console
+- **Cognition**: Decides whether to continue or quit
+- **Memory**: Manages human messages in conversation history
+
+### LlmNode - Complete AI Intelligence  
+
+- **Input**: Receives human messages from state
+- **Output**: Generates responses via OpenAI API
+- **Cognition**: Reasons about context and generates appropriate responses
+- **Memory**: Manages AI responses in conversation history
+
+The flow alternates between these two entities, creating a natural conversational pattern where each participant is a complete intelligent system with its own interface modalities.
+
+## Key Features
+
+- **Intelligent entities**: Each node represents a complete intelligent participant
+- **Complete I/O**: Every entity handles its own input and output capabilities
+- **Natural conversation**: Two entities alternating in dialogue
+- **Clean abstraction**: Intelligence units rather than operational steps
+- **Extensible pattern**: Easy to add more intelligent entities (databases, tools, etc.)
+
+## Files
+
+- `main.py` - Entry point that starts the intelligent entity conversation
+- `nodes.py` - HumanNode and LlmNode intelligent entity implementations
+- `chat_flow.py` - Two-node conversational flow definition</doc><doc title="Portfolio Analysis" desc="Financial data processing with type-safe transformations"># Portfolio Analysis Example
+
+Multi-specialist workflow for portfolio allocation decisions using simulated market data.
+
+## Flow
+
+```mermaid
+graph LR
+    Start([Market Data]) --> Q[QuantAnalyst]
+    Q -->|analysis_complete| R[RiskAnalyst]
+    Q -->|analysis_failed| E[ErrorHandler]
+    R -->|risk_acceptable| P[PortfolioManager]
+    R -->|risk_limits_exceeded| E
+    P -->|recommendations_ready| C[ComplianceOfficer]
+    P -->|analysis_failed| E
+    C -->|compliance_approved| D[DecisionNode]
+    C -->|compliance_failed| E
+    E -->|error_handled| D
+    D -->|decision_ready| End([Final Decision])
+```
+
+## Quick Start
+
+```bash
+# From project root directory
+
+# 1. Set up your OpenAI API key
+cp .env.example .env
+# Edit .env and add your API key
+
+# 2. Install dependencies
+uv sync --all-extras
+
+# 3. Run the example
+cd examples/portfolio_analysis
+python main.py  # If venv is activated
+# Or: uv run python main.py
+```
+
+## How It Works
+
+This example demonstrates a sequential workflow where each specialist node analyzes market data and passes enriched state to the next stage:
+
+1. **QuantAnalyst** - Technical analysis and opportunity identification
+2. **RiskAnalyst** - Risk assessment and limit checking
+3. **PortfolioManager** - Allocation recommendations
+4. **ComplianceOfficer** - Regulatory validation
+5. **DecisionNode** - Final synthesis and execution plan
+6. **ErrorHandler** - Converts errors to conservative decisions
+
+Each node uses DSPy for structured LLM outputs with Pydantic validation.
+
+## Key Features
+
+- **Sequential processing** - Each specialist processes in order
+- **Type-safe transformations** - `MarketData → QuantInsights → RiskAssessment → Decision`
+- **Error recovery** - Failures route to ErrorHandler then continue
+- **Structured outputs** - DSPy signatures ensure consistent responses
+- **Audit trail** - Complete reasoning chain for compliance
+
+## Files
+
+- `main.py` - Entry point with scenario selection
+- `portfolio_flow.py` - Flow definition and routing
+- `market_data.py` - Simulated market data generation
+- `specialists/` - Individual specialist node implementations
+- `shared/` - Common models and configuration</doc><doc title="RAG Pipeline" desc="Retrieval-augmented generation workflow implementation"># RAG Example
+
+Retrieval-Augmented Generation system demonstrating ClearFlow's type-safe state transformations.
+
+## Flow
+
+```mermaid
+graph TD
+    subgraph Offline Indexing Flow
+        Start1([RAGState]) --> Chunk[ChunkDocumentsNode]
+        Chunk -->|chunked| Embed[EmbedDocumentsNode]
+        Embed -->|embedded| Index[CreateIndexNode]
+        Index -->|indexed| End1([IndexedState])
+    end
+    
+    subgraph Online Query Flow
+        Start2([QueryState]) --> EmbedQ[EmbedQueryNode]
+        EmbedQ -->|embedded| Retrieve[RetrieveDocumentNode]
+        Retrieve -->|retrieved| Generate[GenerateAnswerNode]
+        Generate -->|answered| End2([AnsweredState])
+    end
+```
+
+## Quick Start
+
+```bash
+# From project root directory
+
+# 1. Set up your OpenAI API key
+cp .env.example .env
+# Edit .env and add your API key
+
+# 2. Install dependencies
+uv sync --all-extras
+
+# 3. Run the example
+cd examples/rag
+python main.py  # If venv is activated
+# Or: uv run python main.py
+# With custom query:
+python main.py "What is Q-Mesh protocol?"
+```
+
+## How It Works
+
+RAG combines document retrieval with language model generation. This implementation uses two flows:
+
+**Offline Indexing Flow:**
+
+- `ChunkDocuments` - Splits text into overlapping chunks (500 chars, 50 overlap)
+- `EmbedDocuments` - Creates OpenAI embeddings for each chunk
+- `CreateIndex` - Builds FAISS vector index for similarity search
+
+**Online Query Flow:**
+
+- `EmbedQuery` - Converts user query to embedding
+- `RetrieveDocument` - Finds most similar chunk via cosine similarity
+- `GenerateAnswer` - Uses GPT-4 with retrieved context to answer
+
+Each transformation creates new immutable state: `RAGState → ChunkedState → EmbeddedState → IndexedState`
+
+## Key Features
+
+- **Two-phase architecture** - Separate indexing and query flows
+- **Type-safe transformations** - Each node produces specific state types
+- **Immutable state** - All transformations create new state objects
+- **Vector search** - FAISS for efficient similarity matching
+- **Explicit routing** - Clear flow definition with single termination
+
+## Files
+
+- `main.py` - Entry point and flow orchestration
+- `nodes.py` - All node implementations
+- `rag_flow.py` - Flow definitions and routing
+- `models.py` - State type definitions
+- `utils.py` - OpenAI and chunking utilities</doc></examples><testing><doc title="Test Suite" desc="Comprehensive test coverage demonstrating all patterns">"""Test Flow orchestration features of ClearFlow.
+
+This module tests the Flow class functionality including linear flows,
+branching, single termination enforcement, and flow composition.
+
+"""
+
+from dataclasses import dataclass, replace
+from dataclasses import dataclass as dc
+from typing import override
+
+from clearflow import Node, NodeResult, flow
+from tests.conftest import ValidationState
+
+
+@dataclass(frozen=True)
+class ChatState:
+    """State for chat routing tests."""
+
+    query: str = ""
+    intent: str = ""
+    agent: str = ""
+    response_type: str = ""
+    formatted: bool = False
+
+
+@dataclass(frozen=True)
+class DocState:
+    """State for document processing tests."""
+
+    source: str
+    loaded: str = ""
+    doc_count: str = ""
+    embedded: str = ""
+    embedding_dim: str = ""
+    stored: str = ""
+
+
+# Test nodes for chat routing - defined outside test to reduce complexity
+@dc(frozen=True)
+class IntentClassifier(Node[ChatState]):
+    """Classifies user intent for appropriate AI response."""
+
+    name: str = "classifier"
+
+    @override
+    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+        query = state.query or ""
+        intent = self._classify_intent(query)
+        new_state = replace(state, intent=intent)
+        return NodeResult(new_state, outcome=intent)
+
+    def _classify_intent(self, query: str) -> str:
+        """Classify query intent.
+
+        Returns:
+            Intent string: "technical", "question", or "general".
+        """
+        query_lower = str(query).lower()
+        if "code" in query_lower or "bug" in query_lower:
+            return "technical"
+        if "?" in str(query):
+            return "question"
+        return "general"
+
+
+@dc(frozen=True)
+class TechnicalAgent(Node[ChatState]):
+    """Handles technical queries with code examples."""
+
+    name: str = "technical_agent"
+
+    @override
+    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+        new_state = replace(
+            state,
+            agent="technical",
+            response_type="code_example",
+        )
+        return NodeResult(new_state, outcome="responded")
+
+
+@dc(frozen=True)
+class QAAgent(Node[ChatState]):
+    """Handles Q&A with retrieval augmented generation."""
+
+    name: str = "qa_agent"
+
+    @override
+    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+        new_state = replace(
+            state,
+            agent="qa",
+            response_type="retrieved_answer",
+        )
+        return NodeResult(new_state, outcome="responded")
+
+
+@dc(frozen=True)
+class GeneralAgent(Node[ChatState]):
+    """Handles general conversation."""
+
+    name: str = "general_agent"
+
+    @override
+    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+        new_state = replace(
+            state,
+            agent="general",
+            response_type="chat",
+        )
+        return NodeResult(new_state, outcome="responded")
+
+
+@dc(frozen=True)
+class ResponseFormatter(Node[ChatState]):
+    """Formats final response for user."""
+
+    name: str = "formatter"
+
+    @override
+    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
+        new_state = replace(state, formatted=True)
+        return NodeResult(new_state, outcome="complete")
+
+
+# Test data classes and nodes for linear flow
+@dc(frozen=True)
+class RawText:
+    """Raw text to be processed."""
+
+    content: str
+    source: str
+
+
+@dc(frozen=True)
+class TokenizedText:
+    """Text split into tokens."""
+
+    raw: RawText
+    tokens: tuple[str, ...]
+
+
+@dc(frozen=True)
+class IndexedDocument:
+    """Final indexed document."""
+
+    tokenized: TokenizedText
+    token_count: int
+    indexed: bool = True
+
+
+@dc(frozen=True)
+class TokenizerNode(Node[RawText, TokenizedText]):
+    """Tokenizes text for embedding generation."""
+
+    name: str = "tokenizer"
+
+    @override
+    async def exec(self, state: RawText) -> NodeResult[TokenizedText]:
+        tokens = tuple(state.content.split())
+        tokenized = TokenizedText(raw=state, tokens=tokens)
+        return NodeResult(tokenized, outcome="tokenized")
+
+
+@dc(frozen=True)
+class IndexerNode(Node[TokenizedText, IndexedDocument]):
+    """Creates embeddings and indexes document."""
+
+    name: str = "indexer"
+
+    @override
+    async def exec(self, state: TokenizedText) -> NodeResult[IndexedDocument]:
+        indexed = IndexedDocument(tokenized=state, token_count=len(state.tokens))
+        return NodeResult(indexed, outcome="indexed")
+
+
+# Nodes for nested flow testing
+@dc(frozen=True)
+class DocumentLoader(Node[DocState]):
+    """Loads documents for processing."""
+
+    name: str = "loader"
+
+    @override
+    async def exec(self, state: DocState) -> NodeResult[DocState]:
+        new_state = replace(state, loaded="true", doc_count="5")
+        return NodeResult(new_state, outcome="loaded")
+
+
+@dc(frozen=True)
+class Embedder(Node[DocState]):
+    """Creates embeddings from loaded documents."""
+
+    name: str = "embedder"
+
+    @override
+    async def exec(self, state: DocState) -> NodeResult[DocState]:
+        new_state = replace(
+            state,
+            embedded="true",
+            embedding_dim="768",
+        )
+        return NodeResult(new_state, outcome="embedded")
+
+
+@dc(frozen=True)
+class VectorStore(Node[DocState]):
+    """Stores embeddings in vector database."""
+
+    name: str = "vector_store"
+
+    @override
+    async def exec(self, state: DocState) -> NodeResult[DocState]:
+        new_state = replace(state, stored="true")
+        return NodeResult(new_state, outcome="indexed")
+
+
+class TestFlow:
+    """Test the Flow orchestration."""
+
+    @staticmethod
+    async def test_linear_flow_build() -> None:
+        """Test building a linear flow."""
+        tokenizer = TokenizerNode()
+        indexer = IndexerNode()
+
+        flow_instance = flow("RAG", tokenizer).route(tokenizer, "tokenized", indexer).end(indexer, "indexed")
+
+        assert flow_instance.name == "RAG"
+
+    @staticmethod
+    async def test_linear_flow_execution() -> None:
+        """Test executing a linear flow."""
+        tokenizer = TokenizerNode()
+        indexer = IndexerNode()
+
+        flow_instance = flow("RAG", tokenizer).route(tokenizer, "tokenized", indexer).end(indexer, "indexed")
+
+        initial = RawText(content="Natural language processing", source="test.txt")
+        result = await flow_instance(initial)
+
+        assert result.outcome == "indexed"
+        assert isinstance(result.state, IndexedDocument)
+        assert result.state.token_count == 3
+
+    @staticmethod
+    async def test_chat_routing_flow_setup() -> None:
+        """Test building an AI chat routing flow."""
+        # Build AI chat routing flow using new API
+        classifier = IntentClassifier()
+        technical = TechnicalAgent()
+        qa = QAAgent()
+        general = GeneralAgent()
+        formatter = ResponseFormatter()
+
+        chat_flow = (
+            flow("ChatRouter", classifier)
+            .route(classifier, "technical", technical)
+            .route(classifier, "question", qa)
+            .route(classifier, "general", general)
+            .route(technical, "responded", formatter)
+            .route(qa, "responded", formatter)
+            .route(general, "responded", formatter)
+            .end(formatter, "complete")
+        )
+
+        # Just verify flow builds correctly
+        assert chat_flow.name == "ChatRouter"
+
+    @staticmethod
+    async def test_chat_technical_path() -> None:
+        """Test technical query routing in chat flow."""
+        classifier = IntentClassifier()
+        technical = TechnicalAgent()
+        formatter = ResponseFormatter()
+
+        chat_flow = (
+            flow("TechRouter", classifier)
+            .route(classifier, "technical", technical)
+            .route(technical, "responded", formatter)
+            .end(formatter, "complete")
+        )
+
+        tech_input = ChatState(query="How do I fix this bug in my code?")
+        result = await chat_flow(tech_input)
+        assert result.state.intent == "technical"
+        assert result.state.agent == "technical"
+        assert result.outcome == "complete"
+
+    @staticmethod
+    async def test_chat_question_path() -> None:
+        """Test question routing in chat flow."""
+        classifier = IntentClassifier()
+        qa = QAAgent()
+        formatter = ResponseFormatter()
+
+        chat_flow = (
+            flow("QARouter", classifier)
+            .route(classifier, "question", qa)
+            .route(qa, "responded", formatter)
+            .end(formatter, "complete")
+        )
+
+        question_input = ChatState(query="What is RAG?")
+        result = await chat_flow(question_input)
+        assert result.state.intent == "question"
+        assert result.state.agent == "qa"
+        assert result.outcome == "complete"
+
+    @staticmethod
+    async def test_chat_general_path() -> None:
+        """Test general conversation routing."""
+        classifier = IntentClassifier()
+        general = GeneralAgent()
+        formatter = ResponseFormatter()
+
+        chat_flow = (
+            flow("GeneralRouter", classifier)
+            .route(classifier, "general", general)
+            .route(general, "responded", formatter)
+            .end(formatter, "complete")
+        )
+
+        input_state = ChatState(query="Hello there")
+        result = await chat_flow(input_state)
+        assert result.state.intent == "general"
+        assert result.state.agent == "general"
+        assert result.outcome == "complete"
+
+    @staticmethod
+    async def test_single_termination_enforcement() -> None:
+        """Test that flows must have exactly one termination point."""
+
+        @dc(frozen=True)
+        class DataValidator(Node[ValidationState]):
+            """Validates incoming data for processing."""
+
+            name: str = "validator"
+
+            @override
+            async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
+                return NodeResult(state, outcome="valid")
+
+        @dc(frozen=True)
+        class DataProcessor(Node[ValidationState]):
+            """Processes validated data."""
+
+            name: str = "processor"
+
+            @override
+            async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
+                return NodeResult(state, outcome="processed")
+
+        validator = DataValidator()
+        processor = DataProcessor()
+
+        # This works - single termination point
+        valid_flow = (
+            flow("ValidationPipeline", validator).route(validator, "valid", processor).end(processor, "processed")
+        )
+
+        # Test that it runs successfully
+        result = await valid_flow(ValidationState(input_text="test data"))
+        assert result.outcome == "processed"
+
+    @staticmethod
+    async def test_flow_composition() -> None:
+        """Test that flows can be composed as nodes."""
+        loader = DocumentLoader()
+        embedder = Embedder()
+
+        # Create inner flow
+        inner_flow = flow("Inner", loader).route(loader, "loaded", embedder).end(embedder, "embedded")
+
+        # Use inner flow as a node
+        vector_store = VectorStore()
+        outer_flow = flow("Outer", inner_flow).route(inner_flow, "embedded", vector_store).end(vector_store, "indexed")
+
+        # Just verify it builds
+        assert outer_flow.name == "Outer"
+
+    @staticmethod
+    async def test_nested_flow_execution() -> None:
+        """Test execution of nested flows."""
+        loader = DocumentLoader()
+        embedder = Embedder()
+        doc_flow = flow("DocFlow", loader).route(loader, "loaded", embedder).end(embedder, "embedded")
+
+        vector_store = VectorStore()
+        pipeline = flow("Pipeline", doc_flow).route(doc_flow, "embedded", vector_store).end(vector_store, "indexed")
+
+        doc_input = DocState(
+            source="kb",
+            loaded="",
+            doc_count="",
+            embedded="",
+            embedding_dim="",
+            stored="",
+        )
+        result = await pipeline(doc_input)
+        assert result.outcome == "indexed"
+        assert result.state.stored == "true"</doc><doc title="Node Tests" desc="Unit tests for Node behavior">"""Test Node abstraction features of ClearFlow.
+
+This module tests the Node class functionality including lifecycle hooks,
+lifecycle hooks, and routing patterns for mission-critical AI orchestration.
+
+"""
+
+from dataclasses import dataclass as dc
+from dataclasses import replace
+from typing import override
+
+from clearflow import Node, NodeResult
+from tests.conftest import AgentState, Message, ValidationState
+
+# Module-level test nodes to reduce complexity
+
+
+@dc(frozen=True)
+class TokenCountNode(Node[ValidationState]):
+    """Node for token counting in LLM validation."""
+
+    name: str = "token_counter"
+
+    @override
+    async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
+        # Transformation: count tokens (simplified)
+        token_count = len(state.input_text.split())
+
+        if token_count > 100:
+            errors = (*state.errors, f"Token count {token_count} exceeds limit")
+            new_state = replace(state, errors=errors, validated=False)
+            outcome = "too_long"
+        else:
+            new_state = replace(state, validated=True)
+            outcome = "valid_length"
+
+        return NodeResult(new_state, outcome=outcome)
+
+
+@dc(frozen=True)
+class PromptState:
+    """Immutable state for prompt engineering pipeline."""
+
+    raw_prompt: str
+    sanitized: bool = False
+    validated: bool = False
+    enhanced: bool = False
+
+
+@dc(frozen=True)
+class PromptEngineeringNode(Node[PromptState]):
+    """Node demonstrating lifecycle hooks for prompt engineering."""
+
+    name: str = "prompt_engineer"
+
+    @override
+    async def prep(self, state: PromptState) -> PromptState:
+        # Sanitize prompt in prep phase
+        return replace(state, sanitized=True)
+
+    @override
+    async def exec(self, state: PromptState) -> NodeResult[PromptState]:
+        # Validate prompt in main execution
+        new_state = replace(state, validated=True)
+        return NodeResult(new_state, outcome="validated")
+
+    @override
+    async def post(
+        self,
+        result: NodeResult[PromptState],
+    ) -> NodeResult[PromptState]:
+        # Enhance prompt in post phase
+        new_state = replace(result.state, enhanced=True)
+        return NodeResult(new_state, outcome=result.outcome)
+
+
+@dc(frozen=True)
+class LLMRouterNode(Node[AgentState]):
+    """Routes to different paths based on LLM analysis."""
+
+    name: str = "llm_router"
+
+    @override
+    async def exec(self, state: AgentState) -> NodeResult[AgentState]:
+        # Analyze last user message for intent (simulating LLM classification)
+        last_msg = state.messages[-1] if state.messages else None
+
+        # Determine outcome and response based on message content
+        outcome, response = self._classify_intent(last_msg)
+
+        # Immutable state update
+        new_state = AgentState(
+            messages=(*state.messages, response),
+            context=state.context,
+            temperature=0.3 if outcome == "code_generation" else state.temperature,
+        )
+        return NodeResult(new_state, outcome=outcome)
+
+    def _classify_intent(self, msg: Message | None) -> tuple[str, Message]:
+        """Classify user intent from message.
+
+        Returns:
+            Tuple of (intent string, response message).
+        """
+        if not msg or msg.role != "user":
+            return "no_input", Message(role="assistant", content="Please provide input.")
+
+        content_lower = msg.content.lower()
+        if "weather" in content_lower:
+            return "tool_required", Message(
+                role="assistant",
+                content="I'll check the weather for you.",
+            )
+        if "code" in content_lower:
+            return "code_generation", Message(
+                role="assistant",
+                content="I'll help you write code.",
+            )
+
+        return "direct_response", Message(
+            role="assistant",
+            content="I understand your request.",
+        )
+
+
+class TestNode:
+    """Test the Node abstraction."""
+
+    @staticmethod
+    async def test_immutable_transformations() -> None:
+        """Test that nodes perform immutable transformations - same input produces same output."""
+        node = TokenCountNode()
+        initial = ValidationState(input_text="Short prompt for testing")
+
+        # Multiple calls with same input produce same output (immutable transformations)
+        result1 = await node(initial)
+        result2 = await node(initial)
+
+        assert result1.state == result2.state
+        assert result1.outcome == result2.outcome
+
+    @staticmethod
+    async def test_validation_success() -> None:
+        """Test successful validation for short text."""
+        node = TokenCountNode()
+        initial = ValidationState(input_text="Short prompt for testing")
+
+        result = await node(initial)
+
+        assert result.state.validated is True
+        assert result.outcome == "valid_length"
+        # Verify immutability
+        assert initial.validated is False
+
+    @staticmethod
+    async def test_validation_failure() -> None:
+        """Test validation failure for long text."""
+        node = TokenCountNode()
+        # Create text with more than 100 words
+        long_text = " ".join(["word"] * 101)
+        initial = ValidationState(input_text=long_text)
+
+        result = await node(initial)
+
+        assert result.state.validated is False
+        assert result.outcome == "too_long"
+        assert len(result.state.errors) == 1
+        assert "exceeds limit" in result.state.errors[0]
+
+    @staticmethod
+    async def test_lifecycle_hooks() -> None:
+        """Test that prep and post hooks work correctly."""
+        node = PromptEngineeringNode()
+        initial = PromptState(raw_prompt="Explain quantum computing")
+        result = await node(initial)
+
+        assert result.state.sanitized is True
+        assert result.state.validated is True
+        assert result.state.enhanced is True
+        assert initial.sanitized is False  # Original unchanged
+
+    @staticmethod
+    async def test_router_no_input() -> None:
+        """Test router handles missing user input."""
+        node = LLMRouterNode()
+        empty_state = AgentState(messages=(), context="assistant")
+        result = await node(empty_state)
+
+        assert result.outcome == "no_input"
+        assert "Please provide input" in result.state.messages[0].content
+
+    @staticmethod
+    async def test_router_tool_required() -> None:
+        """Test router identifies tool-required intent."""
+        node = LLMRouterNode()
+        weather_state = AgentState(
+            messages=(Message(role="user", content="What's the weather in NYC?"),),
+            context="weather_assistant",
+        )
+        result = await node(weather_state)
+
+        assert result.outcome == "tool_required"
+        assert len(result.state.messages) == 2
+        assert "check the weather" in result.state.messages[-1].content
+
+    @staticmethod
+    async def test_router_code_generation() -> None:
+        """Test router identifies code generation intent and adjusts temperature."""
+        node = LLMRouterNode()
+        code_state = AgentState(
+            messages=(Message(role="user", content="Help me write Python code"),),
+            context="coding_assistant",
+            temperature=0.7,
+        )
+        result = await node(code_state)
+
+        assert result.outcome == "code_generation"
+        assert result.state.temperature == 0.3  # Lowered for code generation
+        assert "write code" in result.state.messages[-1].content
+
+    @staticmethod
+    async def test_router_direct_response() -> None:
+        """Test router handles general queries."""
+        node = LLMRouterNode()
+        general_state = AgentState(
+            messages=(Message(role="user", content="Tell me about history"),),
+            context="assistant",
+        )
+        result = await node(general_state)
+
+        assert result.outcome == "direct_response"
+        assert "understand your request" in result.state.messages[-1].content</doc></testing><optional><doc title="Migration Guide" desc="Upgrading from v0.x to v1.x"># Migration Guide: v0.x to v1.0
+
+This guide covers breaking changes and migration steps for ClearFlow v1.0.
+
+## Breaking Changes
+
+### 1. Node Type Parameters
+
+**Before:** Single type parameter
+
+```python
+class MyNode(Node[StateType]):
+    async def exec(self, state: StateType) -> NodeResult[StateType]:
+        ...
+```
+
+**After:** Input/Output type parameters
+
+```python
+@dataclass(frozen=True)
+class MyNode(Node[StateType]):  # TOut defaults to TIn
+    name: str = "my_node"
+    
+    @override
+    async def exec(self, state: StateType) -> NodeResult[StateType]:
+        ...
+
+# Or with transformation:
+@dataclass(frozen=True)
+class TransformNode(Node[InputType, OutputType]):
+    name: str = "transformer"
+    
+    @override
+    async def exec(self, state: InputType) -> NodeResult[OutputType]:
+        ...
+```
+
+### 2. Node Name Required
+
+**Before:** Name defaults to class name
+
+```python
+class MyNode(Node[T]):
+    # name automatically becomes "MyNode"
+    pass
+```
+
+**After:** Name must be explicit
+
+```python
+@dataclass(frozen=True)
+class MyNode(Node[T]):
+    name: str = "my_node"  # Required field
+```
+
+### 3. Flow API Replaced
+
+**Before:** Flow class with add() method
+
+```python
+flow = Flow(name="pipeline", start_node=start)
+flow.add(start, "success", processor)
+flow.add(processor, "done", None)  # Termination
+```
+
+**After:** flow() function with builder pattern
+
+```python
+flow_instance = (
+    flow("pipeline", start)
+    .route(start, "success", processor)
+    .end(processor, "done")  # Single termination via end()
+)
+```
+
+### 4. Single Termination Enforcement
+
+**Before:** Multiple terminations allowed
+
+```python
+flow.add(node1, "outcome1", None)
+flow.add(node2, "outcome2", None)  # Multiple terminations OK
+```
+
+**After:** Exactly one termination via end()
+
+```python
+flow_instance = (
+    flow("pipeline", start)
+    .route(start, "path1", node1)
+    .route(start, "path2", node2)
+    .route(node1, "done", node2)
+    .end(node2, "complete")  # Only one end() allowed
+)
+```
+
+### 5. Reachability Validation
+
+**New:** Cannot route from unreachable nodes
+
+```python
+# This will raise ValueError:
+flow_instance = (
+    flow("pipeline", start)
+    .route(unreachable_node, "outcome", end)  # Error: unreachable_node not reachable
+    .end(end, "done")
+)
+```
+
+### 6. Frozen Dataclasses Required
+
+**Before:** Regular classes
+
+```python
+class MyNode(Node[T]):
+    def __init__(self):
+        self.mutable_field = []  # Mutable state allowed
+```
+
+**After:** Frozen dataclasses only
+
+```python
+@dataclass(frozen=True)
+class MyNode(Node[T]):
+    name: str = "my_node"
+    # All fields must be immutable
+```
+
+## Migration Steps
+
+### Step 1: Update Node Definitions
+
+1. Add `@dataclass(frozen=True)` decorator
+2. Add explicit `name` field
+3. Add `@override` decorator to `exec()`
+4. Update type parameters if transforming state
+
+### Step 2: Replace Flow Usage
+
+1. Replace `Flow()` with `flow()` function
+2. Replace `.add()` calls with `.route()`
+3. Replace termination `add(node, outcome, None)` with `.end(node, outcome)`
+4. Ensure only one `.end()` call per flow
+
+### Step 3: Update State Types
+
+1. Ensure all state types are immutable (frozen dataclasses or tuples)
+2. Replace mutable operations with `dataclasses.replace()`
+3. Use tuples instead of lists for collections
+
+### Step 4: Fix Import Statements
+
+**Before:**
+
+```python
+from clearflow import Flow, Node, NodeResult
+```
+
+**After:**
+
+```python
+from clearflow import flow, Node, NodeResult  # flow is lowercase function
+```
+
+## Complete Example
+
+**Before:**
+
+```python
+from clearflow import Flow, Node, NodeResult
+
+class ProcessNode(Node[dict]):
+    async def exec(self, state: dict) -> NodeResult[dict]:
+        state["processed"] = True
+        return NodeResult(state, outcome="done")
+
+process = ProcessNode()
+flow = Flow(name="pipeline", start_node=process)
+flow.add(process, "done", None)
+```
+
+**After:**
+
+```python
+from dataclasses import dataclass
+from typing import override
+from clearflow import flow, Node, NodeResult
+
+@dataclass(frozen=True)
+class State:
+    data: str
+    processed: bool = False
+
+@dataclass(frozen=True)
+class ProcessNode(Node[State]):
+    name: str = "processor"
+    
+    @override
+    async def exec(self, state: State) -> NodeResult[State]:
+        from dataclasses import replace
+        new_state = replace(state, processed=True)
+        return NodeResult(new_state, outcome="done")
+
+process = ProcessNode()
+pipeline = flow("pipeline", process).end(process, "done")
+```
+
+## Common Issues
+
+### TypeError: Missing required 'name' field
+
+**Solution:** Add `name: str = "node_name"` to your node class
+
+### ValueError: No route defined for outcome
+
+**Solution:** Ensure all possible outcomes have routes or terminations
+
+### ValueError: Cannot route from 'node' - not reachable
+
+**Solution:** Ensure nodes are connected in order from start node
+
+### AttributeError: 'Flow' object has no attribute 'add'
+
+**Solution:** Replace Flow class with flow() function and builder pattern
+
+## Need Help?
+
+See the [examples](examples/) directory for complete working code with the new API.</doc><doc title="License" desc="MIT License">MIT License
+
+Copyright (c) 2025 ClearFlow Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</doc></optional></project>

@@ -61,6 +61,22 @@ jobs:
       with:
         version: ${{ env.UV_VERSION }}
         
+    - name: Update llms.txt documentation
+      run: |
+        # Install dependencies for llms.txt generation
+        uv sync --all-extras
+        
+        # Regenerate llms-full.txt to ensure it's up-to-date
+        uv run llms_txt2ctx --optional true llms.txt > llms-full.txt
+        
+        # Commit if there are changes (shouldn't be any if CI is working)
+        if ! git diff --quiet llms-full.txt; then
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add llms-full.txt
+          git commit -m "ci: update llms-full.txt for release"
+        fi
+        
     - name: Update version in pyproject.toml
       run: |
         # Update the version in pyproject.toml

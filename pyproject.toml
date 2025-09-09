@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "clearflow"
 version = "0.0.0"  # Version dynamically set by CI/CD pipeline
-description = "Type-safe orchestration for unpredictable AI."
+description = "Compose type-safe flows for emergent AI"
 authors = [
   {name = "Richard Beauchamp", email = "rbeauchamp@users.noreply.github.com"}
 ]
@@ -344,6 +344,12 @@ severity = "low"  # Report all severity levels
 
 [tool.bandit.assert_used]
 skips = ["*/test_*.py", "*_test.py"]  # Allow assert in tests
+
+[dependency-groups]
+dev = [
+    "llms-txt>=0.0.4",
+    "mcpdoc>=0.0.10",
+]
 
 # Note: vulture, xenon, and radon don't read pyproject.toml automatically
 # Their settings are hardcoded in quality-check.sh where they're invoked

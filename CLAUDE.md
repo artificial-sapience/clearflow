@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Philosophy
 
+**Tagline**: "Compose type-safe flows for emergent AI"
+
 ClearFlow provides mission-critical AI orchestration with verifiable correctness. Built for Python engineers who demand:
 
 - **Deep immutability** - All state transformations create new immutable data structures
@@ -182,34 +184,9 @@ These linters run automatically as part of `./quality-check.sh` and enforce zero
 
 ### Documentation Style
 
-**CRITICAL**: All documentation must be:
-
-- **Factual and concise** - No verbosity or repetition
-- **Free of "we/our" language** - Use neutral technical language
-- **Focused on what matters** - Essential information only
-- **Proportional** - Documentation should be shorter than the code (200 lines)
-- **Ego-free** - No defensiveness, no overselling, no anxiety
-
-Examples:
-
-- ❌ "We provide trustworthy orchestration for mission-critical systems"
-- ✅ "Reliable language model orchestration. Type-safe with 100% test coverage."
-- ❌ "Our philosophy is trust through proof"
-- ✅ "100% test coverage required"
-- ❌ "This guide explains how to create high-quality examples"
-- ✅ "Creating Examples"
-
-**Documentation Smell Test**:
-If documentation sounds anxious, defensive, or like it's trying to impress, rewrite it.
-Good documentation states facts without emotion.
-
-When responding to users:
-
-- Be direct and factual
-- State limitations without defensiveness
-- Use technical language, not marketing speak
-- Keep responses concise
-- Don't explain why you can't do something (preachy)
+- **Factual and concise** - No verbosity, no "we/our" language
+- **Ego-free** - No defensiveness, no marketing speak
+- **Direct responses** - State facts and limitations without explanation
 
 ### Red Flags to Avoid
 
@@ -265,58 +242,59 @@ ClearFlow provides explicit routing with single termination enforcement. Keep th
 
 ## Documentation Size Limits
 
-ClearFlow is ~250 lines. Documentation should be proportional:
-
-- README.md: Keep concise but complete (~200 lines is reasonable for user-facing docs)
+- README.md: ~100 lines (proportional to 250-line codebase)
 - Individual docs: <100 lines
 - Total documentation: <500 lines
 
-Balance completeness with conciseness. The README needs to properly onboard users while staying focused.
-
 ## Release Process
 
-ClearFlow uses automated release management:
-
-1. **Version Management**: GitVersion calculates versions based on git history
-2. **Draft Releases**: Release Drafter maintains draft with changelog from PR merges
-3. **Publishing**: Manual trigger of release.yml workflow:
-   - Builds package with calculated version
-   - Creates git tag
-   - Publishes to PyPI via trusted publisher
-   - Converts draft to published GitHub release
-
-**Known Issues**:
-
-- Draft release IDs can become stale - always fetch fresh by tag name
-- PyPI trusted publisher requires exact workflow path match
-- Version must be updated in pyproject.toml before building
-
+Automated via GitVersion and Release Drafter. Manual trigger of release.yml publishes to PyPI.
 **PyPI Package**: <https://pypi.org/project/clearflow/>
 
 ## Critical Technical Distinctions
 
-**Explicit routing ≠ Deterministic execution**
+**Explicit routing ≠ Deterministic execution** - ClearFlow provides explicit routing (given outcome X, next step is always Y) but NOT deterministic execution.
 
-ClearFlow provides explicit routing (given outcome X, next step is always Y) but NOT deterministic execution (nodes execute arbitrary async code with unpredictable timing).
+## Technical Notes
 
-**Type Stub Best Practices**
+- **Pyright only** - Removed mypy, pyright supports PEP 695 defaults
+- **Type stubs** - Stub only what you use (6 DSPy APIs, not 127 files)
+- **Metaclass patterns** - Field descriptors must return `Any` (standard practice)
 
-- Stub only what you use (e.g., 6 DSPy APIs, not 127 files)
-- Metaclass field descriptors must return `Any` (standard practice)
-- Document why in stubs: `# Returns Any for metaclass transformation`
-- Minimal stubs are maintainable; complete stubs are not
+## llms.txt Implementation
 
-Always use precise technical terms. Users are engineers who will verify claims.
+ClearFlow includes comprehensive llms.txt support for optimal AI assistant integration:
 
-## Lessons Learned
+1. **Files**:
+   - `llms.txt` - Minimal index with documentation links (~2KB)
+   - `llms-full.txt` - Auto-generated expanded content (~63KB)
+   - Generated with: `uv run llms_txt2ctx --optional true llms.txt > llms-full.txt`
 
-1. **Documentation debt is real** - A 200-line library had 783 lines of docs (reduced to 150)
-2. **Ego leaks into docs** - Watch for defensive language, "we/our", trying to sound important
-3. **Less is more** - If you can say it in 20 lines instead of 100, do it
-4. **Show, don't tell** - Code examples > philosophical manifestos
-5. **Trust the code** - A well-written 200-line library doesn't need 450-line guides
-6. **Be boring** - Boring, obvious code and docs are better than clever ones
-7. **Mypy vs Pyright** - Pyright supports PEP 695 defaults, mypy doesn't. Use pyright only.
-8. **Type stub maintenance** - Keep only what you use. 127 stubs for 6 APIs is waste.
-9. **Metaclass patterns** - Must return `Any` from field constructors (industry standard)
-10. **DSPy signatures** - They're Pydantic models with metaclass transformation
+2. **Key Decisions**:
+   - Single `clearflow/__init__.py` contains entire implementation (not split files)
+   - Example links point to README.md files (context before code)
+   - Include CLAUDE.md in llms.txt for AI context
+   - Use GitHub raw URLs (we have no separate website)
+
+3. **MCP Server** (optional advanced integration):
+   - Install: `uv add --dev mcpdoc`
+   - Start: `python scripts/run_mcp_server.py`
+   - Provides structured documentation access for IDEs
+
+4. **Maintenance**:
+   - GitHub Action auto-updates llms-full.txt on doc changes
+   - Release workflow regenerates before publishing
+   - Validate URLs: `cat llms.txt | grep -oE 'https://[^)]+' | xargs -I {} curl -I {}`
+
+5. **Integration Points**:
+   - Claude Code: Configure MCP via `claude mcp add clearflow` or edit `~/.claude.json`
+   - Claude Projects: Add llms-full.txt URL as resource
+   - Cursor/Windsurf: Point to MCP server or raw GitHub URLs
+   - GitHub Copilot: Automatically detects llms.txt files
+
+## Messaging Principles
+
+- **Avoid vague claims** - "Full transparency" misleads about features we don't have
+- **Use active voice** - "Compose flows" not "Composing flows"
+- **Acknowledge AI nature** - "emergent AI" not "unpredictable AI" (less adversarial)
+- **Be specific** - "Type-safe", "Zero dependencies" are verifiable features

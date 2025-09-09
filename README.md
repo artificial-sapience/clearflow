@@ -8,7 +8,7 @@
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-Type-safe orchestration for unpredictable AI.
+Compose type-safe flows for emergent AI.
 
 ## Why ClearFlow?
 
@@ -17,6 +17,7 @@ Type-safe orchestration for unpredictable AI.
 - **Immutable state** – No hidden mutations
 - **Zero dependencies** – No hidden failure modes
 - **Single exit enforcement** – No ambiguous endings
+- **AI Assistant Ready** – Full llms.txt support for optimal LLM integration
 
 ## Installation
 

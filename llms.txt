@@ -1,0 +1,29 @@
+# ClearFlow
+
+> Compose type-safe flows for emergent AI. Type-safe workflow composition. Zero dependencies.
+
+## Quick Start
+
+- [Install from PyPI](https://pypi.org/project/clearflow/): pip install clearflow
+
+## Documentation
+
+- [README](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/README.md): Complete overview and quickstart guide
+- [Core API](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/clearflow/__init__.py): Complete implementation - Node, NodeResult, Flow, and exceptions in a single module
+- [CLAUDE Guidelines](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/CLAUDE.md): Development guidelines and architectural principles
+
+## Examples
+
+- [Chat](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/chat/README.md): Simple conversational flow with OpenAI integration
+- [Portfolio Analysis](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/portfolio_analysis/README.md): Financial data processing with type-safe transformations
+- [RAG Pipeline](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/rag/README.md): Retrieval-augmented generation workflow implementation
+
+## Testing
+
+- [Test Suite](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow.py): Comprehensive test coverage demonstrating all patterns
+- [Node Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_node.py): Unit tests for Node behavior
+
+## Optional
+
+- [Migration Guide](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/MIGRATION.md): Upgrading from v0.x to v1.x
+- [License](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/LICENSE): MIT License
