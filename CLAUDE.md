@@ -160,7 +160,7 @@ ClearFlow uses three custom linters to enforce mission-critical standards:
    - All async tests must have `@pytest.mark.asyncio`
    - All resources must use context managers
 
-These linters run automatically as part of `./quality-check.sh` and enforce zero-tolerance policies for violations.
+These linters run automatically as part of `./quality-check.sh` and enforce strict policies for violations.
 
 ### Contributing Guidelines
 
@@ -205,7 +205,7 @@ These linters run automatically as part of `./quality-check.sh` and enforce zero
    - Dependencies that could introduce unpredictability
 
 3. **Language to avoid**:
-   - "Deterministic" when describing the framework (use "explicit routing" instead)
+   - "Deterministic" when describing the framework
    - "Unreasonable AI" or other hyperbolic characterizations of LLMs
    - Absolute statements about what users can't do
    - Marketing language that can't be verified
@@ -291,6 +291,32 @@ ClearFlow includes comprehensive llms.txt support for optimal AI assistant integ
    - Claude Projects: Add llms-full.txt URL as resource
    - Cursor/Windsurf: Point to MCP server or raw GitHub URLs
    - GitHub Copilot: Automatically detects llms.txt files
+
+## Complexity Management
+
+**Radical Simplification Strategy** for Grade A compliance:
+- Replace complex content analysis with static descriptions
+- Remove file system dependencies when possible
+- Use simple dictionary lookups instead of conditional chains
+- Question if dynamic behavior is truly necessary
+
+**Common Over-engineering Patterns to Avoid**:
+- Complex text processing for marginal metadata gains
+- Multiple decision branches for utility scripts
+- Dynamic file content analysis when static works
+- Perfect descriptions when "good enough" suffices
+
+**Example**: llms.txt generation - static descriptions work as well as complex extraction
+
+## Security and Suppressions
+
+**Subprocess Security Suppressions** (legitimate cases):
+```python
+import subprocess  # noqa: S404  # Required for running uv/mcpdoc commands in dev setup
+["uv", "run", "cmd"],  # noqa: S607  # Safe: hardcoded command with literal args
+```
+
+**Pattern**: Development/configuration scripts with hardcoded commands are safe to suppress
 
 ## Messaging Principles
 
