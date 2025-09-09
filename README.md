@@ -3,8 +3,6 @@
 [![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
-[![type: pyright](https://img.shields.io/badge/type-pyright-blue)](https://github.com/microsoft/pyright)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
@@ -79,11 +77,17 @@ ClearFlow emphasizes **robust, type-safe orchestration** with validation and gua
 
 ## Development
 
-```bash
-# Install uv (if not already installed)
-pipx install uv
+### Install uv
 
-# Clone and set up development environment
+- Please see [official uv docs](https://docs.astral.sh/uv/getting-started/installation/#installation-methods) for other ways to install uv.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Clone and set up development environment
+
+```bash
 git clone https://github.com/artificial-sapience/ClearFlow.git
 cd ClearFlow
 uv sync --all-extras     # Creates venv and installs deps automatically
