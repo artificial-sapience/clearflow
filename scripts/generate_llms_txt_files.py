@@ -8,7 +8,7 @@ generates properly formatted llms.txt files without any hardcoded content.
 
 import ast
 import re
-import subprocess  # noqa: S404
+import subprocess  # noqa: S404  # Safe: Development script with hardcoded commands only
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -574,8 +574,8 @@ def generate_llms_full(llms_txt_path: Path) -> Path:
     llms_full_path = llms_txt_path.parent / "llms-full.txt"
 
     try:
-        result = subprocess.run(  # noqa: S603
-            ["uv", "run", "llms_txt2ctx", "--optional", "true", str(llms_txt_path)],  # noqa: S607
+        result = subprocess.run(  # noqa: S603  # Safe: Hardcoded command with controlled input path
+            ["uv", "run", "llms_txt2ctx", "--optional", "true", str(llms_txt_path)],  # noqa: S607  # Safe: Literal command list, only variable is internally generated path
             capture_output=True,
             text=True,
             check=True,
