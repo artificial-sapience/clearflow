@@ -3,11 +3,11 @@
 [![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
-[![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
+[![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt)
 
-Compose type-safe flows for emergent AI.
+Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.
 
 ## Why ClearFlow?
 
@@ -20,28 +20,34 @@ Compose type-safe flows for emergent AI.
 
 ## Quick Start
 
-### 1. Install
-
 ```bash
 pip install clearflow
 ```
 
 > **Upgrading from v0.x?** See the [Migration Guide](MIGRATION.md) for breaking changes.
 
-### 2. Configure Your AI Assistant
+## AI Assistant Integration
+
+ClearFlow provides comprehensive documentation in [llms.txt](https://llmstxt.org/) format for optimal AI assistant support.
+
+### Claude Code Setup
+
+Add ClearFlow documentation to Claude Code with one command:
 
 ```bash
-# Enable ClearFlow in Claude Code, Cursor, Windsurf:
-mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt
-
-# Or for persistent configuration:
-uv run python scripts/configure-mcpdoc.py
+claude mcp add mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt
 ```
 
-Your AI assistant now understands ClearFlow's complete API. Try asking it to create a flow!
+For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc#configuration).
 
-### 3. Explore Examples
+### Direct URL Access
 
+Use these URLs directly in any AI tool that supports llms.txt:
+
+- **Minimal index** (~2KB): <https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt>
+- **Full documentation** (~63KB): <https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms-full.txt>
+
+## Examples
 
 | Name | Description |
 |------|-------------|

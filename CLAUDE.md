@@ -276,21 +276,15 @@ ClearFlow includes comprehensive llms.txt support for optimal AI assistant integ
    - Include CLAUDE.md in llms.txt for AI context
    - Use GitHub raw URLs (we have no separate website)
 
-3. **MCP Server** (optional advanced integration):
-   - Install: `uv add --dev mcpdoc`
-   - Start: `python scripts/run_mcp_server.py`
-   - Provides structured documentation access for IDEs
+3. **Integration**:
+   - Direct URLs work with any llms.txt-compatible tool
+   - Use mcpdoc for IDE integration: `mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt`
+   - See [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc) for IDE-specific setup
 
 4. **Maintenance**:
    - GitHub Action auto-updates llms-full.txt on doc changes
    - Release workflow regenerates before publishing
    - Validate URLs: `cat llms.txt | grep -oE 'https://[^)]+' | xargs -I {} curl -I {}`
-
-5. **Integration Points**:
-   - Claude Code: Configure MCP via `claude mcp add clearflow` or edit `~/.claude.json`
-   - Claude Projects: Add llms-full.txt URL as resource
-   - Cursor/Windsurf: Point to MCP server or raw GitHub URLs
-   - GitHub Copilot: Automatically detects llms.txt files
 
 ## Complexity Management
 
