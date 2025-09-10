@@ -86,7 +86,7 @@
         });
     </script>
   </body>
-</html></doc></quick start><documentation><doc title="README"># ClearFlow
+</html></doc></quick start><documentation><doc title="README" desc="Documentation"># ClearFlow
 
 [![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
@@ -478,7 +478,7 @@ def flow[TStartIn, TStartOut](
         _start=start,
         _routes=MappingProxyType({}),
         _reachable=frozenset({start.name}),  # Start node is always reachable
-    )</doc><doc title="CLAUDE Guidelines" desc="This file provides guidance to Claude Code (claude.ai/code) when working with code in this repositor"># CLAUDE.md
+    )</doc><doc title="CLAUDE Guidelines" desc="Documentation"># CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -799,7 +799,7 @@ Always use precise technical terms. Users are engineers who will verify claims.
 7. **Mypy vs Pyright** - Pyright supports PEP 695 defaults, mypy doesn't. Use pyright only.
 8. **Type stub maintenance** - Keep only what you use. 127 stubs for 6 APIs is waste.
 9. **Metaclass patterns** - Must return `Any` from field constructors (industry standard)
-10. **DSPy signatures** - They're Pydantic models with metaclass transformation</doc></documentation><examples><doc title="Chat" desc="Simple conversational flow with OpenAI integration"># Chat Example: Intelligent Entity Conversation
+10. **DSPy signatures** - They're Pydantic models with metaclass transformation</doc></documentation><examples><doc title="Chat" desc="Chat Example"># Chat Example: Intelligent Entity Conversation
 
 Demonstrates ClearFlow's power for modeling conversation as interaction between intelligent entities, a human and a language model, each with their own I/O capabilities and cognitive processes.
 
@@ -872,7 +872,7 @@ The flow alternates between these two entities, creating a natural conversationa
 
 - `main.py` - Entry point that starts the intelligent entity conversation
 - `nodes.py` - HumanNode and LlmNode intelligent entity implementations
-- `chat_flow.py` - Two-node conversational flow definition</doc><doc title="Portfolio Analysis" desc="Simple conversational flow with OpenAI integration"># Portfolio Analysis Example
+- `chat_flow.py` - Two-node conversational flow definition</doc><doc title="Portfolio Analysis" desc="Portfolio Analysis Example"># Portfolio Analysis Example
 
 Multi-specialist workflow for portfolio allocation decisions using simulated market data.
 
@@ -938,7 +938,7 @@ Each node uses DSPy for structured LLM outputs with Pydantic validation.
 - `portfolio_flow.py` - Flow definition and routing
 - `market_data.py` - Simulated market data generation
 - `specialists/` - Individual specialist node implementations
-- `shared/` - Common models and configuration</doc><doc title="RAG Pipeline" desc="Simple conversational flow with OpenAI integration"># RAG Example
+- `shared/` - Common models and configuration</doc><doc title="RAG Pipeline" desc="RAG Pipeline"># RAG Example
 
 Retrieval-Augmented Generation system demonstrating ClearFlow's type-safe state transformations.
 
@@ -2322,7 +2322,7 @@ class TestTypeTransformations:
         executor = SimpleExecutor()
         result = await executor(plan)
         assert isinstance(result.state, ToolResult)
-        assert result.state.success is True</doc></testing><optional><doc title="Migration Guide" desc="This guide covers breaking changes and migration steps for ClearFlow v1.0."># Migration Guide: v0.x to v1.0
+        assert result.state.success is True</doc></testing><optional><doc title="Migration Guide" desc="Documentation"># Migration Guide: v0.x to v1.0
 
 This guide covers breaking changes and migration steps for ClearFlow v1.0.
 

@@ -13,7 +13,7 @@ Thank you for your interest in contributing to ClearFlow!
 
 ## Code Quality Standards
 
-All contributions must maintain our zero-tolerance quality standards:
+All contributions must maintain our strict quality standards:
 
 - **100% test coverage** - No exceptions
 - **Type safety** - Must pass `uv run pyright` in strict mode

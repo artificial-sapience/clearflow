@@ -8,15 +8,15 @@
 
 ## Documentation
 
-- [README](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/README.md)
+- [README](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/README.md): Documentation
 - [Core API](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/clearflow/__init__.py): Complete implementation - Node, NodeResult, Flow, and exceptions in a single module
-- [CLAUDE Guidelines](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/CLAUDE.md): This file provides guidance to Claude Code (claude.ai/code) when working with code in this repositor
+- [CLAUDE Guidelines](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/CLAUDE.md): Documentation
 
 ## Examples
 
-- [Chat](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/chat/README.md): Simple conversational flow with OpenAI integration
-- [Portfolio Analysis](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/portfolio_analysis/README.md): Simple conversational flow with OpenAI integration
-- [RAG Pipeline](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/rag/README.md): Simple conversational flow with OpenAI integration
+- [Chat](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/chat/README.md): Chat Example
+- [Portfolio Analysis](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/portfolio_analysis/README.md): Portfolio Analysis Example
+- [RAG Pipeline](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/rag/README.md): RAG Pipeline
 
 ## Testing
 
@@ -28,5 +28,5 @@
 
 ## Optional
 
-- [Migration Guide](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/MIGRATION.md): This guide covers breaking changes and migration steps for ClearFlow v1.0.
+- [Migration Guide](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/MIGRATION.md): Documentation
 - [License](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/LICENSE): MIT License

@@ -8,7 +8,7 @@ to serve ClearFlow's llms.txt to AI coding assistants like Claude Code, Cursor, 
 import json
 import os
 import platform
-import subprocess  # noqa: S404
+import subprocess  # noqa: S404  # Required for running uv/mcpdoc commands in dev setup
 import sys
 from pathlib import Path
 
@@ -21,7 +21,7 @@ def check_mcpdoc_installed() -> bool:
     """
     try:
         result = subprocess.run(
-            ["uv", "run", "mcpdoc", "--version"],  # noqa: S607
+            ["uv", "run", "mcpdoc", "--version"],  # noqa: S607  # Safe: hardcoded uv command with literal args
             capture_output=True,
             text=True,
             check=False,
@@ -41,7 +41,7 @@ def install_mcpdoc() -> bool:
     print("📦 mcpdoc not found. Installing...")
     try:
         subprocess.run(
-            ["uv", "add", "--dev", "mcpdoc"],  # noqa: S607
+            ["uv", "add", "--dev", "mcpdoc"],  # noqa: S607  # Safe: hardcoded uv command with literal args
             check=True,
         )
     except subprocess.CalledProcessError:
@@ -122,34 +122,13 @@ def ensure_mcpdoc_installed() -> None:
 
 
 def get_documentation_url() -> str:
-    """Get the documentation URL based on user choice.
+    """Get the GitHub documentation URL.
 
     Returns:
-        str: The URL to the llms.txt file.
+        str: The URL to the llms.txt file on GitHub.
     """
-    print("\n📍 Select documentation source:")
-    print("1. GitHub (recommended for most users)")
-    print("2. Local development")
-
-    choice = input("\nEnter choice (1 or 2): ").strip()
-
-    if choice == "2":
-        # Local development
-        project_root = Path(__file__).parent.parent
-        llms_txt = project_root / "llms.txt"
-
-        if not llms_txt.exists():
-            print(f"❌ Error: {llms_txt} not found")
-            print("   This file should exist in the repository root")
-            sys.exit(1)
-
-        llms_url = f"file://{llms_txt.absolute()}"
-        print(f"\n📁 Using local file: {llms_txt}")
-    else:
-        # Default to GitHub
-        llms_url = "https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt"
-        print(f"\n🌐 Using GitHub URL: {llms_url}")
-
+    llms_url = "https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt"
+    print(f"\n🌐 Using GitHub URL: {llms_url}")
     return llms_url
 
 
