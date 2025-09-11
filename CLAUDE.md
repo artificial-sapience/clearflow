@@ -282,8 +282,8 @@ ClearFlow includes comprehensive llms.txt support for optimal AI assistant integ
    - See [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc) for IDE-specific setup
 
 4. **Maintenance**:
-   - GitHub Action auto-updates llms-full.txt on doc changes
-   - Release workflow regenerates before publishing
+   - Manual generation: `uv run python scripts/generate_llms_txt_files.py`
+   - Review changes before committing to maintain quality
    - Validate URLs: `cat llms.txt | grep -oE 'https://[^)]+' | xargs -I {} curl -I {}`
 
 ## Complexity Management
