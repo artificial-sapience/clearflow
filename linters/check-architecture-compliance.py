@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Check architecture compliance for the ClearFlow project.
 
 This script enforces architectural requirements for ClearFlow.

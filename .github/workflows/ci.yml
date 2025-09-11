@@ -97,13 +97,13 @@ jobs:
         
     # Custom linters - MUST run first
     - name: Architecture compliance check
-      run: python3 linters/check-architecture-compliance.py clearflow tests examples linters
+      run: python linters/check-architecture-compliance.py clearflow tests examples linters
       
     - name: Immutability compliance check
-      run: python3 linters/check-immutability.py clearflow tests examples linters
+      run: python linters/check-immutability.py clearflow tests examples linters
       
     - name: Test suite compliance check
-      run: python3 linters/check-test-suite-compliance.py clearflow tests examples linters
+      run: python linters/check-test-suite-compliance.py clearflow tests examples linters
         
     # Ruff checks
     - name: Run ruff linting with auto-fix
@@ -195,7 +195,7 @@ jobs:
       run: uv run pytest -x -v tests --cov=clearflow --cov-report=xml --cov-report=term-missing --cov-fail-under=100
         
     - name: Upload coverage to Coveralls
-      if: matrix.os == 'ubuntu-latest' && github.repository == 'artificial-sapience/ClearFlow'
+      if: matrix.os == 'ubuntu-latest' && github.repository == 'artificial-sapience/clearflow'
       uses: coverallsapp/github-action@v2
       with:
         files: coverage.xml

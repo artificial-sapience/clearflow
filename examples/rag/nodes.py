@@ -33,6 +33,7 @@ class ChunkDocumentsNode(Node[RAGState, ChunkedState]):
 
         Returns:
             NodeResult with chunked state and 'chunked' outcome.
+
         """
         all_chunks = tuple(chunk for doc in state.documents for chunk in fixed_size_chunk(doc))
 
@@ -57,6 +58,7 @@ class EmbedDocumentsNode(Node[ChunkedState, EmbeddedState]):
 
         Returns:
             NodeResult with embedded state and 'embedded' outcome.
+
         """
         embeddings_tuple = tuple(get_embedding(chunk) for chunk in state.chunks)
 
@@ -89,6 +91,7 @@ class CreateIndexNode(Node[EmbeddedState, IndexedState]):
 
         Raises:
             ValueError: If no embeddings are available to index.
+
         """
         print("🔍 Creating search index...")
 
@@ -130,6 +133,7 @@ class EmbedQueryNode(Node[QueryState]):
 
         Returns:
             NodeResult with query embedding and 'embedded' outcome.
+
         """
         print(f"🔍 Embedding query: {state.query}")
 
@@ -155,6 +159,7 @@ class RetrieveDocumentNode(Node[QueryState, RetrievedState]):
 
         Raises:
             ValueError: If query embedding, index, or chunks are missing.
+
         """
         print("🔎 Searching for relevant documents...")
 
@@ -207,6 +212,7 @@ class GenerateAnswerNode(Node[RetrievedState, AnsweredState]):
 
         Returns:
             NodeResult with answered state and 'answered' outcome.
+
         """
         prompt = f"""Briefly answer the following question based on the context provided:
 Question: {state.query}

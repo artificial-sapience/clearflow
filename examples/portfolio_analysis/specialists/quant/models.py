@@ -37,6 +37,7 @@ class QuantInsights:
 
         Raises:
             ValueError: If any sector score is outside [-1, 1] range.
+
         """
         for sector, score in v.items():
             if not -1 <= score <= 1:

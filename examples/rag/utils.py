@@ -45,6 +45,7 @@ def get_embedding(text: str) -> npt.NDArray[np.float32]:
 
     Returns:
         Embedding vector as numpy array
+
     """
     response = client.embeddings.create(
         model="text-embedding-3-small",
@@ -62,6 +63,7 @@ def call_llm(prompt: str) -> str:
 
     Returns:
         Generated text response
+
     """
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -83,6 +85,7 @@ def fixed_size_chunk(text: str, chunk_size: int = 500, overlap: int = 50) -> tup
 
     Returns:
         Tuple of text chunks
+
     """
     if not text:
         return ()

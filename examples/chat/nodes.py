@@ -39,6 +39,7 @@ def _to_openai_message(msg: ChatMessage) -> ChatCompletionMessageParam:
 
     Returns:
         OpenAI-compatible message dictionary with correct role literal.
+
     """
     if msg.role == "user":
         return {"role": "user", "content": msg.content}
@@ -53,6 +54,7 @@ def _ensure_system_message(messages: tuple[ChatMessage, ...], system_prompt: str
 
     Returns:
         Messages tuple with system message prepended if missing.
+
     """
     if not messages:
         return (ChatMessage(role="system", content=system_prompt),)
@@ -64,6 +66,7 @@ async def _get_ai_response(messages: tuple[ChatMessage, ...], model: str) -> str
 
     Returns:
         AI-generated response content string.
+
     """
     client = AsyncOpenAI()
     # OpenAI API requires a list, not a tuple - this is outside our control
@@ -99,6 +102,7 @@ class HumanNode(Node[ChatState]):
 
         Returns:
             NodeResult with "responded" (message sent) or "quit" (exit).
+
         """
         # Output capability: Display AI response if present
         if state.last_response:
@@ -152,6 +156,7 @@ class LlmNode(Node[ChatState]):
 
         Returns:
             NodeResult with "responded" outcome (always responds).
+
         """
         # Ensure system message exists for context
         messages = _ensure_system_message(state.messages, self.system_prompt)

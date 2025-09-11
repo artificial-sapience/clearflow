@@ -10,7 +10,7 @@ ClearFlow provides mission-critical AI orchestration with verifiable correctness
 
 - **Deep immutability** - All state transformations create new immutable data structures
 - **Immutable transformations** - Nodes transform state without mutation (though they may perform I/O)
-- **Type safety** - Full static typing with pyright strict mode (mypy removed)
+- **Type safety** - Full static typing with pyright strict mode
 - **100% test coverage** - Every path tested, no exceptions
 - **Explicit routing** - Given an outcome, the next step is always the same
 - **Zero dependencies** - Stdlib only for maximum reliability
@@ -28,9 +28,9 @@ uv sync --all-extras        # Install with dev dependencies
 ./quality-check.sh         # Runs all checks: custom linters, lint, format, type check, tests
 
 # Custom linters (mission-critical compliance)
-python3 linters/check-architecture-compliance.py  # Architecture violations
-python3 linters/check-immutability.py            # Deep immutability enforcement
-python3 linters/check-test-suite-compliance.py   # Test isolation and resource management
+python linters/check-architecture-compliance.py  # Architecture violations
+python linters/check-immutability.py            # Deep immutability enforcement
+python linters/check-test-suite-compliance.py   # Test isolation and resource management
 
 # Individual quality commands
 uv run ruff check --fix clearflow tests                 # Auto-fix linting (no unsafe fixes)
@@ -278,7 +278,7 @@ ClearFlow includes comprehensive llms.txt support for optimal AI assistant integ
 
 3. **Integration**:
    - Direct URLs work with any llms.txt-compatible tool
-   - Use mcpdoc for IDE integration: `mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt`
+   - Use mcpdoc for IDE integration: `mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt`
    - See [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc) for IDE-specific setup
 
 4. **Maintenance**:
@@ -289,12 +289,14 @@ ClearFlow includes comprehensive llms.txt support for optimal AI assistant integ
 ## Complexity Management
 
 **Radical Simplification Strategy** for Grade A compliance:
+
 - Replace complex content analysis with static descriptions
 - Remove file system dependencies when possible
 - Use simple dictionary lookups instead of conditional chains
 - Question if dynamic behavior is truly necessary
 
 **Common Over-engineering Patterns to Avoid**:
+
 - Complex text processing for marginal metadata gains
 - Multiple decision branches for utility scripts
 - Dynamic file content analysis when static works
@@ -305,6 +307,7 @@ ClearFlow includes comprehensive llms.txt support for optimal AI assistant integ
 ## Security and Suppressions
 
 **Subprocess Security Suppressions** (legitimate cases):
+
 ```python
 import subprocess  # noqa: S404  # Required for running uv/mcpdoc commands in dev setup
 ["uv", "run", "cmd"],  # noqa: S607  # Safe: hardcoded command with literal args

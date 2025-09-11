@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Generate llms.txt and llms-full.txt files dynamically for AI assistant integration.
 
 This script implements the llms.txt standard (https://llmstxt.org/) with best practices
@@ -103,6 +103,7 @@ class RepoDiscovery:
 
         Args:
             project_root: Path to project root.
+
         """
         self.root = project_root
         self._metadata: ProjectMetadata | None = None
@@ -113,6 +114,7 @@ class RepoDiscovery:
 
         Returns:
             Dict containing project metadata.
+
         """
         if self._metadata is None:
             self._metadata = self._load_metadata()
@@ -123,6 +125,7 @@ class RepoDiscovery:
 
         Returns:
             Project metadata dataclass.
+
         """
         pyproject_path = self.root / "pyproject.toml"
 
@@ -162,6 +165,7 @@ class RepoDiscovery:
 
         Returns:
             Tuple of discovered file paths.
+
         """
         discovered = ()
         for pattern in patterns:
@@ -184,6 +188,7 @@ class RepoDiscovery:
 
         Returns:
             GitHub raw URL for the file.
+
         """
         relative_path = file_path.relative_to(self.root)
         return (
@@ -200,6 +205,7 @@ class DescriptionExtractor:
 
         Returns:
             Description string or None.
+
         """
         tree = ast.parse(content)
         docstring = ast.get_docstring(tree)
@@ -213,6 +219,7 @@ class DescriptionExtractor:
 
         Returns:
             First line of docstring or None.
+
         """
         tree = ast.parse(content)
         docstring = ast.get_docstring(tree)
@@ -228,6 +235,7 @@ class DescriptionExtractor:
 
         Returns:
             Static test description.
+
         """
         return "Test implementation"
 
@@ -237,6 +245,7 @@ class DescriptionExtractor:
 
         Returns:
             Fallback description or None.
+
         """
         filename = file_path.stem
         fallback_map = {
@@ -257,6 +266,7 @@ class DescriptionExtractor:
 
         Returns:
             Extracted description or None.
+
         """
         content = file_path.read_text(encoding="utf-8")
 
@@ -286,6 +296,7 @@ class DescriptionExtractor:
 
         Returns:
             Simple static description.
+
         """
         if file_path.parent == file_path.parent.parent:
             return "Complete overview and quickstart guide"
@@ -297,6 +308,7 @@ class DescriptionExtractor:
 
         Returns:
             Cleaned text string.
+
         """
         clean = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
         clean = re.sub(r"\*(.*?)\*", r"\1", clean)
@@ -308,6 +320,7 @@ class DescriptionExtractor:
 
         Returns:
             Static description.
+
         """
         return "Documentation"
 
@@ -317,6 +330,7 @@ class DescriptionExtractor:
 
         Returns:
             Fallback description or None.
+
         """
         filename_map = {
             "CLAUDE": "Development guidelines and architectural principles",
@@ -337,6 +351,7 @@ class DescriptionExtractor:
 
         Returns:
             Extracted description or None.
+
         """
         description = DescriptionExtractor.extract_first_content_line()
         if description:
@@ -353,6 +368,7 @@ class DescriptionExtractor:
 
         Returns:
             Generated description.
+
         """
         parent_name = file_path.parent.name.lower()
 
@@ -373,6 +389,7 @@ class LLMSGenerator:
 
         Args:
             project_root: Path to project root directory.
+
         """
         self.root = project_root
         self.discovery = RepoDiscovery(project_root)
@@ -383,6 +400,7 @@ class LLMSGenerator:
 
         Returns:
             Generated llms.txt content.
+
         """
         # Build header (H1) - Required per spec
         metadata = self.discovery.metadata
@@ -418,6 +436,7 @@ class LLMSGenerator:
 
         Returns:
             Tuple of lines for the section.
+
         """
         # Build section header (H2)
         header_lines = (f"## {config.title}", "")
@@ -447,6 +466,7 @@ class LLMSGenerator:
 
         Returns:
             Formatted link text.
+
         """
         example_name = file_path.parent.name
         return "RAG Pipeline" if example_name == "rag" else example_name.replace("_", " ").title()
@@ -457,6 +477,7 @@ class LLMSGenerator:
 
         Returns:
             Formatted link text.
+
         """
         test_name = file_path.stem.replace("test_", "")
         test_names = {
@@ -472,6 +493,7 @@ class LLMSGenerator:
 
         Returns:
             Formatted link text.
+
         """
         link_text = file_path.stem
         filename_map = {
@@ -492,6 +514,7 @@ class LLMSGenerator:
 
         Returns:
             Formatted link string or None.
+
         """
         _ = config  # Mark as intentionally unused
 
@@ -519,6 +542,7 @@ class LLMSGenerator:
 
         Returns:
             License type description.
+
         """
         content = file_path.read_text(encoding="utf-8")
         first_line = content.split("\n")[0].strip()
@@ -541,6 +565,7 @@ class LLMSGenerator:
 
         Returns:
             Simple description string or None.
+
         """
         if file_path.suffix == ".py":
             return self.extractor.from_python_file(file_path)
@@ -558,6 +583,7 @@ def validate_llms_content() -> tuple[bool, tuple[str, ...]]:
 
     Returns:
         Always valid - validation simplified for Grade A complexity.
+
     """
     return True, ()
 
@@ -570,6 +596,7 @@ def generate_llms_full(llms_txt_path: Path) -> Path:
 
     Returns:
         Path to generated llms-full.txt file.
+
     """
     llms_full_path = llms_txt_path.parent / "llms-full.txt"
 

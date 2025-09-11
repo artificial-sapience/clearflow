@@ -39,11 +39,11 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/artificial-sapience/ClearFlow"
-Repository = "https://github.com/artificial-sapience/ClearFlow.git"
-Source = "https://github.com/artificial-sapience/ClearFlow"
-Issues = "https://github.com/artificial-sapience/ClearFlow/issues"
-Examples = "https://github.com/artificial-sapience/ClearFlow/tree/main/examples"
+Homepage = "https://github.com/artificial-sapience/clearflow"
+Repository = "https://github.com/artificial-sapience/clearflow.git"
+Source = "https://github.com/artificial-sapience/clearflow"
+Issues = "https://github.com/artificial-sapience/clearflow/issues"
+Examples = "https://github.com/artificial-sapience/clearflow/tree/main/examples"
 Inspiration = "https://github.com/The-Pocket/PocketFlow"
 
 [project.optional-dependencies]
@@ -64,7 +64,6 @@ dev = [
     # Security & vulnerability scanning
     "pip-audit>=2.9.0",      # CVE scanner for dependencies
     "bandit[toml]>=1.8.0",   # AST security analyzer
-    # semgrep removed due to rich version conflict with dspy 3.0.3
     
     # Code quality & complexity
     "radon>=6.0.1",          # Cyclomatic complexity, maintainability index
@@ -73,13 +72,13 @@ dev = [
 ]
 examples = [
     # Union of all example dependencies
-    "openai>=1.106.1",
-    "python-dotenv>=1.1.1",
+    "openai>=1.107.0",
+    "python-dotenv>=1.1.0",
     "dspy>=3.0.3",
     "pydantic>=2.11.0",
     "rich>=13.7.1",  # Required by dspy 3.0.3
-    "faiss-cpu>=1.9.0.post2",
-    "numpy>=2.3.2",
+    "faiss-cpu>=1.12.0",
+    "numpy>=2.3.0",
 ]
 
 [tool.hatch.build]
@@ -121,7 +120,7 @@ line-length = 120
 target-version = "py313"
 indent-width = 4
 preview = true
-fix = false
+fix = true
 extend-exclude = ["*.ipynb", "typings", "**/.venv", "**/venv"]  # Exclude notebooks, type stubs, and virtual environments
 unsafe-fixes = false
 
@@ -199,7 +198,7 @@ unfixable = [
 max-line-length = 120
 
 [tool.ruff.lint.mccabe]
-# Mission-critical: Enforce low complexity
+# Enforce low complexity
 max-complexity = 7  # A grade maximum
 
 [tool.ruff.lint.per-file-ignores]
@@ -210,15 +209,9 @@ max-complexity = 7  # A grade maximum
 # Test files have different requirements
 "tests/**/*.py" = [
   "S101",    # Use of assert (required for pytest)
-  "D",       # Allow missing docstrings in tests
   "PLR2004", # Magic values in assertions are expected values
-  "RUF029",  # Async functions without await (intentional for flow functions)
-  "C901",    # Complex test scenarios are acceptable
   "PERF401", # Explicit loops needed for type checking
-  "PLR6301", # Methods that could be static (needed for inheritance)
   "FBT003",  # Boolean literals in function calls (clear in tests)
-  # REMOVED for mission-critical quality:
-  # T201 - No print statements, use proper logging/assertions
 ]
 # Main package can use internal imports
 "clearflow/**/*.py" = [
@@ -230,7 +223,6 @@ max-complexity = 7  # A grade maximum
   "T201",    # Print statements are needed for user interaction
   "INP001",  # Examples don't need to be packages
   "EXE001",  # Shebang presence is fine without executable bit
-  "D",       # Allow missing docstrings in examples
 ]
 # Linter scripts are infrastructure tools with different requirements
 "linters/**/*.py" = [
@@ -242,7 +234,6 @@ max-complexity = 7  # A grade maximum
 "scripts/**/*.py" = [
   "T201",    # Print statements are needed for user feedback
   "INP001",  # Scripts don't need to be packages
-  "D",       # Allow missing docstrings in scripts
 ]
 
 [tool.ruff.lint.flake8-pytest-style]
@@ -316,7 +307,7 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "\\.\\.\\.",  # Exclude ellipsis in abstract/protocol methods
 ]
-ignore_errors = false  # Mission-critical: We need to know about ALL coverage errors
+ignore_errors = false  # We need to know about ALL coverage errors
 
 [tool.coverage.html]
 directory = "htmlcov"

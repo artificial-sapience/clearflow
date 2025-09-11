@@ -16,6 +16,7 @@ def configure_dspy(model: str = "gpt-5-nano-2025-08-07", temperature: float = 1.
 
     Raises:
         ValueError: If OPENAI_API_KEY is not found in environment variables.
+
     """
     # Load environment variables
     _load_env()

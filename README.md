@@ -1,11 +1,11 @@
 # ClearFlow
 
-[![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/clearflow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/clearflow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-[![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt)
+[![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
 Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.
 
@@ -35,7 +35,7 @@ ClearFlow provides comprehensive documentation in [llms.txt](https://llmstxt.org
 Add ClearFlow documentation to Claude Code with one command:
 
 ```bash
-claude mcp add mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt
+claude mcp add mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt
 ```
 
 For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc#configuration).
@@ -44,8 +44,8 @@ For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/l
 
 Use these URLs directly in any AI tool that supports llms.txt:
 
-- **Minimal index** (~2KB): <https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms.txt>
-- **Full documentation** (~63KB): <https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/llms-full.txt>
+- **Minimal index** (~2KB): <https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt>
+- **Full documentation** (~63KB): <https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms-full.txt>
 
 ## Examples
 
@@ -110,7 +110,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### Clone and set up development environment
 
 ```bash
-git clone https://github.com/artificial-sapience/ClearFlow.git
+git clone https://github.com/artificial-sapience/clearflow.git
 cd ClearFlow
 uv sync --all-extras     # Creates venv and installs deps automatically
 ./quality-check.sh       # Run all checks

@@ -96,11 +96,13 @@ class LLMRouterNode(Node[AgentState]):
         )
         return NodeResult(new_state, outcome=outcome)
 
-    def _classify_intent(self, msg: Message | None) -> tuple[str, Message]:
+    @staticmethod
+    def _classify_intent(msg: Message | None) -> tuple[str, Message]:
         """Classify user intent from message.
 
         Returns:
             Tuple of (intent string, response message).
+
         """
         if not msg or msg.role != "user":
             return "no_input", Message(role="assistant", content="Please provide input.")

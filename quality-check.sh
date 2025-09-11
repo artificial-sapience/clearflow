@@ -97,19 +97,19 @@ check_step "Dependencies synchronization"
 
 print_header "🚨 ARCHITECTURE COMPLIANCE CHECK"
 echo "Enforcing clean architecture principles..."
-python3 linters/check-architecture-compliance.py $QUALITY_TARGETS
+python linters/check-architecture-compliance.py $QUALITY_TARGETS
 check_step "Architecture compliance check"
 
 print_header "🔒 IMMUTABILITY COMPLIANCE CHECK"
 echo "Enforcing deep immutability requirements..."
-python3 linters/check-immutability.py $QUALITY_TARGETS
+python linters/check-immutability.py $QUALITY_TARGETS
 check_step "Immutability compliance check"
 
 # Only run test suite compliance if we're checking test files
 if [ -d "tests" ] || [[ "$QUALITY_TARGETS" == *"test"* ]]; then
     print_header "🧪 TEST SUITE COMPLIANCE CHECK"
     echo "Enforcing test isolation and resource management..."
-    python3 linters/check-test-suite-compliance.py $QUALITY_TARGETS
+    python linters/check-test-suite-compliance.py $QUALITY_TARGETS
     check_step "Test suite compliance check"
 fi
 

@@ -50,11 +50,13 @@ class IntentClassifier(Node[ChatState]):
         new_state = replace(state, intent=intent)
         return NodeResult(new_state, outcome=intent)
 
-    def _classify_intent(self, query: str) -> str:
+    @staticmethod
+    def _classify_intent(query: str) -> str:
         """Classify query intent.
 
         Returns:
             Intent string: "technical", "question", or "general".
+
         """
         query_lower = str(query).lower()
         if "code" in query_lower or "bug" in query_lower:

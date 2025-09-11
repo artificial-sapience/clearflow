@@ -36,6 +36,7 @@ class ComplianceOfficer(Node[PortfolioRecommendations, ComplianceReview | Compli
 
         Returns:
             State passed through unchanged.
+
         """
         print("\n🤖 COMPLIANCE OFFICER")
         print("   └─ Reviewing recommendations for regulatory compliance...")
@@ -81,6 +82,7 @@ class ComplianceOfficer(Node[PortfolioRecommendations, ComplianceReview | Compli
 
         Returns:
             Result passed through unchanged.
+
         """
         if isinstance(result.state, ComplianceError):
             print("   ❌ Compliance violations detected")
@@ -96,6 +98,7 @@ class ComplianceOfficer(Node[PortfolioRecommendations, ComplianceReview | Compli
 
         Returns:
             Tuple of compliance checks with pass/fail status.
+
         """
         return (
             validate_position_limits(allocation_changes),
@@ -109,6 +112,7 @@ class ComplianceOfficer(Node[PortfolioRecommendations, ComplianceReview | Compli
 
         Returns:
             Tuple of failed compliance checks only.
+
         """
         return tuple(check for check in checks if check.status == "fail")
 
@@ -118,8 +122,8 @@ class ComplianceOfficer(Node[PortfolioRecommendations, ComplianceReview | Compli
 
         Returns:
             NodeResult with compliance review or compliance error.
-        """
 
+        """
         try:
             # Run regulatory compliance checks
             regulatory_checks = self._run_regulatory_checks(state.allocation_changes)

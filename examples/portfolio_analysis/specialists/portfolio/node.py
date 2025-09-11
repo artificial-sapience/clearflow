@@ -32,6 +32,7 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
 
         Returns:
             State passed through unchanged.
+
         """
         print("\n🤖 PORTFOLIO MANAGER")
         print("   └─ Developing strategic allocation recommendations...")
@@ -45,6 +46,7 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
 
         Returns:
             Tuple of (increases, decreases) allocation changes.
+
         """
         increases = tuple(c for c in allocation_changes if c.recommended_allocation > c.current_allocation)
         decreases = tuple(c for c in allocation_changes if c.recommended_allocation < c.current_allocation)
@@ -85,6 +87,7 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
 
         Returns:
             Result passed through unchanged.
+
         """
         if isinstance(result.state, AnalysisError):
             print("   ❌ Portfolio management failed")
@@ -99,8 +102,8 @@ class PortfolioManager(Node[RiskAssessment, PortfolioRecommendations | AnalysisE
 
         Returns:
             NodeResult with portfolio recommendations or analysis error.
-        """
 
+        """
         # Check if risk is too extreme for adjustments
         if state.risk_level == "extreme":
             error = AnalysisError(

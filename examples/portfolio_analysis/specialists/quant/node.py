@@ -33,6 +33,7 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
 
         Returns:
             State passed through unchanged.
+
         """
         print("\n🤖 QUANTITATIVE ANALYST")
         print("   └─ Analyzing market trends and opportunities...")
@@ -72,6 +73,7 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
 
         Returns:
             Result passed through unchanged.
+
         """
         if isinstance(result.state, AnalysisError):
             print("   ❌ Analysis failed")
@@ -86,8 +88,8 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
 
         Returns:
             NodeResult with quantitative insights or analysis error.
-        """
 
+        """
         if not state.assets:
             error = AnalysisError(
                 error_type="no_market_data",

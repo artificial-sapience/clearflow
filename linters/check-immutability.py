@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Check deep immutability compliance for the ClearFlow project.
 
 This script enforces deep immutability requirements.
