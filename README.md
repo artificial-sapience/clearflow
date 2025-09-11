@@ -3,7 +3,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/clearflow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/clearflow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
-![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
+[![Python versions](https://img.shields.io/pypi/pyversions/clearflow.svg)](https://pypi.org/project/clearflow/)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
