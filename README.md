@@ -35,7 +35,11 @@ ClearFlow provides comprehensive documentation in [llms.txt](https://llmstxt.org
 Add ClearFlow documentation to Claude Code with one command:
 
 ```bash
-claude mcp add mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt
+claude mcp add-json clearflow-docs '{
+    "type":"stdio",
+    "command":"uvx",
+    "args":["--from", "mcpdoc", "mcpdoc", "--urls", "ClearFlow:https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt"]
+}'
 ```
 
 For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc#configuration).

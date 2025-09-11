@@ -277,9 +277,8 @@ ClearFlow includes comprehensive llms.txt support for optimal AI assistant integ
    - Use GitHub raw URLs (we have no separate website)
 
 3. **Integration**:
+   - See README.md for Claude Code setup instructions
    - Direct URLs work with any llms.txt-compatible tool
-   - Use mcpdoc for IDE integration: `mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt`
-   - See [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc) for IDE-specific setup
 
 4. **Maintenance**:
    - Manual generation: `uv run python scripts/generate_llms_txt_files.py`
