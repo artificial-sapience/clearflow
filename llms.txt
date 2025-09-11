@@ -1,0 +1,32 @@
+# ClearFlow
+
+> Compose type-safe flows for emergent AI.
+
+## Quick Start
+
+- [Install from PyPI](https://pypi.org/project/clearflow/): pip install clearflow
+
+## Documentation
+
+- [README](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/README.md): Documentation
+- [Core API](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/clearflow/__init__.py): Complete implementation - Node, NodeResult, Flow, and exceptions in a single module
+- [CLAUDE Guidelines](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/CLAUDE.md): Documentation
+
+## Examples
+
+- [Chat](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/chat/README.md): Chat Example
+- [Portfolio Analysis](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/portfolio_analysis/README.md): Portfolio Analysis Example
+- [RAG Pipeline](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/rag/README.md): RAG Pipeline
+
+## Testing
+
+- [Error Handling](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_error_handling.py): Test error handling and edge cases for ClearFlow
+- [Flow Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow.py): Test Flow orchestration features of ClearFlow
+- [Flow Validation](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow_builder_validation.py): Test flow builder validation for reachability and duplicate routes
+- [Node Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_node.py): Test Node abstraction features of ClearFlow
+- [Type Transformations](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_type_transformations.py): Test type transformation features of ClearFlow
+
+## Optional
+
+- [Migration Guide](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/MIGRATION.md): Documentation
+- [License](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/LICENSE): MIT License

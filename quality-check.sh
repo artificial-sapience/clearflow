@@ -34,7 +34,7 @@ if [ $# -gt 0 ]; then
     QUALITY_TARGETS="$DIRS $FILES"
 else
     # No arguments - check everything
-    QUALITY_TARGETS="clearflow tests examples linters"
+    QUALITY_TARGETS="clearflow tests examples linters scripts"
 fi
 
 # Ensure we have something to check
@@ -60,12 +60,12 @@ check_step() {
         echo -e "${GREEN}✓ $1 passed${NC}"
     else
         echo -e "${RED}✗ $1 failed${NC}"
-        echo -e "${RED}MISSION-CRITICAL VIOLATION: Fix immediately before proceeding${NC}"
+        echo -e "${RED}VIOLATION: Fix immediately before proceeding${NC}"
         exit 1
     fi
 }
 
-echo -e "${YELLOW}Running MISSION-CRITICAL quality checks for: ${QUALITY_TARGETS}${NC}"
+echo -e "${YELLOW}Running quality checks for: ${QUALITY_TARGETS}${NC}"
 echo -e "${RED}════════════════════════════════════════════════════════════════${NC}"
 echo -e "${RED}⚠️  IMPORTANT: ALL violations must be FIXED, not suppressed${NC}"
 echo -e "${RED}⚠️  AI ASSISTANTS: Never use # noqa, # type: ignore, or ignore lists${NC}"
@@ -97,19 +97,19 @@ check_step "Dependencies synchronization"
 
 print_header "🚨 ARCHITECTURE COMPLIANCE CHECK"
 echo "Enforcing clean architecture principles..."
-python3 linters/check-architecture-compliance.py $QUALITY_TARGETS
+python linters/check-architecture-compliance.py $QUALITY_TARGETS
 check_step "Architecture compliance check"
 
 print_header "🔒 IMMUTABILITY COMPLIANCE CHECK"
 echo "Enforcing deep immutability requirements..."
-python3 linters/check-immutability.py $QUALITY_TARGETS
+python linters/check-immutability.py $QUALITY_TARGETS
 check_step "Immutability compliance check"
 
 # Only run test suite compliance if we're checking test files
 if [ -d "tests" ] || [[ "$QUALITY_TARGETS" == *"test"* ]]; then
     print_header "🧪 TEST SUITE COMPLIANCE CHECK"
     echo "Enforcing test isolation and resource management..."
-    python3 linters/check-test-suite-compliance.py $QUALITY_TARGETS
+    python linters/check-test-suite-compliance.py $QUALITY_TARGETS
     check_step "Test suite compliance check"
 fi
 
@@ -152,7 +152,7 @@ print_header "Running pyright type checks"
 if [ $# -gt 0 ]; then
     PYRIGHT_ARGS="$QUALITY_TARGETS"
 else
-    PYRIGHT_ARGS="clearflow tests examples linters"  # Default directories
+    PYRIGHT_ARGS="clearflow tests examples linters scripts"  # Default directories
 fi
 # Force pyright to use latest version to avoid version warnings
 if ! PYRIGHT_PYTHON_FORCE_VERSION=latest uv run pyright $PYRIGHT_ARGS; then
@@ -218,7 +218,7 @@ if [ "$should_run_tests" = true ]; then
         
         if [ $test_status -ne 0 ]; then
             echo -e "${RED}✗ Tests failed or coverage below 100%${NC}"
-            echo -e "${RED}MISSION-CRITICAL: Must maintain 100% coverage${NC}"
+            echo -e "${RED}Must maintain 100% coverage${NC}"
             echo -e "${YELLOW}⚠️  DO NOT use # pragma: no cover to exclude lines${NC}"
             echo -e "${YELLOW}⚠️  DO NOT weaken coverage requirements${NC}"
             echo -e "${YELLOW}⚠️  AI ASSISTANTS: Never reduce coverage without explicit user approval${NC}"
@@ -253,7 +253,7 @@ else
     # The py library is a pytest dependency only used in testing, not in production code
     if ! uv run pip-audit --fix --desc --ignore-vuln PYSEC-2022-42969 2>/dev/null; then
         echo -e "${RED}✗ CVE vulnerabilities detected in dependencies${NC}"
-        echo -e "${RED}MISSION-CRITICAL: Security vulnerabilities found${NC}"
+        echo -e "${RED}Security vulnerabilities found${NC}"
         echo -e "${YELLOW}⚠️  Update vulnerable dependencies immediately${NC}"
         echo -e "${GREEN}✅ FIX THE ROOT CAUSE: Update to secure versions${NC}"
         exit 1
@@ -312,7 +312,7 @@ done
 if [ -n "$xenon_targets" ]; then
     if ! uv run xenon --max-average A --max-modules A --max-absolute A -e "*/.venv/*,*/venv/*" $xenon_targets 2>&1; then
         echo -e "${RED}✗ Functions exceeding complexity threshold${NC}"
-        echo -e "${RED}MISSION-CRITICAL: Complexity violations detected${NC}"
+        echo -e "${RED}Complexity violations detected${NC}"
         echo -e "${YELLOW}⚠️  DO NOT suppress or increase complexity thresholds${NC}"
         echo -e "${YELLOW}⚠️  AI ASSISTANTS: Never increase complexity limits without explicit user approval${NC}"
         echo -e "${GREEN}✅ FIX THE ROOT CAUSE: Refactor complex functions into simpler ones${NC}"
@@ -325,7 +325,7 @@ if [ -n "$linter_targets" ]; then
     echo "Checking linters (infrastructure) with Grade B requirement..."
     if ! uv run xenon --max-average B --max-modules B --max-absolute B -e "*/.venv/*,*/venv/*" $linter_targets 2>&1; then
         echo -e "${RED}✗ Linter functions exceeding Grade B complexity${NC}"
-        echo -e "${RED}MISSION-CRITICAL: Infrastructure complexity violations detected${NC}"
+        echo -e "${RED}Infrastructure complexity violations detected${NC}"
         exit 1
     fi
 fi
@@ -357,7 +357,7 @@ if [ -n "$vulture_targets" ]; then
         vulture_count=$(echo "$vulture_output" | grep -c "unused" || echo "0")
         echo -e "${RED}✗ Found $vulture_count dead code issues:${NC}"
         echo "$vulture_output"
-        echo -e "${RED}MISSION-CRITICAL: Dead code detected${NC}"
+        echo -e "${RED}Dead code detected${NC}"
         echo -e "${YELLOW}⚠️  DO NOT suppress dead code warnings${NC}"
         echo -e "${GREEN}✅ FIX THE ROOT CAUSE: Remove unused code${NC}"
         exit 1
@@ -397,7 +397,7 @@ if [ -n "$radon_targets" ]; then
             echo -e "${GREEN}✓ Radon complexity check passed (Grade $avg_grade, avg: $avg_value)${NC}"
         else
             echo -e "${RED}✗ Average complexity Grade $avg_grade (avg: $avg_value) exceeds maximum allowed Grade A${NC}"
-            echo -e "${RED}MISSION-CRITICAL: Refactor complex functions${NC}"
+            echo -e "${RED}Refactor complex functions${NC}"
             echo -e "${GREEN}✅ FIX: Break down functions with high complexity${NC}"
             exit 1
         fi
@@ -411,5 +411,5 @@ else
 fi
 
 echo -e "\n${GREEN}════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}  MISSION-CRITICAL QUALITY CHECKS PASSED! 🚀✨🎯  ${NC}"
+echo -e "${GREEN}  QUALITY CHECKS PASSED! 🚀✨🎯  ${NC}"
 echo -e "${GREEN}════════════════════════════════════════════════════${NC}"

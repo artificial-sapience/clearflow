@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Main entry point for the human-in-the-loop chat application."""
 
 import asyncio
@@ -12,7 +12,7 @@ from examples.chat.nodes import ChatState
 
 
 async def main() -> None:
-    """Main application entry point."""
+    """Run the main application entry point."""
     # Load environment variables
     load_dotenv()
 

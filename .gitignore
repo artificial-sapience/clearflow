@@ -1,6 +1,5 @@
 # ClearFlow .gitignore
 # This file tells Git which files and directories to ignore
-# For mission-critical software, this is crucial for security and cleanliness
 
 # Python bytecode and cache files
 # These are generated automatically and can differ between systems

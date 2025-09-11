@@ -19,6 +19,7 @@ def create_portfolio_analysis_flow() -> Node[MarketData, TradingDecision]:
     Returns:
         Flow that processes MarketData through multiple AI specialists
         to produce TradingDecision or error states.
+
     """
     # Configure DSPy with OpenAI
     configure_dspy()

@@ -18,6 +18,7 @@ def create_chat_flow() -> Node[ChatState]:
 
     Returns:
         Flow configured for intelligent entity conversation.
+
     """
     human = HumanNode(name="human")
     llm = LlmNode(name="llm")

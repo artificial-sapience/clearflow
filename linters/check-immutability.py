@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Check deep immutability compliance for the ClearFlow project.
 
 This script enforces deep immutability requirements.
@@ -668,7 +668,7 @@ def print_report(violations: tuple[Violation, ...]) -> None:
         print(f"  {code} ({description}): {len(by_code[code])} violations")
     print(f"\nTotal violations: {len(violations)}")
     print("\n" + "🚨" * 35)
-    print("MISSION-CRITICAL: Deep immutability violations detected!")
+    print("Deep immutability violations detected!")
     print("⚠️  All types must be deeply immutable for thread safety")
     print("⚠️  DO NOT suppress these checks")
     print("✅ FIX THE ROOT CAUSE:")

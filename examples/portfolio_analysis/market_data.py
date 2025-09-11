@@ -70,6 +70,7 @@ def _generate_asset_data(symbol: str, sector: str, base_price: float) -> AssetDa
 
     Returns:
         AssetData with randomized values.
+
     """
     # Add some market volatility
     price_variance = random.uniform(PRICE_VARIANCE_MIN, PRICE_VARIANCE_MAX)
@@ -112,8 +113,8 @@ def create_sample_market_data() -> MarketData:
 
     Returns:
         MarketData with normal market conditions.
-    """
 
+    """
     # Define assets across sectors
     sample_assets = [
         ("TECH-01", "Technology", 175.50),
@@ -153,8 +154,8 @@ def create_volatile_market_data() -> MarketData:
 
     Returns:
         MarketData with high volatility and bearish sentiment.
-    """
 
+    """
     # Asset definitions
     sample_assets = [
         ("TECH-01", "Technology", 175.50),
@@ -215,8 +216,8 @@ def create_bullish_market_data() -> MarketData:
 
     Returns:
         MarketData with positive momentum and bullish sentiment.
-    """
 
+    """
     # Asset definitions
     sample_assets = [
         ("TECH-01", "Technology", 175.50),

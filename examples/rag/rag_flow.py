@@ -22,6 +22,7 @@ def create_offline_flow() -> Node[RAGState, IndexedState]:
 
     Returns:
         Flow that transforms RAGState to IndexedState
+
     """
     chunk = ChunkDocumentsNode()
     embed = EmbedDocumentsNode()
@@ -45,6 +46,7 @@ def create_online_flow() -> Node[QueryState, AnsweredState]:
 
     Returns:
         Flow that processes QueryState
+
     """
     embed_query = EmbedQueryNode()
     retrieve = RetrieveDocumentNode()

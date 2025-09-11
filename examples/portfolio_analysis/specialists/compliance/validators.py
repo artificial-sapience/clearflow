@@ -22,6 +22,7 @@ def validate_position_limits(
 
     Returns:
         ComplianceCheck with position limit status
+
     """
     violations = [
         change.symbol for change in allocation_changes if change.recommended_allocation > ComplianceRules.POSITION_LIMIT
@@ -51,6 +52,7 @@ def validate_sector_concentration(
 
     Returns:
         ComplianceCheck with sector concentration status
+
     """
     # Simplified sector mapping for demo
     sectors = {
@@ -87,6 +89,7 @@ def _check_negative_allocations(
 
     Returns:
         Tuple of symbols with negative recommended allocations.
+
     """
     return tuple(change.symbol for change in allocation_changes if change.recommended_allocation < 0)
 
@@ -98,6 +101,7 @@ def _check_total_allocation(
 
     Returns:
         Sum of all recommended allocation percentages.
+
     """
     return sum(change.recommended_allocation for change in allocation_changes)
 
@@ -105,13 +109,14 @@ def _check_total_allocation(
 def validate_allocation_sanity(
     allocation_changes: tuple[AllocationChange, ...],
 ) -> ComplianceCheck:
-    """Basic sanity checks for allocations.
+    """Perform basic sanity checks for allocations.
 
     Args:
         allocation_changes: Proposed allocation changes
 
     Returns:
         ComplianceCheck with sanity check status
+
     """
     # Check for negative allocations
     negative = _check_negative_allocations(allocation_changes)

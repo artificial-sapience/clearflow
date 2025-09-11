@@ -1,14 +1,13 @@
 # ClearFlow
 
-[![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/ClearFlow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/ClearFlow?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/clearflow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/clearflow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
-[![type: pyright](https://img.shields.io/badge/type-pyright-blue)](https://github.com/microsoft/pyright)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
+[![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
-Type-safe orchestration for unpredictable AI.
+Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.
 
 ## Why ClearFlow?
 
@@ -17,14 +16,36 @@ Type-safe orchestration for unpredictable AI.
 - **Immutable state** – No hidden mutations
 - **Zero dependencies** – No hidden failure modes
 - **Single exit enforcement** – No ambiguous endings
+- **AI-Ready Documentation** – llms.txt for optimal coding assistant integration
 
-## Installation
+## Quick Start
 
 ```bash
 pip install clearflow
 ```
 
 > **Upgrading from v0.x?** See the [Migration Guide](MIGRATION.md) for breaking changes.
+
+## AI Assistant Integration
+
+ClearFlow provides comprehensive documentation in [llms.txt](https://llmstxt.org/) format for optimal AI assistant support.
+
+### Claude Code Setup
+
+Add ClearFlow documentation to Claude Code with one command:
+
+```bash
+claude mcp add mcpdoc --urls ClearFlow:https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt
+```
+
+For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc#configuration).
+
+### Direct URL Access
+
+Use these URLs directly in any AI tool that supports llms.txt:
+
+- **Minimal index** (~2KB): <https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt>
+- **Full documentation** (~63KB): <https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms-full.txt>
 
 ## Examples
 
@@ -78,12 +99,18 @@ ClearFlow emphasizes **robust, type-safe orchestration** with validation and gua
 
 ## Development
 
-```bash
-# Install uv (if not already installed)
-pipx install uv
+### Install uv
 
-# Clone and set up development environment
-git clone https://github.com/artificial-sapience/ClearFlow.git
+- Please see [official uv docs](https://docs.astral.sh/uv/getting-started/installation/#installation-methods) for other ways to install uv.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Clone and set up development environment
+
+```bash
+git clone https://github.com/artificial-sapience/clearflow.git
 cd ClearFlow
 uv sync --all-extras     # Creates venv and installs deps automatically
 ./quality-check.sh       # Run all checks

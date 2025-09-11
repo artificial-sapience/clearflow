@@ -38,6 +38,7 @@ def _get_allocation_action(delta: float) -> str:
 
     Returns:
         Action string: "INCREASE", "DECREASE", or "HOLD".
+
     """
     if delta > 0:
         return "INCREASE"
@@ -97,6 +98,7 @@ async def run_portfolio_analysis(scenario: str = "normal") -> None:
 
     Args:
         scenario: Market scenario - "normal", "bullish", or "volatile"
+
     """
     # Create market data based on scenario
     if scenario == "bullish":
@@ -154,7 +156,7 @@ async def _run_scenario_by_choice(choice: str) -> None:
 
 
 async def main() -> None:
-    """Main entry point with menu."""
+    """Run the main entry point with menu."""
     _print_menu()
     choice = input("\nEnter choice (1-3, default=1): ").strip()
     await _run_scenario_by_choice(choice)

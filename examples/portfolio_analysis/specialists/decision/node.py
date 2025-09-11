@@ -33,8 +33,8 @@ class DecisionNode(Node[ComplianceReview, TradingDecision]):
 
         Returns:
             NodeResult with trading decision.
-        """
 
+        """
         try:
             # Use DSPy to get structured trading decision
             prediction = self._predict(compliance_review=state)
@@ -66,6 +66,7 @@ class ErrorHandler(Node[AnalysisError | RiskLimitError | ComplianceError, Tradin
 
         Returns:
             NodeResult with hold trading decision.
+
         """
         # Create error message based on error type
         if isinstance(state, AnalysisError):

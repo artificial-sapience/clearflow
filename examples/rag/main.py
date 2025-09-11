@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Main entry point for RAG example."""
 
 import asyncio
@@ -16,6 +16,7 @@ def get_sample_documents() -> tuple[str, ...]:
 
     Returns:
         Tuple of document strings
+
     """
     return (
         # ClearFlow framework
@@ -64,6 +65,7 @@ def get_query() -> str:
 
     Returns:
         Query string
+
     """
     # Check for command line argument
     if len(sys.argv) > 1:
@@ -125,7 +127,7 @@ async def run_rag_pipeline() -> None:
 
 
 async def main() -> None:
-    """Main application entry point."""
+    """Run the main application entry point."""
     # Load environment variables
     load_dotenv()
 

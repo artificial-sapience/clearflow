@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Check architecture compliance for the ClearFlow project.
 
 This script enforces architectural requirements for ClearFlow.
@@ -556,7 +556,7 @@ def print_report(violations: tuple[Violation, ...]) -> None:
         print(f"  {req}: {len(req_violations)} violations")
     print(f"\nTotal violations: {len(violations)}")
     print("\n" + "🚨" * 35)
-    print("MISSION-CRITICAL: Fix ALL violations immediately!")
+    print("Fix ALL violations immediately!")
     print("⚠️  DO NOT suppress these checks with # noqa, # type: ignore, etc.")
     print("⚠️  DO NOT add to ignore lists in pyproject.toml")
     print("⚠️  DO NOT disable linting rules")

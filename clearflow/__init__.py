@@ -1,8 +1,4 @@
-"""ClearFlow: Zero-dependency async workflow orchestration framework.
-
-Provides type-safe workflow composition with explicit routing and single termination.
-Built for mission-critical AI orchestration.
-"""
+"""ClearFlow: Compose type-safe flows for emergent AI."""
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping

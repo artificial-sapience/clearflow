@@ -31,6 +31,7 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
 
         Returns:
             State passed through unchanged.
+
         """
         print("\n🤖 RISK ANALYST")
         print("   └─ Evaluating portfolio risk metrics and stress testing...")
@@ -71,6 +72,7 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
 
         Returns:
             Result passed through unchanged.
+
         """
         if isinstance(result.state, RiskLimitError):
             print("   ❌ Risk limits exceeded")
@@ -86,8 +88,8 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
 
         Returns:
             NodeResult with risk assessment or risk limit error.
-        """
 
+        """
         try:
             # Use DSPy to get structured risk assessment
             # The AI will determine risk acceptability based on context
