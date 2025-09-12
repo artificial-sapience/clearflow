@@ -1,108 +1,116 @@
-# Session Context: Message Flow Routing Fix & Hybrid API Implementation
+# Session Context: Message API Finalization & Test Organization
 
 ## Session Summary
-This session successfully resolved the critical message flow routing bug by implementing a hybrid API approach. The `_MessageFlowBuilder` routing logic was completely redesigned to use explicit producer specification while maintaining type safety and fluent chaining.
+This session successfully completed the critical message API finalization by making the architectural decision to make the message API public, implementing comprehensive quality compliance, and achieving 100% test coverage. The only remaining task is a style improvement (PLR6301 test method conversion).
 
-## Major Accomplishment: Hybrid API Implementation
+## Major Accomplishment: Message API Made Public ✅
 
-### The Original Problem (SOLVED ✅)
-- **Bug**: `_MessageFlowBuilder.route()` couldn't determine which node produces each message type
-- **Symptom**: Test failure `test_message_flow.py::TestMessageFlow::test_flow_with_routing`
-- **Error**: "No route defined for message type 'ValidateCommand' from node 'transform'"
+### The Critical Decision (RESOLVED ✅)
+- **Issue**: Message API not exported in `clearflow.__init__.py` but tests imported from submodules
+- **Decision**: Made message API public through proper `__all__` exports
+- **Outcome**: Tests now use public API only, enforced by new ARCH011 linter rule
 
-### The Solution: Hybrid API Design
-Implemented a context-based builder pattern with explicit producer specification:
-
+### Implementation Details
+**Public API Exports Added**:
 ```python
-# New Hybrid API Pattern
-message_flow("example", start)
-    .from_node(start)
-        .route(SuccessMessage, processor)
-        .route(ErrorMessage, handler)
-    .from_node(processor)
-        .route(ProcessedMessage, finalizer)
+__all__ = [
+    "Command", "Event", "Message", "MessageNode", "Node", "NodeResult", 
+    "ObservableFlow", "Observer", "flow", "message_flow",
+]
 ```
 
-**Key Benefits**:
-1. **Explicit Routing**: Clear which node produces which message
-2. **Type Safety**: Full type tracking through builder chain  
-3. **Grouping**: Related routes from same node are visually grouped
-4. **No Ambiguity**: No inference needed - producer is always explicit
-
-## Technical Implementation Details
-
-### Architecture Changes
-1. **Added `_MessageFlowBuilderContext`**: Context class for routing from specific nodes
-2. **Modified `_MessageFlowBuilder`**: Added `from_node()` method returning context
-3. **Fixed Method Naming**: Removed redundant underscores (`add_route` vs `_add_route`)
-4. **Type Safety**: Added proper casting for generic type parameters
-
-### Linter Improvements
-- **Fixed Architecture Linter**: Now allows same-module private access (Pythonic convention)
-- **Removed Code Smells**: Fixed unused variables and optimized endswith() calls
-- **Justification**: Python's module boundary = encapsulation boundary principle
-
-## Current Status: Near Complete ✅
-
-### Test Results
-- **85/85 tests passing** ✅ 
-- **98.86% code coverage** (only 2 lines uncovered in message_node.py)
-- **All message flow tests work** with hybrid API
-
-### Quality Metrics
-- [x] Architecture compliance ✅
-- [x] Immutability compliance ✅ 
-- [x] Test suite compliance ✅
-- [x] All tests passing ✅
-- [x] High coverage achieved ✅
-- [ ] 71 linting issues need fixing (imports, docstrings, etc.)
-
-## Critical Issue Discovered: API Publicity
-
-### The Problem
-Tests import directly from submodules but `clearflow.__init__.py` doesn't export message API:
-
+**Architecture Enforcement**: Added ARCH011 linter rule detecting test imports from non-public modules:
 ```python
-# Current test imports (potentially wrong)
-from clearflow.message_flow import message_flow
-from clearflow.message_node import Node
-from clearflow.observer import ObservableFlow
-
-# But clearflow.__init__.py only exports:
-__all__ = ["Node", "NodeResult", "flow"]  # Original API only
+non_public_modules = [
+    "clearflow.message", "clearflow.message_node", 
+    "clearflow.message_flow", "clearflow.observer"
+]
 ```
 
-### Decision Required
-1. **Make message API public**: Add to `__all__` exports
-2. **Keep internal**: Document as implementation tests or refactor
+**Test Updates**: All tests now use `from clearflow import MessageNode, message_flow` instead of submodule imports.
+
+## Quality & Coverage Achievements ✅
+
+### 100% Test Coverage Achieved
+- **Fixed**: 2 uncovered lines in `message_node.py` (lines 41-42)
+- **Solution**: Added node name validation test for empty/whitespace names
+- **Pattern**: Missing coverage often indicates missing validation tests
+
+### Critical Linting Issues Resolved
+**Fixed All Non-PLR6301 Issues**:
+- ✅ Unused imports (F401) - Removed from test files
+- ✅ Missing docstring returns (DOC201) - Added return documentation  
+- ✅ Broad exception assertions (B017, PT011) - Used specific exception types
+- ✅ Exception naming/handling (TRY003, EM102, N818) - Fixed patterns
+
+**Only Remaining**: 48 PLR6301 warnings for test methods that don't use `self`.
+
+## PLR6301 Research & Decision ✅
+
+### Research Results
+- **Official pylint guidance**: Convert methods that don't use `self` to standalone functions
+- **Industry consensus**: For mission-critical software, follow "fix root cause" approach
+- **ClearFlow alignment**: Matches "always fix root cause instead of suppressing" policy
+
+### Approved Solution
+**Pattern**: Convert test methods to standalone functions
+```python
+# Instead of:
+class TestMessage:
+    async def test_message_type_property(self) -> None: ...
+
+# Use:
+async def test_message_type_property() -> None:
+    """Test that message_type returns the concrete class type."""
+    ...
+```
+
+**Files to Update**: 48 methods across 4 files (see `plan.md` for breakdown).
 
 ## Files Modified This Session
 
-### Core Implementation
-- `clearflow/message_flow.py` - Complete hybrid API implementation
-  - Added `_MessageFlowBuilderContext` class
-  - Implemented `from_node()` method  
-  - Fixed producer tracking logic
-  - Added proper type casting
+### Core Exports
+- `clearflow/__init__.py` - Added message API to `__all__` (alphabetically sorted)
+- `clearflow/message.py` - Added `__all__ = ["Command", "Event", "Message"]`
+- `clearflow/message_node.py` - Added `__all__ = ["Node"]`
+- `clearflow/message_flow.py` - Added `__all__ = ["message_flow"]`
+- `clearflow/observer.py` - Added `__all__ = ["Observer", "ObservableFlow"]`
 
-### Linter Updates  
-- `linters/check-architecture-compliance.py` - Allow same-module private access
-  - Fixed unused variable
-  - Optimized endswith() pattern matching
-  - Added Pythonic same-module access support
+### Architecture Enhancement  
+- `linters/check-architecture-compliance.py` - Added ARCH011 rule for test API compliance
 
-### Tests Updated
-- `tests/test_message_flow.py` - All flows use `from_node()` pattern
-- `tests/test_observer.py` - Updated 2 failing tests to use hybrid API
+### Test Improvements
+- `tests/test_message_node.py` - Added `test_node_name_validation()` for 100% coverage
+- `tests/conftest_message.py` - Fixed unused imports, added return documentation
+- `tests/test_message.py` - Fixed unused imports, broad exceptions  
+- `tests/test_message_flow.py` - Fixed broad exceptions, unused imports
+- `tests/test_observer.py` - Fixed exception naming, unused imports
+- **All test files** - Updated to import from public API only
+
+### Documentation
+- `CLAUDE.md` - Added session learnings with concrete patterns and examples
+
+## Current System Status
+
+### Health Metrics
+- **85/85 tests passing** ✅
+- **100% test coverage** ✅ (fixed `message_node.py` lines 41-42)
+- **All critical linting resolved** ✅ (only PLR6301 style warnings remain)
+- **Architecture compliance** ✅ (including new ARCH011 rule)
+- **Public API properly designed** ✅
+
+### Quality Check Results
+- ✅ Architecture compliance: No violations
+- ✅ Immutability compliance: No violations  
+- ✅ Test suite compliance: No violations
+- ⚠️ 48 PLR6301 warnings remain (approved for conversion)
 
 ## Next Session Priority
 
-**CRITICAL**: Decide message API publicity before proceeding
-- If public → Export in `__init__.py` 
-- If internal → Refactor test imports or document as implementation tests
+**Single Remaining Task**: Convert 48 test methods to standalone functions
+- **Priority**: LOW (style improvement only)
+- **Impact**: No functional changes, improves code clarity
+- **Status**: User approved conversion plan
+- **Reference**: See `plan.md` for detailed breakdown and conversion pattern
 
-**HIGH**: Fix 71 linting issues for clean quality check
-**MEDIUM**: Achieve final 2 lines for 100% coverage
-
-## Reference
-See `plan.md` for detailed task breakdown and priority order.
+The message-driven architecture implementation is functionally complete. The remaining work is purely organizational/stylistic improvement that aligns with ClearFlow's quality standards.

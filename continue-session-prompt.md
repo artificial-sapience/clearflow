@@ -1,51 +1,64 @@
-# Continue Session: Complete Message API Finalization
+# Continue Session: PLR6301 Test Method Conversion
 
 Please continue working on the ClearFlow message-driven architecture implementation.
 
 ## Context
 
-See `session-context.md` for full background. We successfully implemented the hybrid API and fixed the message flow routing bug, achieving 85/85 passing tests and 98.86% coverage. 
+See `session-context.md` for complete background. We successfully completed the critical message API finalization, achieving 100% test coverage, resolving all architecture violations, and making the message API public with proper enforcement.
 
-## Immediate Priority: Critical Decision Required
+## Current Status: 🎉 MISSION ACCOMPLISHED (Almost!)
 
-**Issue**: Message-based API is not exported in `clearflow.__init__.py` but tests import directly from submodules. This violates the "test only through public API" principle.
+The message-driven architecture is **functionally complete** with:
+- ✅ **85/85 tests passing**
+- ✅ **100% test coverage** 
+- ✅ **All critical linting resolved**
+- ✅ **Message API properly exported**
+- ✅ **Architecture compliance enforced**
 
-**Current State**:
-- Tests import from: `clearflow.message_flow`, `clearflow.message_node`, `clearflow.observer` 
-- But `clearflow.__init__.py` only exports: `["Node", "NodeResult", "flow"]` (original API)
+## Single Remaining Task: PLR6301 Style Improvement
 
-**Decision Needed**: 
-1. **Make message API public**: Add `message_flow`, `Message`, `Command`, `Event`, `ObservableFlow`, etc. to `__all__` in `clearflow/__init__.py`
-2. **Keep message API internal**: Refactor tests to use only public API or document as implementation tests
+**Objective**: Convert 48 test methods that don't use `self` to standalone functions
 
-Please make this architectural decision first, then proceed with remaining tasks.
+**Priority**: LOW (style improvement only - no functional impact)
 
-## After Decision, Complete These Tasks
+**Status**: User approved conversion plan in previous session
 
-1. **Fix 71 Linting Issues** (HIGH priority)
-   - Unused imports in test files  
-   - Missing docstring returns
-   - Method could be function warnings
-   - Exception handling issues
+## Implementation Details
 
-2. **Achieve 100% Coverage** (HIGH priority)
-   - Fix 2 uncovered lines in `message_node.py`
-   - Currently at 98.86% (237 lines, 2 uncovered)
+**Pattern**: Convert class methods to standalone functions
+```python
+# Instead of:
+class TestMessage:
+    async def test_message_type_property(self) -> None:
+        """Test that message_type returns the concrete class type."""
+        ...
 
-3. **Complete Quality Validation** (MEDIUM priority)
-   - Ensure `./quality-check.sh` passes completely
-   - Document any approved suppressions with justifications
+# Convert to:
+async def test_message_type_property() -> None:
+    """Test that message_type returns the concrete class type."""
+    ...
+```
 
-## Current Status
-- ✅ Hybrid API implemented and working
-- ✅ All 85 tests passing
-- ✅ Architecture/immutability/test compliance checks passing  
-- ⚠️ 71 linting errors need fixing
-- ⚠️ API publicity decision required
+**Files to Convert** (48 total methods):
+- `tests/test_message.py` - 16 methods
+- `tests/test_message_flow.py` - 11 methods  
+- `tests/test_message_node.py` - 10 methods
+- `tests/test_observer.py` - 11 methods
 
-## Files to Focus On
-- `clearflow/__init__.py` - Add message API exports if making public
-- Test files - Fix linting issues (imports, docstrings)
-- `clearflow/message_node.py` - Cover remaining 2 lines for 100%
+## Instructions
 
-See `plan.md` for complete task breakdown and `session-context.md` for implementation details.
+1. **Start systematic conversion** of test methods to functions
+2. **Remove empty test classes** after converting all their methods
+3. **Verify all tests still pass** after each file conversion
+4. **Maintain test organization** through clear function naming
+5. **Complete quality validation** with final `./quality-check.sh`
+
+## Expected Outcome
+
+After conversion:
+- All PLR6301 warnings resolved
+- Tests remain functionally identical (85/85 passing)
+- Code clarity improved (functions are honest about not using instance state)
+- Aligns with ClearFlow "fix root cause" philosophy
+
+See `plan.md` for task breakdown and `session-context.md` for complete technical context.
