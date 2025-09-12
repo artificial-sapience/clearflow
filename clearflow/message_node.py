@@ -2,12 +2,10 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import final
 
 from clearflow.message import Message
 
 
-@final
 @dataclass(frozen=True, kw_only=True)
 class Node[TMessageIn: Message, TMessageOut: Message](ABC):
     """Orchestration node that can embody AI intelligence.

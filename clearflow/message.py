@@ -17,7 +17,6 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-@final
 @dataclass(frozen=True, kw_only=True)
 class Message(ABC):
     """Base message class for all messages in the system.
@@ -52,7 +51,16 @@ class Event(Message):
         flow_id: UUID identifying the flow session
     """
 
-    triggered_by_id: uuid.UUID  # Override to make required for events
+    def __post_init__(self) -> None:
+        """Validate that triggered_by_id is set for events.
+
+        Raises:
+            ValueError: If triggered_by_id is None for an Event.
+
+        """
+        if self.triggered_by_id is None:
+            msg = "Events must have a triggered_by_id"
+            raise ValueError(msg)
 
 
 @final

@@ -21,8 +21,8 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
     """
 
     name: str
-    start_node: Node
-    routes: Mapping[MessageRouteKey, Node | None]
+    start_node: Node[Message, Message]
+    routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
 
     async def execute(self, start_message: TStartMessage) -> TEndMessage:
         """Execute the flow by routing messages through nodes.
@@ -79,7 +79,7 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
 
     _name: str
     _start_node: Node[TStartMessage, Message]
-    _routes: MappingProxyType[MessageRouteKey, Node | None]
+    _routes: MappingProxyType[MessageRouteKey, Node[Message, Message] | None]
     _reachable_nodes: frozenset[str]  # Node names that are reachable from start
 
     def _validate_and_create_route(
