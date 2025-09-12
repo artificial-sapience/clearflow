@@ -50,9 +50,7 @@ class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFail
     name: str = "validator"
 
     @override
-    async def process(
-        self, message: ValidateCommand
-    ) -> ValidationPassedEvent | ValidationFailedEvent:
+    async def process(self, message: ValidateCommand) -> ValidationPassedEvent | ValidationFailedEvent:
         if message.strict and len(message.content) < 5:
             return ValidationFailedEvent(
                 reason="Content too short",
@@ -111,180 +109,182 @@ class ChainNode(Node[ProcessedEvent, AnalyzeCommand]):
         )
 
 
-class TestMessageNode:
-    """Test the message Node abstraction."""
+async def test_node_basic_processing() -> None:
+    """Test basic node message processing."""
+    node = ProcessorNode()
+    flow_id = create_flow_id()
 
-    async def test_node_basic_processing(self) -> None:
-        """Test basic node message processing."""
-        node = ProcessorNode()
-        flow_id = create_flow_id()
+    input_msg = ProcessCommand(
+        data="test data",
+        triggered_by_id=None,
+        flow_id=flow_id,
+    )
 
-        input_msg = ProcessCommand(
-            data="test data",
-            triggered_by_id=None,
-            flow_id=flow_id,
-        )
+    output = await node.process(input_msg)
 
-        output = await node.process(input_msg)
+    assert isinstance(output, ProcessedEvent)
+    assert output.result == "processed: test data"
+    assert output.processing_time_ms == 100.0
+    assert output.triggered_by_id == input_msg.id
+    assert output.flow_id == flow_id
 
-        assert isinstance(output, ProcessedEvent)
-        assert output.result == "processed: test data"
-        assert output.processing_time_ms == 100.0
-        assert output.triggered_by_id == input_msg.id
-        assert output.flow_id == flow_id
 
-    async def test_node_immutability(self) -> None:
-        """Test that nodes are immutable."""
-        node = ProcessorNode(name="immutable_processor")
+def test_node_immutability() -> None:
+    """Test that nodes are immutable."""
+    node = ProcessorNode(name="immutable_processor")
 
-        # Should not be able to modify node
-        with pytest.raises((FrozenInstanceError, AttributeError)):
-            node.name = "modified"  # type: ignore[misc]
+    # Should not be able to modify node
+    with pytest.raises((FrozenInstanceError, AttributeError)):
+        node.name = "modified"  # type: ignore[misc]
 
-    async def test_node_union_return_types(self) -> None:
-        """Test nodes that return union types."""
-        node = ValidatorNode()
-        flow_id = create_flow_id()
 
-        # Test validation success
-        valid_cmd = ValidateCommand(
-            content="valid content",
-            strict=True,
-            triggered_by_id=None,
-            flow_id=flow_id,
-        )
-        result = await node.process(valid_cmd)
-        assert isinstance(result, ValidationPassedEvent)
-        assert result.validated_content == "VALID CONTENT"
+async def test_node_union_return_types() -> None:
+    """Test nodes that return union types."""
+    node = ValidatorNode()
+    flow_id = create_flow_id()
 
-        # Test validation failure
-        invalid_cmd = ValidateCommand(
-            content="bad",
-            strict=True,
-            triggered_by_id=None,
-            flow_id=flow_id,
-        )
-        result = await node.process(invalid_cmd)
-        assert isinstance(result, ValidationFailedEvent)
-        assert result.reason == "Content too short"
+    # Test validation success
+    valid_cmd = ValidateCommand(
+        content="valid content",
+        strict=True,
+        triggered_by_id=None,
+        flow_id=flow_id,
+    )
+    result = await node.process(valid_cmd)
+    assert isinstance(result, ValidationPassedEvent)
+    assert result.validated_content == "VALID CONTENT"
 
-    async def test_node_message_chaining(self) -> None:
-        """Test chaining messages through multiple nodes."""
-        processor = ProcessorNode()
-        chainer = ChainNode()
-        analyzer = AnalyzerNode(fail_on_empty=False)
-        flow_id = create_flow_id()
+    # Test validation failure
+    invalid_cmd = ValidateCommand(
+        content="bad",
+        strict=True,
+        triggered_by_id=None,
+        flow_id=flow_id,
+    )
+    result = await node.process(invalid_cmd)
+    assert isinstance(result, ValidationFailedEvent)
+    assert result.reason == "Content too short"
 
-        # Start with command
-        cmd = ProcessCommand(
-            data="important",
-            triggered_by_id=None,
-            flow_id=flow_id,
-        )
 
-        # Process through chain
-        event1 = await processor.process(cmd)
-        assert isinstance(event1, ProcessedEvent)
+async def test_node_message_chaining() -> None:
+    """Test chaining messages through multiple nodes."""
+    processor = ProcessorNode()
+    chainer = ChainNode()
+    analyzer = AnalyzerNode(fail_on_empty=False)
+    flow_id = create_flow_id()
 
-        cmd2 = await chainer.process(event1)
-        assert isinstance(cmd2, AnalyzeCommand)
-        assert cmd2.input_data == event1.result
+    # Start with command
+    cmd = ProcessCommand(
+        data="important",
+        triggered_by_id=None,
+        flow_id=flow_id,
+    )
 
-        event2 = await analyzer.process(cmd2)
-        assert isinstance(event2, AnalysisCompleteEvent)
-        assert "processed: important" in event2.findings
+    # Process through chain
+    event1 = await processor.process(cmd)
+    assert isinstance(event1, ProcessedEvent)
 
-    async def test_node_error_handling(self) -> None:
-        """Test node error event generation."""
-        analyzer = AnalyzerNode(fail_on_empty=True)
-        flow_id = create_flow_id()
+    cmd2 = await chainer.process(event1)
+    assert isinstance(cmd2, AnalyzeCommand)
+    assert cmd2.input_data == event1.result
 
-        # Empty input should trigger error
-        cmd = AnalyzeCommand(
-            input_data="",
-            triggered_by_id=None,
-            flow_id=flow_id,
-        )
+    event2 = await analyzer.process(cmd2)
+    assert isinstance(event2, AnalysisCompleteEvent)
+    assert "processed: important" in event2.findings
 
-        result = await analyzer.process(cmd)
-        assert isinstance(result, ErrorEvent)
-        assert result.error_message == "Empty input data"
-        assert result.error_type == "validation"
 
-    async def test_node_causality_preservation(self) -> None:
-        """Test that nodes preserve message causality."""
-        node = ProcessorNode()
-        flow_id = create_flow_id()
+async def test_node_error_handling() -> None:
+    """Test node error event generation."""
+    analyzer = AnalyzerNode(fail_on_empty=True)
+    flow_id = create_flow_id()
 
-        cmd = ProcessCommand(
-            data="test",
-            triggered_by_id=None,
-            flow_id=flow_id,
-        )
+    # Empty input should trigger error
+    cmd = AnalyzeCommand(
+        input_data="",
+        triggered_by_id=None,
+        flow_id=flow_id,
+    )
 
-        output = await node.process(cmd)
+    result = await analyzer.process(cmd)
+    assert isinstance(result, ErrorEvent)
+    assert result.error_message == "Empty input data"
+    assert result.error_type == "validation"
 
-        # Output should be triggered by input
-        assert output.triggered_by_id == cmd.id
-        assert output.flow_id == cmd.flow_id
 
-    async def test_node_name_property(self) -> None:
-        """Test node name configuration."""
-        # Default name
-        node1 = ProcessorNode()
-        assert node1.name == "processor"
+async def test_node_causality_preservation() -> None:
+    """Test that nodes preserve message causality."""
+    node = ProcessorNode()
+    flow_id = create_flow_id()
 
-        # Custom name
-        node2 = ProcessorNode(name="custom_processor")
-        assert node2.name == "custom_processor"
+    cmd = ProcessCommand(
+        data="test",
+        triggered_by_id=None,
+        flow_id=flow_id,
+    )
 
-    async def test_node_with_configuration(self) -> None:
-        """Test nodes with configuration parameters."""
-        # Configurable analyzer
-        strict_analyzer = AnalyzerNode(name="strict", fail_on_empty=True)
-        lenient_analyzer = AnalyzerNode(name="lenient", fail_on_empty=False)
-        flow_id = create_flow_id()
+    output = await node.process(cmd)
 
-        empty_cmd = AnalyzeCommand(
-            input_data="",
-            triggered_by_id=None,
-            flow_id=flow_id,
-        )
+    # Output should be triggered by input
+    assert output.triggered_by_id == cmd.id
+    assert output.flow_id == cmd.flow_id
 
-        # Strict fails on empty
-        strict_result = await strict_analyzer.process(empty_cmd)
-        assert isinstance(strict_result, ErrorEvent)
 
-        # Lenient processes empty
-        lenient_result = await lenient_analyzer.process(empty_cmd)
-        assert isinstance(lenient_result, AnalysisCompleteEvent)
+def test_node_name_property() -> None:
+    """Test node name configuration."""
+    # Default name
+    node1 = ProcessorNode()
+    assert node1.name == "processor"
 
-    async def test_node_type_safety(self) -> None:
-        """Test that nodes maintain type safety."""
-        processor = ProcessorNode()
-        validator = ValidatorNode()
-        flow_id = create_flow_id()
+    # Custom name
+    node2 = ProcessorNode(name="custom_processor")
+    assert node2.name == "custom_processor"
 
-        # Processor expects ProcessCommand
-        process_cmd = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
-        process_result = await processor.process(process_cmd)
-        assert isinstance(process_result, ProcessedEvent)
 
-        # Validator expects ValidateCommand (different type)
-        validate_cmd = ValidateCommand(
-            content="test", triggered_by_id=None, flow_id=flow_id
-        )
-        validate_result = await validator.process(validate_cmd)
-        assert isinstance(
-            validate_result, (ValidationPassedEvent, ValidationFailedEvent)
-        )
+async def test_node_with_configuration() -> None:
+    """Test nodes with configuration parameters."""
+    # Configurable analyzer
+    strict_analyzer = AnalyzerNode(name="strict", fail_on_empty=True)
+    lenient_analyzer = AnalyzerNode(name="lenient", fail_on_empty=False)
+    flow_id = create_flow_id()
 
-    async def test_node_name_validation(self) -> None:
-        """Test that nodes validate their names during initialization."""
-        # Empty name should raise ValueError
-        with pytest.raises(ValueError, match="Node name must be a non-empty string"):
-            ProcessorNode(name="")
+    empty_cmd = AnalyzeCommand(
+        input_data="",
+        triggered_by_id=None,
+        flow_id=flow_id,
+    )
 
-        # Whitespace-only name should raise ValueError
-        with pytest.raises(ValueError, match="Node name must be a non-empty string"):
-            ProcessorNode(name="   ")
+    # Strict fails on empty
+    strict_result = await strict_analyzer.process(empty_cmd)
+    assert isinstance(strict_result, ErrorEvent)
+
+    # Lenient processes empty
+    lenient_result = await lenient_analyzer.process(empty_cmd)
+    assert isinstance(lenient_result, AnalysisCompleteEvent)
+
+
+async def test_node_type_safety() -> None:
+    """Test that nodes maintain type safety."""
+    processor = ProcessorNode()
+    validator = ValidatorNode()
+    flow_id = create_flow_id()
+
+    # Processor expects ProcessCommand
+    process_cmd = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    process_result = await processor.process(process_cmd)
+    assert isinstance(process_result, ProcessedEvent)
+
+    # Validator expects ValidateCommand (different type)
+    validate_cmd = ValidateCommand(content="test", triggered_by_id=None, flow_id=flow_id)
+    validate_result = await validator.process(validate_cmd)
+    assert isinstance(validate_result, (ValidationPassedEvent, ValidationFailedEvent))
+
+
+def test_node_name_validation() -> None:
+    """Test that nodes validate their names during initialization."""
+    # Empty name should raise ValueError
+    with pytest.raises(ValueError, match="Node name must be a non-empty string"):
+        ProcessorNode(name="")
+
+    # Whitespace-only name should raise ValueError
+    with pytest.raises(ValueError, match="Node name must be a non-empty string"):
+        ProcessorNode(name="   ")

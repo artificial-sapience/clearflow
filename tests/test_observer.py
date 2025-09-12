@@ -119,9 +119,7 @@ class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFail
     name: str = "validator"
 
     @override
-    async def process(
-        self, message: ValidateCommand
-    ) -> ValidationPassedEvent | ValidationFailedEvent:
+    async def process(self, message: ValidateCommand) -> ValidationPassedEvent | ValidationFailedEvent:
         if "fail" in message.content:
             return ValidationFailedEvent(
                 reason="Contains 'fail'",
@@ -135,302 +133,299 @@ class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFail
         )
 
 
-class TestObserver:
-    """Test the Observer abstract class."""
+async def test_observer_basic_functionality() -> None:
+    """Test basic observer functionality."""
+    logged: list[Message] = []
+    observer = LoggingObserver(logged_messages=logged)
 
-    async def test_observer_basic_functionality(self) -> None:
-        """Test basic observer functionality."""
-        logged: list[Message] = []
-        observer = LoggingObserver(logged_messages=logged)
+    flow_id = create_flow_id()
+    msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
 
-        flow_id = create_flow_id()
-        msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    await observer.observe(msg)
 
-        await observer.observe(msg)
-
-        assert len(logged) == 1
-        assert logged[0] == msg
-
-    async def test_observer_type_filtering(self) -> None:
-        """Test that observers can be typed to specific messages."""
-        event_count = [0]
-        event_observer = EventCountObserver(event_count=event_count)
-
-        flow_id = create_flow_id()
-
-        # Observer handles Event
-        event = ProcessedEvent(
-            result="test",
-            processing_time_ms=1.0,
-            triggered_by_id=create_flow_id(),
-            flow_id=flow_id,
-        )
-        await event_observer.observe(event)
-        assert event_count[0] == 1
+    assert len(logged) == 1
+    assert logged[0] == msg
 
 
-class TestObservableFlow:
-    """Test the ObservableFlow decorator."""
+async def test_observer_type_filtering() -> None:
+    """Test that observers can be typed to specific messages."""
+    event_count = [0]
+    event_observer = EventCountObserver(event_count=event_count)
 
-    async def test_observable_flow_basic(self) -> None:
-        """Test basic observable flow functionality."""
-        # Create a simple flow
-        processor = SimpleProcessorNode()
-        core_flow = message_flow("test", processor).end(ProcessedEvent)
+    flow_id = create_flow_id()
 
-        # Make it observable
-        logged: list[Message] = []
-        logger = LoggingObserver(logged_messages=logged)
+    # Observer handles Event
+    event = ProcessedEvent(
+        result="test",
+        processing_time_ms=1.0,
+        triggered_by_id=create_flow_id(),
+        flow_id=flow_id,
+    )
+    await event_observer.observe(event)
+    assert event_count[0] == 1
 
-        observable = ObservableFlow(
-            name="observable_test",
-            flow=core_flow,
-            observers={},
-        ).observe(Message, logger)
 
-        # Execute flow
-        flow_id = create_flow_id()
-        input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
-        result = await observable.process(input_msg)
+async def test_observable_flow_basic() -> None:
+    """Test basic observable flow functionality."""
+    # Create a simple flow
+    processor = SimpleProcessorNode()
+    core_flow = message_flow("test", processor).end(ProcessedEvent)
 
-        # Check result
-        assert isinstance(result, ProcessedEvent)
-        assert result.result == "processed: test"
+    # Make it observable
+    logged: list[Message] = []
+    logger = LoggingObserver(logged_messages=logged)
 
-        # Check observations
-        assert len(logged) == 2  # Input and output
-        assert isinstance(logged[0], ProcessCommand)
-        assert isinstance(logged[1], ProcessedEvent)
+    observable = ObservableFlow(
+        name="observable_test",
+        flow=core_flow,
+        observers={},
+    ).observe(Message, logger)
 
-    async def test_observable_flow_multiple_observers(self) -> None:
-        """Test flow with multiple observers."""
-        # Create flow
-        processor = SimpleProcessorNode()
-        core_flow = message_flow("test", processor).end(ProcessedEvent)
+    # Execute flow
+    flow_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    result = await observable.process(input_msg)
 
-        # Create observers
-        logged: list[Message] = []
-        logger = LoggingObserver(logged_messages=logged)
+    # Check result
+    assert isinstance(result, ProcessedEvent)
+    assert result.result == "processed: test"
 
-        event_count = [0]
-        event_counter = EventCountObserver(event_count=event_count)
+    # Check observations
+    assert len(logged) == 2  # Input and output
+    assert isinstance(logged[0], ProcessCommand)
+    assert isinstance(logged[1], ProcessedEvent)
 
-        # Add multiple observers
-        observable = (
-            ObservableFlow(name="multi_observer", flow=core_flow, observers={})
-            .observe(Message, logger)
-            .observe(Event, event_counter)
-        )
 
-        # Execute
-        flow_id = create_flow_id()
-        input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+async def test_observable_flow_multiple_observers() -> None:
+    """Test flow with multiple observers."""
+    # Create flow
+    processor = SimpleProcessorNode()
+    core_flow = message_flow("test", processor).end(ProcessedEvent)
+
+    # Create observers
+    logged: list[Message] = []
+    logger = LoggingObserver(logged_messages=logged)
+
+    event_count = [0]
+    event_counter = EventCountObserver(event_count=event_count)
+
+    # Add multiple observers
+    observable = (
+        ObservableFlow(name="multi_observer", flow=core_flow, observers={})
+        .observe(Message, logger)
+        .observe(Event, event_counter)
+    )
+
+    # Execute
+    flow_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    await observable.process(input_msg)
+
+    # Both observers should have been called
+    assert len(logged) == 2  # Input and output
+    assert event_count[0] == 1  # Only the output event
+
+
+async def test_observable_flow_fail_fast() -> None:
+    """Test that observer exceptions stop the flow immediately."""
+    # Create flow
+    processor = SimpleProcessorNode()
+    core_flow = message_flow("test", processor).end(ProcessedEvent)
+
+    # Add security observer that will throw
+    security = SecurityObserver(forbidden_words=("danger",))
+    observable = ObservableFlow(name="security_test", flow=core_flow, observers={}).observe(ProcessedEvent, security)
+
+    # Execute with forbidden word
+    flow_id = create_flow_id()
+    input_msg = ProcessCommand(data="danger", triggered_by_id=None, flow_id=flow_id)
+
+    # Should raise SecurityError
+    with pytest.raises(SecurityError) as exc_info:
         await observable.process(input_msg)
 
-        # Both observers should have been called
-        assert len(logged) == 2  # Input and output
-        assert event_count[0] == 1  # Only the output event
+    assert "Security violation" in str(exc_info.value)
+    assert "danger" in str(exc_info.value)
 
-    async def test_observable_flow_fail_fast(self) -> None:
-        """Test that observer exceptions stop the flow immediately."""
-        # Create flow
-        processor = SimpleProcessorNode()
-        core_flow = message_flow("test", processor).end(ProcessedEvent)
 
-        # Add security observer that will throw
-        security = SecurityObserver(forbidden_words=("danger",))
-        observable = ObservableFlow(
-            name="security_test", flow=core_flow, observers={}
-        ).observe(ProcessedEvent, security)
+async def test_observable_flow_with_routing() -> None:
+    """Test observable flow with multiple nodes and routing."""
+    # Create multi-node flow
+    processor = SimpleProcessorNode()
+    transformer = TransformerNode()
+    validator = ValidatorNode()
 
-        # Execute with forbidden word
-        flow_id = create_flow_id()
-        input_msg = ProcessCommand(data="danger", triggered_by_id=None, flow_id=flow_id)
+    core_flow = (
+        message_flow("pipeline", processor)
+        .from_node(processor)
+        .route(ProcessedEvent, transformer)
+        .from_node(transformer)
+        .route(ValidateCommand, validator)
+        .from_node(validator)
+        .end(ValidationPassedEvent)
+    )
 
-        # Should raise SecurityError
-        with pytest.raises(SecurityError) as exc_info:
-            await observable.process(input_msg)
+    # Add observer for all messages
+    logged: list[Message] = []
+    logger = LoggingObserver(logged_messages=logged)
 
-        assert "Security violation" in str(exc_info.value)
-        assert "danger" in str(exc_info.value)
+    observable = ObservableFlow(name="observable_pipeline", flow=core_flow, observers={}).observe(Message, logger)
 
-    async def test_observable_flow_with_routing(self) -> None:
-        """Test observable flow with multiple nodes and routing."""
-        # Create multi-node flow
-        processor = SimpleProcessorNode()
-        transformer = TransformerNode()
-        validator = ValidatorNode()
+    # Execute
+    flow_id = create_flow_id()
+    input_msg = ProcessCommand(data="valid", triggered_by_id=None, flow_id=flow_id)
+    result = await observable.process(input_msg)
 
-        core_flow = (
-            message_flow("pipeline", processor)
-            .from_node(processor)
-            .route(ProcessedEvent, transformer)
-            .from_node(transformer)
-            .route(ValidateCommand, validator)
-            .from_node(validator)
-            .end(ValidationPassedEvent)
-        )
+    assert isinstance(result, ValidationPassedEvent)
 
-        # Add observer for all messages
-        logged: list[Message] = []
-        logger = LoggingObserver(logged_messages=logged)
+    # Should have observed all intermediate messages
+    assert len(logged) == 4  # Input + 3 intermediate outputs
+    assert isinstance(logged[0], ProcessCommand)
+    assert isinstance(logged[1], ProcessedEvent)
+    assert isinstance(logged[2], ValidateCommand)
+    assert isinstance(logged[3], ValidationPassedEvent)
 
-        observable = ObservableFlow(
-            name="observable_pipeline", flow=core_flow, observers={}
-        ).observe(Message, logger)
 
-        # Execute
-        flow_id = create_flow_id()
-        input_msg = ProcessCommand(data="valid", triggered_by_id=None, flow_id=flow_id)
-        result = await observable.process(input_msg)
+async def test_observable_flow_inheritance_matching() -> None:
+    """Test that observers match on inheritance hierarchy."""
+    # Create flow
+    processor = SimpleProcessorNode()
+    core_flow = message_flow("test", processor).end(ProcessedEvent)
 
-        assert isinstance(result, ValidationPassedEvent)
+    # Observer for base Event type
+    event_count = [0]
+    event_observer = EventCountObserver(event_count=event_count)
 
-        # Should have observed all intermediate messages
-        assert len(logged) == 4  # Input + 3 intermediate outputs
-        assert isinstance(logged[0], ProcessCommand)
-        assert isinstance(logged[1], ProcessedEvent)
-        assert isinstance(logged[2], ValidateCommand)
-        assert isinstance(logged[3], ValidationPassedEvent)
+    observable = ObservableFlow(name="inheritance_test", flow=core_flow, observers={}).observe(Event, event_observer)
 
-    async def test_observable_flow_inheritance_matching(self) -> None:
-        """Test that observers match on inheritance hierarchy."""
-        # Create flow
-        processor = SimpleProcessorNode()
-        core_flow = message_flow("test", processor).end(ProcessedEvent)
+    # Execute
+    flow_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    await observable.process(input_msg)
 
-        # Observer for base Event type
-        event_count = [0]
-        event_observer = EventCountObserver(event_count=event_count)
+    # Should match ProcessedEvent as it's an Event
+    assert event_count[0] == 1
 
-        observable = ObservableFlow(
-            name="inheritance_test", flow=core_flow, observers={}
-        ).observe(Event, event_observer)
 
-        # Execute
-        flow_id = create_flow_id()
-        input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
-        await observable.process(input_msg)
+async def test_observable_flow_specific_message_observation() -> None:
+    """Test observing specific message types."""
+    # Create flow with failure path
+    processor = SimpleProcessorNode()
+    transformer = TransformerNode()
+    validator = ValidatorNode()
 
-        # Should match ProcessedEvent as it's an Event
-        assert event_count[0] == 1
+    core_flow = (
+        message_flow("pipeline", processor)
+        .from_node(processor)
+        .route(ProcessedEvent, transformer)
+        .from_node(transformer)
+        .route(ValidateCommand, validator)
+        .from_node(validator)
+        .end(ValidationFailedEvent)
+    )
 
-    async def test_observable_flow_specific_message_observation(self) -> None:
-        """Test observing specific message types."""
-        # Create flow with failure path
-        processor = SimpleProcessorNode()
-        transformer = TransformerNode()
-        validator = ValidatorNode()
+    # Observer only for failures
+    failure_log: list[str] = []
+    failure_observer = ValidationObserver(failure_log=failure_log)
 
-        core_flow = (
-            message_flow("pipeline", processor)
-            .from_node(processor)
-            .route(ProcessedEvent, transformer)
-            .from_node(transformer)
-            .route(ValidateCommand, validator)
-            .from_node(validator)
-            .end(ValidationFailedEvent)
-        )
+    observable = ObservableFlow(name="failure_test", flow=core_flow, observers={}).observe(
+        ValidationFailedEvent, failure_observer
+    )
 
-        # Observer only for failures
-        failure_log: list[str] = []
-        failure_observer = ValidationObserver(failure_log=failure_log)
+    # Execute with failure input
+    flow_id = create_flow_id()
+    input_msg = ProcessCommand(data="fail", triggered_by_id=None, flow_id=flow_id)
+    result = await observable.process(input_msg)
 
-        observable = ObservableFlow(
-            name="failure_test", flow=core_flow, observers={}
-        ).observe(ValidationFailedEvent, failure_observer)
+    assert isinstance(result, ValidationFailedEvent)
+    assert len(failure_log) == 1
+    assert failure_log[0] == "Contains 'fail'"
 
-        # Execute with failure input
-        flow_id = create_flow_id()
-        input_msg = ProcessCommand(data="fail", triggered_by_id=None, flow_id=flow_id)
-        result = await observable.process(input_msg)
 
-        assert isinstance(result, ValidationFailedEvent)
-        assert len(failure_log) == 1
-        assert failure_log[0] == "Contains 'fail'"
+def test_observable_flow_immutability() -> None:
+    """Test that observable flows are immutable."""
+    processor = SimpleProcessorNode()
+    core_flow = message_flow("test", processor).end(ProcessedEvent)
 
-    async def test_observable_flow_immutability(self) -> None:
-        """Test that observable flows are immutable."""
-        processor = SimpleProcessorNode()
-        core_flow = message_flow("test", processor).end(ProcessedEvent)
+    observable = ObservableFlow(name="immutable", flow=core_flow, observers={})
 
-        observable = ObservableFlow(name="immutable", flow=core_flow, observers={})
+    # Should not be able to modify
+    with pytest.raises((FrozenInstanceError, AttributeError)):
+        observable.name = "modified"  # type: ignore[misc]
 
-        # Should not be able to modify
-        with pytest.raises((FrozenInstanceError, AttributeError)):
-            observable.name = "modified"  # type: ignore[misc]
 
-    async def test_observable_flow_composability(self) -> None:
-        """Test that observable flows can be composed."""
-        # Create inner observable flow
-        processor = SimpleProcessorNode()
-        inner_flow = message_flow("inner", processor).end(ProcessedEvent)
+async def test_observable_flow_composability() -> None:
+    """Test that observable flows can be composed."""
+    # Create inner observable flow
+    processor = SimpleProcessorNode()
+    inner_flow = message_flow("inner", processor).end(ProcessedEvent)
 
-        logged_inner: list[Message] = []
-        inner_logger = LoggingObserver(name="inner_log", logged_messages=logged_inner)
+    logged_inner: list[Message] = []
+    inner_logger = LoggingObserver(name="inner_log", logged_messages=logged_inner)
 
-        observable_inner = ObservableFlow(
-            name="observable_inner", flow=inner_flow, observers={}
-        ).observe(Message, inner_logger)
+    observable_inner = ObservableFlow(name="observable_inner", flow=inner_flow, observers={}).observe(
+        Message, inner_logger
+    )
 
-        # Create outer flow using observable inner as a node
-        transformer = TransformerNode()
-        outer_flow = (
-            message_flow("outer", observable_inner)  # Observable as node!
-            .route(ProcessedEvent, transformer)
-            .end(ValidateCommand)
-        )
+    # Create outer flow using observable inner as a node
+    transformer = TransformerNode()
+    outer_flow = (
+        message_flow("outer", observable_inner)  # Observable as node!
+        .route(ProcessedEvent, transformer)
+        .end(ValidateCommand)
+    )
 
-        logged_outer: list[Message] = []
-        outer_logger = LoggingObserver(name="outer_log", logged_messages=logged_outer)
+    logged_outer: list[Message] = []
+    outer_logger = LoggingObserver(name="outer_log", logged_messages=logged_outer)
 
-        observable_outer = ObservableFlow(
-            name="observable_outer", flow=outer_flow, observers={}
-        ).observe(Message, outer_logger)
+    observable_outer = ObservableFlow(name="observable_outer", flow=outer_flow, observers={}).observe(
+        Message, outer_logger
+    )
 
-        # Execute
-        flow_id = create_flow_id()
-        input_msg = ProcessCommand(data="nested", triggered_by_id=None, flow_id=flow_id)
-        result = await observable_outer.process(input_msg)
+    # Execute
+    flow_id = create_flow_id()
+    input_msg = ProcessCommand(data="nested", triggered_by_id=None, flow_id=flow_id)
+    result = await observable_outer.process(input_msg)
 
-        assert isinstance(result, ValidateCommand)
+    assert isinstance(result, ValidateCommand)
 
-        # Inner observer saw inner messages
-        assert len(logged_inner) == 2  # Input and output of inner flow
+    # Inner observer saw inner messages
+    assert len(logged_inner) == 2  # Input and output of inner flow
 
-        # Outer observer saw all messages in outer flow
-        assert len(logged_outer) == 3  # Input, ProcessedEvent, ValidateCommand
+    # Outer observer saw all messages in outer flow
+    assert len(logged_outer) == 3  # Input, ProcessedEvent, ValidateCommand
 
-    async def test_observer_concurrent_execution(self) -> None:
-        """Test that multiple observers execute concurrently."""
-        # Create flow
-        processor = SimpleProcessorNode()
-        core_flow = message_flow("test", processor).end(ProcessedEvent)
 
-        # Create multiple observers
-        logged1: list[Message] = []
-        logger1 = LoggingObserver(name="log1", logged_messages=logged1)
+async def test_observer_concurrent_execution() -> None:
+    """Test that multiple observers execute concurrently."""
+    # Create flow
+    processor = SimpleProcessorNode()
+    core_flow = message_flow("test", processor).end(ProcessedEvent)
 
-        logged2: list[Message] = []
-        logger2 = LoggingObserver(name="log2", logged_messages=logged2)
+    # Create multiple observers
+    logged1: list[Message] = []
+    logger1 = LoggingObserver(name="log1", logged_messages=logged1)
 
-        event_count = [0]
-        counter = EventCountObserver(event_count=event_count)
+    logged2: list[Message] = []
+    logger2 = LoggingObserver(name="log2", logged_messages=logged2)
 
-        # Add all observers
-        observable = (
-            ObservableFlow(name="concurrent", flow=core_flow, observers={})
-            .observe(Message, logger1)
-            .observe(Message, logger2)
-            .observe(Event, counter)
-        )
+    event_count = [0]
+    counter = EventCountObserver(event_count=event_count)
 
-        # Execute
-        flow_id = create_flow_id()
-        input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
-        await observable.process(input_msg)
+    # Add all observers
+    observable = (
+        ObservableFlow(name="concurrent", flow=core_flow, observers={})
+        .observe(Message, logger1)
+        .observe(Message, logger2)
+        .observe(Event, counter)
+    )
 
-        # All observers should have been called
-        assert len(logged1) == 2
-        assert len(logged2) == 2
-        assert event_count[0] == 1
+    # Execute
+    flow_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    await observable.process(input_msg)
+
+    # All observers should have been called
+    assert len(logged1) == 2
+    assert len(logged2) == 2
+    assert event_count[0] == 1

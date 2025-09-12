@@ -4,7 +4,6 @@ import uuid
 from abc import ABC
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import final
 
 __all__ = [
     "Command",
@@ -42,7 +41,6 @@ class Message(ABC):
         return type(self)
 
 
-@final
 @dataclass(frozen=True, kw_only=True)
 class Event(Message):
     """Base Event extending Message for causality tracking.
@@ -69,7 +67,6 @@ class Event(Message):
             raise ValueError(msg)
 
 
-@final
 @dataclass(frozen=True, kw_only=True)
 class Command(Message):
     """Base Command extending Message for causality tracking.
