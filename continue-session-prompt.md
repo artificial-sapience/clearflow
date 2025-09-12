@@ -1,64 +1,44 @@
-# Continue Session: PLR6301 Test Method Conversion
+# Continue Session: Fix Architecture Violations
 
-Please continue working on the ClearFlow message-driven architecture implementation.
+Please continue working on the ClearFlow quality improvements.
 
 ## Context
+See `session-context.md` for complete background. We successfully completed PLR6301 test method conversion and implemented abstract Command/Event classes with a custom metaclass.
 
-See `session-context.md` for complete background. We successfully completed the critical message API finalization, achieving 100% test coverage, resolving all architecture violations, and making the message API public with proper enforcement.
+## Current Blocker: Architecture Violations
 
-## Current Status: 🎉 MISSION ACCOMPLISHED (Almost!)
+The quality check is failing with 4 ARCH010 violations in the metaclass implementation:
 
-The message-driven architecture is **functionally complete** with:
-- ✅ **85/85 tests passing**
-- ✅ **100% test coverage** 
-- ✅ **All critical linting resolved**
-- ✅ **Message API properly exported**
-- ✅ **Architecture compliance enforced**
-
-## Single Remaining Task: PLR6301 Style Improvement
-
-**Objective**: Convert 48 test methods that don't use `self` to standalone functions
-
-**Priority**: LOW (style improvement only - no functional impact)
-
-**Status**: User approved conversion plan in previous session
-
-## Implementation Details
-
-**Pattern**: Convert class methods to standalone functions
-```python
-# Instead of:
-class TestMessage:
-    async def test_message_type_property(self) -> None:
-        """Test that message_type returns the concrete class type."""
-        ...
-
-# Convert to:
-async def test_message_type_property() -> None:
-    """Test that message_type returns the concrete class type."""
-    ...
+```
+clearflow/message.py:7:0
+  ARCH010: Importing 'Any' type defeats type safety
+clearflow/message.py:19:29, 19:44, 19:52  
+  ARCH010: Using 'Any' type defeats type safety
 ```
 
-**Files to Convert** (48 total methods):
-- `tests/test_message.py` - 16 methods
-- `tests/test_message_flow.py` - 11 methods  
-- `tests/test_message_node.py` - 10 methods
-- `tests/test_observer.py` - 11 methods
+The issue is in our `AbstractMessageMeta.__call__` method that uses `Any` for args/kwargs.
 
-## Instructions
+## Immediate Task
 
-1. **Start systematic conversion** of test methods to functions
-2. **Remove empty test classes** after converting all their methods
-3. **Verify all tests still pass** after each file conversion
-4. **Maintain test organization** through clear function naming
-5. **Complete quality validation** with final `./quality-check.sh`
+**Fix the Any type usage in AbstractMessageMeta** while maintaining functionality.
+
+### Options to Consider:
+1. Replace `Any` with specific types (though metaclass signatures traditionally use Any)
+2. Use `*args: object, **kwargs: object` instead
+3. Define a Protocol for the expected signature
+4. Request architectural exception for metaclass patterns
 
 ## Expected Outcome
 
-After conversion:
-- All PLR6301 warnings resolved
-- Tests remain functionally identical (85/85 passing)
-- Code clarity improved (functions are honest about not using instance state)
-- Aligns with ClearFlow "fix root cause" philosophy
+After fixing the architecture violations:
+- Run `./quality-check.sh` - should pass architecture compliance
+- All 86 tests should still pass
+- Command/Event instantiation prevention should still work
 
-See `plan.md` for task breakdown and `session-context.md` for complete technical context.
+## Next Steps
+
+Once architecture violations are resolved:
+1. Address remaining ~76 pyright type errors in flow routing
+2. Restore test coverage to 100%
+
+See `plan.md` for complete task list and priorities.

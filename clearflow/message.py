@@ -1,15 +1,40 @@
 """Message base classes for message-driven architecture."""
 
 import uuid
-from abc import ABC
+from abc import ABC, ABCMeta
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 __all__ = [
     "Command",
     "Event",
     "Message",
 ]
+
+
+class AbstractMessageMeta(ABCMeta):
+    """Metaclass that prevents direct instantiation of Event and Command base classes."""
+    
+    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
+        """Prevent direct instantiation of abstract Event and Command classes.
+        
+        Raises:
+            TypeError: If trying to instantiate Event or Command directly.
+        """
+        # Prevent direct Event instantiation
+        if cls.__name__ == "Event" and cls.__module__ == "clearflow.message":
+            raise TypeError(
+                "Cannot instantiate abstract Event directly. "
+                "Create a concrete event class (e.g., ProcessedEvent, ValidationFailedEvent)."
+            )
+        # Prevent direct Command instantiation  
+        if cls.__name__ == "Command" and cls.__module__ == "clearflow.message":
+            raise TypeError(
+                "Cannot instantiate abstract Command directly. "
+                "Create a concrete command class (e.g., ProcessCommand, ValidateCommand)."
+            )
+        return super().__call__(*args, **kwargs)
 
 
 def _utc_now() -> datetime:
@@ -42,11 +67,14 @@ class Message(ABC):
 
 
 @dataclass(frozen=True, kw_only=True)
-class Event(Message):
-    """Base Event extending Message for causality tracking.
+class Event(Message, metaclass=AbstractMessageMeta):
+    """Abstract base Event extending Message for causality tracking.
 
     Events capture facts - things that have happened in the system.
     Events MUST have a triggered_by_id (unlike Commands which can be initial).
+    
+    This is an abstract base class - users must create concrete event types
+    like ProcessedEvent, ValidationFailedEvent, etc.
 
     Inherits from Message:
         id: Unique identifier for this message
@@ -68,11 +96,14 @@ class Event(Message):
 
 
 @dataclass(frozen=True, kw_only=True)
-class Command(Message):
-    """Base Command extending Message for causality tracking.
+class Command(Message, metaclass=AbstractMessageMeta):
+    """Abstract base Command extending Message for causality tracking.
 
     Commands capture intent - requests for something to happen.
     Commands can have triggered_by_id=None (initial commands that start flows).
+    
+    This is an abstract base class - users must create concrete command types
+    like ProcessCommand, ValidateCommand, etc.
 
     Inherits from Message:
         id: Unique identifier for this message

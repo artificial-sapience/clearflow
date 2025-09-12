@@ -1,116 +1,132 @@
-# Session Context: Message API Finalization & Test Organization
+# ClearFlow Session Context
 
-## Session Summary
-This session successfully completed the critical message API finalization by making the architectural decision to make the message API public, implementing comprehensive quality compliance, and achieving 100% test coverage. The only remaining task is a style improvement (PLR6301 test method conversion).
+## Session Focus
+This session tackled two major quality improvements: resolving PLR6301 style warnings and fixing type safety issues with Command/Event classes. Both tasks were successfully completed, though new architecture violations were introduced that need addressing.
 
-## Major Accomplishment: Message API Made Public ✅
+## Major Accomplishments
 
-### The Critical Decision (RESOLVED ✅)
-- **Issue**: Message API not exported in `clearflow.__init__.py` but tests imported from submodules
-- **Decision**: Made message API public through proper `__all__` exports
-- **Outcome**: Tests now use public API only, enforced by new ARCH011 linter rule
+### 1. ✅ PLR6301 Test Method Conversion (COMPLETED)
+Successfully converted 48 test methods that didn't use `self` to standalone functions.
 
-### Implementation Details
-**Public API Exports Added**:
+**Philosophy**: Fix root cause rather than suppress warnings - methods that don't use instance state shouldn't be methods.
+
+**Implementation**:
+- Converted methods to functions in 4 test files
+- Removed unnecessary `async` from functions that don't await
+- All 86 tests still passing
+
+**Files Updated**:
+- `tests/test_message.py`: 16 methods → functions
+- `tests/test_message_flow.py`: 11 methods → functions  
+- `tests/test_message_node.py`: 10 methods → functions
+- `tests/test_observer.py`: 11 methods → functions
+
+### 2. ✅ Command/Event Abstract Base Classes (COMPLETED)
+Fixed pyright errors about `@final` classes being subclassed by implementing proper abstract base classes.
+
+**Problem Evolution**:
+1. Initial state: `Command` and `Event` marked `@final` → 9 pyright errors
+2. Attempt 1: Remove `@final` → allows unwanted direct instantiation
+3. Attempt 2: Add dummy abstract method → poor developer UX
+4. **Final solution**: Custom metaclass with clean UX ✅
+
+**Implementation - Custom Metaclass**:
 ```python
-__all__ = [
-    "Command", "Event", "Message", "MessageNode", "Node", "NodeResult", 
-    "ObservableFlow", "Observer", "flow", "message_flow",
-]
+class AbstractMessageMeta(ABCMeta):
+    """Metaclass that prevents direct instantiation of Event and Command."""
+    
+    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
+        if cls.__name__ == "Event" and cls.__module__ == "clearflow.message":
+            raise TypeError(
+                "Cannot instantiate abstract Event directly. "
+                "Create a concrete event class (e.g., ProcessedEvent)."
+            )
+        # Similar check for Command
+        return super().__call__(*args, **kwargs)
 ```
 
-**Architecture Enforcement**: Added ARCH011 linter rule detecting test imports from non-public modules:
+**Benefits**:
+- Clean UX - no boilerplate in subclasses
+- Strict enforcement - `Event()` and `Command()` fail with clear errors
+- Zero breaking changes - all tests continue working
+
+## Current Issues
+
+### 🔥 Architecture Violations (NEW)
+The custom metaclass introduced 4 ARCH010 violations for using `Any` type:
 ```python
-non_public_modules = [
-    "clearflow.message", "clearflow.message_node", 
-    "clearflow.message_flow", "clearflow.observer"
-]
+def __call__(cls, *args: Any, **kwargs: Any) -> Any:  # 4 violations
 ```
 
-**Test Updates**: All tests now use `from clearflow import MessageNode, message_flow` instead of submodule imports.
+**Next step**: Replace with specific types or justify exception for metaclass patterns.
 
-## Quality & Coverage Achievements ✅
+### Remaining Type Errors
+~76 pyright errors remain in test files, primarily related to:
+- Flow routing type variance issues
+- Node generic constraints in message_flow
+- Observable flow type inference
 
-### 100% Test Coverage Achieved
-- **Fixed**: 2 uncovered lines in `message_node.py` (lines 41-42)
-- **Solution**: Added node name validation test for empty/whitespace names
-- **Pattern**: Missing coverage often indicates missing validation tests
+See `plan.md` for detailed breakdown.
 
-### Critical Linting Issues Resolved
-**Fixed All Non-PLR6301 Issues**:
-- ✅ Unused imports (F401) - Removed from test files
-- ✅ Missing docstring returns (DOC201) - Added return documentation  
-- ✅ Broad exception assertions (B017, PT011) - Used specific exception types
-- ✅ Exception naming/handling (TRY003, EM102, N818) - Fixed patterns
+## Quality Metrics
 
-**Only Remaining**: 48 PLR6301 warnings for test methods that don't use `self`.
+### Current State
+- **Tests**: 86/86 passing ✅
+- **Coverage**: 98.57% (was 100%, metaclass code not directly tested)
+- **Architecture**: 4 violations (Any type usage)
+- **Type checking**: 9 errors fixed, ~76 remain
+- **Linting**: All PLR6301 warnings resolved ✅
 
-## PLR6301 Research & Decision ✅
+### What Changed This Session
+- ✅ Resolved 48 PLR6301 warnings
+- ✅ Fixed 9 pyright errors in conftest_message.py
+- ❌ Added 4 architecture violations (Any type)
+- ❌ Coverage dropped 1.43% (metaclass not directly tested)
 
-### Research Results
-- **Official pylint guidance**: Convert methods that don't use `self` to standalone functions
-- **Industry consensus**: For mission-critical software, follow "fix root cause" approach
-- **ClearFlow alignment**: Matches "always fix root cause instead of suppressing" policy
+## Technical Decisions
 
-### Approved Solution
-**Pattern**: Convert test methods to standalone functions
-```python
-# Instead of:
-class TestMessage:
-    async def test_message_type_property(self) -> None: ...
+### Why Custom Metaclass?
+After evaluating multiple approaches, chose metaclass for:
+- **Best UX**: No boilerplate required in user code
+- **Strict enforcement**: Actually prevents instantiation
+- **Clear errors**: Helpful messages guide developers
+- **Hidden complexity**: Implementation details invisible to users
 
-# Use:
-async def test_message_type_property() -> None:
-    """Test that message_type returns the concrete class type."""
-    ...
-```
+### Test Organization Philosophy
+Converted methods to functions because:
+- Honest about requirements (no fake `self` parameter)
+- Aligns with "fix root cause" principle
+- Industry best practice for test organization
+- Clearer intent and simpler code
 
-**Files to Update**: 48 methods across 4 files (see `plan.md` for breakdown).
+## Files Modified
 
-## Files Modified This Session
+### Core Library
+- `clearflow/message.py`: Added `AbstractMessageMeta`, made Command/Event abstract
 
-### Core Exports
-- `clearflow/__init__.py` - Added message API to `__all__` (alphabetically sorted)
-- `clearflow/message.py` - Added `__all__ = ["Command", "Event", "Message"]`
-- `clearflow/message_node.py` - Added `__all__ = ["Node"]`
-- `clearflow/message_flow.py` - Added `__all__ = ["message_flow"]`
-- `clearflow/observer.py` - Added `__all__ = ["Observer", "ObservableFlow"]`
-
-### Architecture Enhancement  
-- `linters/check-architecture-compliance.py` - Added ARCH011 rule for test API compliance
-
-### Test Improvements
-- `tests/test_message_node.py` - Added `test_node_name_validation()` for 100% coverage
-- `tests/conftest_message.py` - Fixed unused imports, added return documentation
-- `tests/test_message.py` - Fixed unused imports, broad exceptions  
-- `tests/test_message_flow.py` - Fixed broad exceptions, unused imports
-- `tests/test_observer.py` - Fixed exception naming, unused imports
-- **All test files** - Updated to import from public API only
-
-### Documentation
-- `CLAUDE.md` - Added session learnings with concrete patterns and examples
-
-## Current System Status
-
-### Health Metrics
-- **85/85 tests passing** ✅
-- **100% test coverage** ✅ (fixed `message_node.py` lines 41-42)
-- **All critical linting resolved** ✅ (only PLR6301 style warnings remain)
-- **Architecture compliance** ✅ (including new ARCH011 rule)
-- **Public API properly designed** ✅
-
-### Quality Check Results
-- ✅ Architecture compliance: No violations
-- ✅ Immutability compliance: No violations  
-- ✅ Test suite compliance: No violations
-- ⚠️ 48 PLR6301 warnings remain (approved for conversion)
+### Test Files (PLR6301 conversion)
+- `tests/test_message.py`: 16 conversions
+- `tests/test_message_flow.py`: 11 conversions
+- `tests/test_message_node.py`: 10 conversions
+- `tests/test_observer.py`: 11 conversions
 
 ## Next Session Priority
 
-**Single Remaining Task**: Convert 48 test methods to standalone functions
-- **Priority**: LOW (style improvement only)
-- **Impact**: No functional changes, improves code clarity
-- **Status**: User approved conversion plan
-- **Reference**: See `plan.md` for detailed breakdown and conversion pattern
+1. **Fix Architecture Violations** (BLOCKING)
+   - Replace `Any` types in metaclass
+   - See `plan.md` for options
 
-The message-driven architecture implementation is functionally complete. The remaining work is purely organizational/stylistic improvement that aligns with ClearFlow's quality standards.
+2. **Resolve Remaining Type Errors**
+   - Focus on flow routing issues
+   - May require generic constraint adjustments
+
+## Environment & Context
+- Directory: `/Users/richard/Developer/github/artificial-sapience/clearflow`
+- Branch: message-driven
+- Python: 3.13.3 with uv
+- Previous context: Message API was made public in earlier session
+- All changes uncommitted and ready for review
+
+## References
+- See `plan.md` for detailed task breakdown and priorities
+- See `CLAUDE.md` for architectural decisions and patterns

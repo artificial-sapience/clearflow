@@ -1,47 +1,37 @@
-# ClearFlow Message-Driven Architecture Implementation Plan
+# ClearFlow Quality Improvements Plan
 
-## Current Sprint: Test Organization Cleanup
+## Current Sprint: Type Safety and Architecture Compliance
 
-### 📋 Remaining Task
+### 🔥 Immediate Task
+**Fix AbstractMessageMeta Type Annotations** (Priority: HIGH - Architecture Violation)
+- [ ] Replace `Any` types in metaclass with specific types
+- [ ] Maintain functionality while satisfying architecture linter
+- **Status**: Architecture linter blocking with ARCH010 violations
 
-**Convert Test Methods to Standalone Functions** (Priority: LOW - Style Only)
-- [ ] Convert 48 test methods that don't use `self` to standalone functions  
-- Files to update: `test_message.py` (16), `test_message_flow.py` (11), `test_message_node.py` (10), `test_observer.py` (11)
-- **Rationale**: Aligns with ClearFlow "fix root cause" principle and pylint best practice
-- **Status**: User approved conversion plan, all critical work completed
+### 📐 Type Safety Issues  
+**Resolve Pyright Type Errors** (Priority: HIGH - Type Safety)
+- [ ] Fix ~35 type errors in `test_message_flow.py` (flow routing types)
+- [ ] Fix ~41 type errors in `test_observer.py` (observable flow types)
+- [ ] Other test files have similar routing type issues
+- **Status**: Command/Event abstract classes fixed, but flow typing remains
 
-### Pattern for Conversion
-```python
-# Instead of:
-class TestMessage:
-    async def test_message_type_property(self) -> None:
-        """Test that message_type returns the concrete class type."""
-        ...
+## Recently Completed (This Session)
 
-# Convert to:
-async def test_message_type_property() -> None:
-    """Test that message_type returns the concrete class type."""
-    ...
-```
+### ✅ PLR6301 Test Method Conversion (COMPLETED)
+- Converted 48 test methods to standalone functions
+- Files updated: `test_message.py` (16), `test_message_flow.py` (11), `test_message_node.py` (10), `test_observer.py` (11)
+- All tests still passing (86/86)
+- Removed unnecessary `async` from non-async functions
 
-## Current Status: ✅ MISSION ACCOMPLISHED 
+### ✅ Command/Event Abstract Classes (COMPLETED)
+- Implemented custom `AbstractMessageMeta` metaclass
+- Prevents direct instantiation of `Command()` and `Event()`
+- Clean UX - no boilerplate methods required in subclasses
+- Clear error messages guide users to create concrete types
+- Resolved 9 pyright errors in `conftest_message.py`
 
-### Major Achievements This Session
-1. **✅ API Design Decision**: Made message API public through `clearflow.__init__.py`
-2. **✅ Architecture Compliance**: Added ARCH011 rule preventing test imports from non-public modules  
-3. **✅ 100% Test Coverage**: Fixed missing 2 lines with node name validation tests
-4. **✅ Critical Linting**: Resolved all functional linting issues (non-style)
-5. **✅ Documentation**: Updated CLAUDE.md with key patterns and learnings
-
-### System Health
-- **85/85 tests passing** ✅
-- **100% coverage achieved** ✅ 
-- **All critical architecture issues resolved** ✅
-- **Public API properly exported** ✅
-- **Only style issue remains**: PLR6301 warnings for test methods
-
-### Technical Implementation Completed
-- Message API exported: `Message`, `Event`, `Command`, `MessageNode`, `message_flow`, `Observer`, `ObservableFlow`  
-- Tests import from public API: `from clearflow import MessageNode, message_flow`
-- ARCH011 linter detects and prevents non-public API imports in tests
-- Node name validation covers previously uncovered error handling paths
+## System Health
+- **86/86 tests passing** ✅
+- **98.57% coverage** (down from 100% due to new metaclass code)
+- **Architecture violations**: 4 (Any type usage in metaclass)
+- **Pyright errors**: ~76 remaining (mostly flow routing types)
