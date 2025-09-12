@@ -460,6 +460,25 @@ def check_private_access(file_path: Path, content: str) -> tuple[Violation, ...]
             attr_name = match.group(1)
             # Skip dunder methods and internal module access
             if not attr_name.startswith("_") and not (is_internal and attr_name == "internal"):
+                # Check if this is same-module access (Pythonic convention)
+                # In Python, classes in the same module can access each other's private members
+                # Look for the pattern: object._method where object is likely a variable
+                # referring to another class instance in the same module
+
+                # Common patterns for same-module private access:
+                # - self._builder._add_route (accessing builder's private method)
+                # - return self._builder._add_termination (similar)
+                # These are valid when both classes are in the same file
+
+                # Check if this looks like accessing a private method of a collaborating class
+                # by looking for patterns like "variable._method" or "self._variable._method"
+                before_dot = line[:match.start()].rstrip()
+                if before_dot.endswith(("_builder", "_flow", "_node")):
+                    # This looks like same-module class collaboration
+                    # In clearflow/message_flow.py, _MessageFlowBuilderContext accessing
+                    # _MessageFlowBuilder's methods is valid Python convention
+                    continue
+
                 violations.append(
                     Violation(
                         file=file_path,

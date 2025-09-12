@@ -69,6 +69,74 @@ class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMess
 
 @final
 @dataclass(frozen=True, kw_only=True)
+class _MessageFlowBuilderContext[TStartMessage: Message, TCurrentMessage: Message]:
+    """Context for routing from a specific node in the flow.
+
+    Provides route() and end() methods that know which node they're routing from.
+    """
+
+    _builder: "_MessageFlowBuilder[TStartMessage, TCurrentMessage]"
+    _from_node: Node[Message, Message]
+
+    def route[TNextMessage: Message](
+        self,
+        message_type: type[TCurrentMessage],
+        to_node: Node[TCurrentMessage, TNextMessage],
+    ) -> "_MessageFlowBuilderContext[TStartMessage, TNextMessage]":
+        """Route message type from the context node to destination.
+
+        Args:
+            message_type: Message type that triggers this route
+            to_node: Destination node that will process the message type
+
+        Returns:
+            Context for continued route definition from the same node
+
+        """
+        # Create new builder with the route
+        new_builder = self._builder.add_route(
+            self._from_node.name, message_type, cast("Node[Message, TNextMessage]", to_node)
+        )
+
+        # Return new context with updated builder
+        return _MessageFlowBuilderContext[TStartMessage, TNextMessage](
+            _builder=new_builder,
+            _from_node=self._from_node,
+        )
+
+    def end(self, message_type: type[TCurrentMessage]) -> Node[TStartMessage, TCurrentMessage]:
+        """Mark message type as terminal from the context node.
+
+        Args:
+            message_type: The message type that completes the flow
+
+        Returns:
+            A Node that represents the complete flow (for composability)
+
+        """
+        result = self._builder.add_termination(self._from_node.name, message_type)
+        return cast("Node[TStartMessage, TCurrentMessage]", result)
+
+    def from_node[TNodeOut: Message](
+        self, node: Node[Message, TNodeOut]
+    ) -> "_MessageFlowBuilderContext[TStartMessage, TNodeOut]":
+        """Switch context to route from a different node.
+
+        Args:
+            node: The node to route from
+
+        Returns:
+            Context for routing from the specified node
+
+        """
+        return _MessageFlowBuilderContext[TStartMessage, TNodeOut](
+            _builder=cast("_MessageFlowBuilder[TStartMessage, TNodeOut]", self._builder),
+            _from_node=node,
+        )
+
+
+@final
+@dataclass(frozen=True, kw_only=True)
 class _MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
     """Private builder for composing type-safe message routes.
 
@@ -115,34 +183,24 @@ class _MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
 
         return route_key
 
-    def route[TNextMessage: Message](
+    def add_route[TNextMessage: Message](
         self,
-        message_type: type[TCurrentMessage],
-        to_node: Node[TCurrentMessage, TNextMessage],
+        from_node_name: str,
+        message_type: type[Message],
+        to_node: Node[Message, TNextMessage],
     ) -> "_MessageFlowBuilder[TStartMessage, TNextMessage]":
-        """Route message type to next node.
+        """Add a route from a specific node.
 
         Args:
+            from_node_name: Name of the node this route originates from
             message_type: Message type that triggers this route
-            to_node: Destination node that will process the message type
+            to_node: Destination node
 
         Returns:
-            Builder for continued route definition
+            New builder with the route added
 
         """
-        # Find the node that produces this message type
-        producing_node_name = None
-        for msg_type, node_name in self._routes:
-            if msg_type == message_type:
-                producing_node_name = node_name
-                break
-
-        # If not found in routes, check if it's the start node's output
-        if producing_node_name is None:
-            # Assume it's from start node for now - real validation happens at runtime
-            producing_node_name = self._start_node.name
-
-        route_key = self._validate_and_create_route(message_type, producing_node_name)
+        route_key = self._validate_and_create_route(message_type, from_node_name)
 
         # Add route and mark to_node as reachable
         new_routes = {**self._routes, route_key: to_node}
@@ -157,8 +215,73 @@ class _MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
             _reachable_nodes=new_reachable,
         )
 
+    def add_termination(
+        self,
+        from_node_name: str,
+        message_type: type[Message],
+    ) -> Node[TStartMessage, Message]:
+        """Add a termination route from a specific node.
+
+        Args:
+            from_node_name: Name of the node this termination originates from
+            message_type: Message type that terminates the flow
+
+        Returns:
+            Completed flow as a Node
+
+        """
+        route_key = self._validate_and_create_route(message_type, from_node_name, is_termination=True)
+
+        new_routes = {**self._routes, route_key: None}
+
+        return _MessageFlow[TStartMessage, Message](
+            name=self._name,
+            start_node=cast("Node[Message, Message]", self._start_node),
+            routes=cast("Mapping[MessageRouteKey, Node[Message, Message] | None]", MappingProxyType(new_routes)),
+        )
+
+    def from_node[TNodeOut: Message](
+        self, node: Node[Message, TNodeOut]
+    ) -> _MessageFlowBuilderContext[TStartMessage, TNodeOut]:
+        """Create a context for routing from a specific node.
+
+        Args:
+            node: The node to route from
+
+        Returns:
+            Context for defining routes from the specified node
+
+        """
+        return _MessageFlowBuilderContext[TStartMessage, TNodeOut](
+            _builder=cast("_MessageFlowBuilder[TStartMessage, TNodeOut]", self),
+            _from_node=node,
+        )
+
+    def route[TNextMessage: Message](
+        self,
+        message_type: type[TCurrentMessage],
+        to_node: Node[TCurrentMessage, TNextMessage],
+    ) -> "_MessageFlowBuilder[TStartMessage, TNextMessage]":
+        """Route message type from start node to destination.
+
+        This is a convenience method for routing from the start node.
+        For routing from other nodes, use from_node().route().
+
+        Args:
+            message_type: Message type that triggers this route
+            to_node: Destination node that will process the message type
+
+        Returns:
+            Builder for continued route definition
+
+        """
+        return self.add_route(self._start_node.name, message_type, cast("Node[Message, TNextMessage]", to_node))
+
     def end(self, message_type: type[TCurrentMessage]) -> Node[TStartMessage, TCurrentMessage]:
-        """Mark message type as terminal, completing the flow.
+        """Mark message type as terminal from start node.
+
+        This is a convenience method for ending from the start node.
+        For ending from other nodes, use from_node().end().
 
         Args:
             message_type: The message type that completes the flow
@@ -167,26 +290,8 @@ class _MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
             A Node that represents the complete flow (for composability)
 
         """
-        # Find the node that produces this message type
-        producing_node_name = None
-        for msg_type, node_name in self._routes:
-            if msg_type == message_type:
-                producing_node_name = node_name
-                break
-
-        # If not found in routes, check if it's from start node
-        if producing_node_name is None:
-            producing_node_name = self._start_node.name
-
-        route_key = self._validate_and_create_route(message_type, producing_node_name, is_termination=True)
-
-        new_routes = {**self._routes, route_key: None}
-
-        return _MessageFlow[TStartMessage, TCurrentMessage](
-            name=self._name,
-            start_node=cast("Node[Message, Message]", self._start_node),
-            routes=cast("Mapping[MessageRouteKey, Node[Message, Message] | None]", MappingProxyType(new_routes)),
-        )
+        result = self.add_termination(self._start_node.name, message_type)
+        return cast("Node[TStartMessage, TCurrentMessage]", result)
 
 
 def message_flow[TStartMessage: Message, TStartOut: Message](

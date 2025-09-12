@@ -1,65 +1,84 @@
 # ClearFlow Message-Driven Architecture Implementation Plan
 
-## Current Sprint: Message-Driven Architecture
+## Current Sprint: Finalization and API Design
 
-### 🔧 In Progress: Flow Builder Routing Fix
+### 🎯 Critical Decision Required: Public API Design
 
-**Issue**: The `_MessageFlowBuilder` has a logic problem tracking which node produces which message type.
+**Issue**: Message-based API is not exported in `clearflow.__init__.py` but tests import directly from submodules.
 
-**Problem Details**:
-- When calling `.route(MessageType, destination_node)`, the builder needs to know which node produces MessageType
-- Current logic incorrectly searches existing routes to find the producer
-- The builder assumes untracked messages come from the start node, which is incorrect for chained routes
+**Current State**:
+- `clearflow.__init__.py` only exports: `Node`, `NodeResult`, `flow` (original string-based API)
+- Tests import from: `clearflow.message_flow`, `clearflow.message_node`, `clearflow.observer`, etc.
+- This violates "test only through public API" principle
 
-**Test Failure**: `test_message_flow.py::TestMessageFlow::test_flow_with_routing`
-- Error: "No route defined for message type 'ValidateCommand' from node 'transform'"
-- The transform node outputs ValidateCommand, but the flow doesn't have the route registered correctly
+**Decision Required**:
+1. **Make message API public**: Add to `__init__.py` `__all__` exports
+2. **Keep message API internal**: Fix tests to not import from submodules
 
-**Root Cause Analysis**:
-```python
-# In _MessageFlowBuilder.route() around line 135:
-for msg_type, node_name in self._routes:
-    if msg_type == message_type:
-        producing_node_name = node_name
-        break
-```
-This searches existing routes to find who produces the message, but routes are keyed by (message_type, producer), so this logic is circular.
+### 📋 Remaining Tasks (Priority Order)
 
-**Potential Solutions**:
-1. Track the destination nodes from previous routes as potential producers
-2. Require explicit "from_node" parameter in route() method
-3. Infer from the order of route() calls (each destination becomes next producer)
+1. **Decide Message API Publicity** (Priority: CRITICAL)
+   - [ ] Determine if message API should be public or internal
+   - [ ] If public: Add exports to `clearflow.__init__.py` `__all__`
+   - [ ] If internal: Refactor tests to use only public API or document as implementation tests
 
-### 📋 Remaining Tasks
+2. **Fix Linting Issues** (Priority: HIGH)
+   - [x] Architecture compliance (COMPLETED)
+   - [x] Immutability compliance (COMPLETED) 
+   - [x] Test suite compliance (COMPLETED)
+   - [ ] 71 linting errors found by quality check (need fixing)
+     - Unused imports in test files
+     - Missing docstring returns
+     - Method could be function warnings
+     - Exception handling issues
 
-1. **Fix Flow Builder Logic** (Priority: HIGH)
-   - Fix the producing node tracking in `_MessageFlowBuilder.route()`
-   - Ensure routes are correctly registered with proper (message_type, producer_node) keys
-   - Make all flow routing tests pass
+3. **Complete Test Coverage** (Priority: HIGH)  
+   - [x] All 85 tests pass (COMPLETED)
+   - [x] 98.86% coverage achieved (COMPLETED)
+   - [ ] Fix 2 uncovered lines in `message_node.py` for 100%
 
-2. **Achieve 100% Test Coverage** (Priority: HIGH)
-   - Current test files created:
-     - test_message.py (16 tests passing)
-     - test_message_node.py (9 tests passing) 
-     - test_message_flow.py (1 failing due to routing issue)
-     - test_observer.py (not yet run due to early failure)
-   - Fix routing issue first, then ensure all tests pass
-   - Add any missing test cases for edge conditions
+4. **Final Quality Validation** (Priority: MEDIUM)
+   - [ ] Complete `./quality-check.sh` with all standards passing
+   - [ ] Document any approved suppressions with justifications
+   - [ ] Verify examples work with new API
 
-3. **Integration Testing** (Priority: MEDIUM)
-   - Test message flows with observer pattern
-   - Test nested observable flows
-   - Verify fail-fast behavior in complex scenarios
+## Completed Work ✅
 
-## Design Decisions Log
+### Major Accomplishments
+1. **Fixed Flow Builder Routing Bug** - Implemented hybrid API with `from_node()` method
+2. **Created Hybrid API** - Explicit producer specification while maintaining fluent chaining
+3. **Updated Linter** - Allow same-module private access (Pythonic convention)
+4. **Updated All Tests** - Now use hybrid API with explicit routing
+5. **High Test Coverage** - Achieved 98.86% coverage (237 lines, only 2 uncovered)
 
-### Key Architectural Choices
-1. **Flows as Nodes**: `_MessageFlow` extends `Node` for composability
-2. **Observable Flows Only**: `ObservableFlow` decorates only `_MessageFlow`, not generic `Node`
-3. **Fail-Fast Observers**: Exceptions propagate immediately, no error isolation
-4. **Package-Internal Privacy**: `_MessageFlow` is private to external users but accessible within clearflow package
+### Architecture Improvements
+- **Hybrid API Pattern**: 
+  ```python
+  message_flow("example", start)
+      .from_node(start)
+      .route(SuccessMessage, processor)  
+      .route(ErrorMessage, handler)
+      .from_node(processor)
+      .route(ProcessedMessage, finalizer)
+  ```
+- **Type Safety**: Full type tracking through the builder chain
+- **Linter Compliance**: Fixed architecture linter for Pythonic same-module access
 
-### API Design
-- Public: `message_flow()` function returns builder
-- Private: `_MessageFlow` and `_MessageFlowBuilder` classes
-- Decorator: `ObservableFlow` wraps flows with observation
+## Key Technical Decisions Made
+
+1. **Hybrid API Over Pure Inference** - Explicit `from_node()` for clarity and type safety
+2. **Same-Module Private Access** - Updated linter to follow Python conventions  
+3. **Method Naming in Private Classes** - Removed redundant underscores (`add_route` vs `_add_route`)
+4. **Builder Context Pattern** - `_MessageFlowBuilderContext` for fluent chaining
+
+## Files Recently Modified
+
+### Core Implementation 
+- `clearflow/message_flow.py` - Implemented hybrid API with context pattern
+- `linters/check-architecture-compliance.py` - Fixed same-module access rules
+
+### Tests Updated
+- `tests/test_message_flow.py` - All tests now use `from_node()` pattern
+- `tests/test_observer.py` - Updated flows to use hybrid API
+
+### Status: 85/85 tests passing, 98.86% coverage

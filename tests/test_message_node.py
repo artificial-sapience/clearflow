@@ -17,9 +17,9 @@ from tests.conftest_message import (
     ErrorEvent,
     ProcessCommand,
     ProcessedEvent,
+    ValidateCommand,
     ValidationFailedEvent,
     ValidationPassedEvent,
-    ValidateCommand,
     create_flow_id,
 )
 
@@ -60,7 +60,7 @@ class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFail
                 triggered_by_id=message.id,
                 flow_id=message.flow_id,
             )
-        
+
         return ValidationPassedEvent(
             validated_content=message.content.upper(),
             validation_score=0.95,

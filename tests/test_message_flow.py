@@ -18,9 +18,9 @@ from tests.conftest_message import (
     ErrorEvent,
     ProcessCommand,
     ProcessedEvent,
+    ValidateCommand,
     ValidationFailedEvent,
     ValidationPassedEvent,
-    ValidateCommand,
     create_flow_id,
 )
 
@@ -117,9 +117,9 @@ class TestMessageFlow:
         # Execute flow
         flow_id = create_flow_id()
         input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
-        
+
         result = await flow.process(input_msg)
-        
+
         assert isinstance(result, ProcessedEvent)
         assert result.result == "started: test"
 
@@ -132,11 +132,15 @@ class TestMessageFlow:
 
         flow = (
             message_flow("pipeline", start)
+            .from_node(start)
             .route(ProcessedEvent, transform)
+            .from_node(transform)
             # Transform produces ValidateCommand, route it to validate
             .route(ValidateCommand, validate)
+            .from_node(validate)
             # Validate produces ValidationPassedEvent, route it to finalize
             .route(ValidationPassedEvent, finalize)
+            .from_node(finalize)
             # Finalize produces AnalysisCompleteEvent, end there
             .end(AnalysisCompleteEvent)
         )
@@ -146,9 +150,9 @@ class TestMessageFlow:
         input_msg = ProcessCommand(
             data="valid data", triggered_by_id=None, flow_id=flow_id
         )
-        
+
         result = await flow.process(input_msg)
-        
+
         assert isinstance(result, AnalysisCompleteEvent)
         assert "started: valid data" in result.findings
 
@@ -159,15 +163,16 @@ class TestMessageFlow:
 
         flow = (
             message_flow("error_handling", start)
+            .from_node(start)
             .route(ProcessedEvent, transform)
-            .end(ErrorEvent)  # Error terminates flow
+            .end(ErrorEvent)  # Error also from start - branching
         )
 
         flow_id = create_flow_id()
         input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
-        
+
         result = await flow.process(input_msg)
-        
+
         assert isinstance(result, ErrorEvent)
         assert result.error_message == "Start failed"
 
@@ -176,20 +181,21 @@ class TestMessageFlow:
         start = StartNode()
         transform = TransformNode()
         validate = ValidateNode(min_length=10)  # Strict validation
-        finalize = FinalizeNode()
 
         flow = (
             message_flow("branching", start)
+            .from_node(start)
             .route(ProcessedEvent, transform)
+            .from_node(transform)
             .route(ValidateCommand, validate)
-            .route(ValidationPassedEvent, finalize)
-            .end(ValidationFailedEvent)  # Failure also terminates
+            .from_node(validate)
+            .end(ValidationFailedEvent)  # Only test failure path
         )
 
         flow_id = create_flow_id()
 
-        # Test failure branch
-        short_input = ProcessCommand(data="hi", triggered_by_id=None, flow_id=flow_id)
+        # Test failure branch - make input that results in short content after "started: "
+        short_input = ProcessCommand(data="", triggered_by_id=None, flow_id=flow_id)  # "started: " = 9 chars < 10
         result = await flow.process(short_input)
         assert isinstance(result, ValidationFailedEvent)
 
@@ -209,7 +215,7 @@ class TestMessageFlow:
         # Should raise ValueError for missing route
         with pytest.raises(ValueError) as exc_info:
             await flow.process(input_msg)
-        
+
         assert "No route defined for message type" in str(exc_info.value)
         assert "ValidateCommand" in str(exc_info.value)
 
@@ -218,21 +224,26 @@ class TestMessageFlow:
         # Create inner flow
         validate = ValidateNode()
         finalize = FinalizeNode()
-        
+
         inner_flow = (
             message_flow("inner", validate)
+            .from_node(validate)
             .route(ValidationPassedEvent, finalize)
+            .from_node(finalize)
             .end(AnalysisCompleteEvent)
         )
 
         # Create outer flow using inner flow as a node
         start = StartNode()
         transform = TransformNode()
-        
+
         outer_flow = (
             message_flow("outer", start)
+            .from_node(start)
             .route(ProcessedEvent, transform)
+            .from_node(transform)
             .route(ValidateCommand, inner_flow)  # Inner flow as node!
+            .from_node(inner_flow)
             .end(AnalysisCompleteEvent)
         )
 
@@ -240,9 +251,9 @@ class TestMessageFlow:
         input_msg = ProcessCommand(
             data="composite test", triggered_by_id=None, flow_id=flow_id
         )
-        
+
         result = await outer_flow.process(input_msg)
-        
+
         assert isinstance(result, AnalysisCompleteEvent)
         assert "started: composite test" in result.findings
 
@@ -255,8 +266,8 @@ class TestMessageFlow:
 
         # Try to route from unreachable node
         with pytest.raises(ValueError) as exc_info:
-            builder.route(ValidationPassedEvent, unreachable).end(AnalysisCompleteEvent)
-        
+            builder.from_node(unreachable).route(ValidationPassedEvent, start)
+
         assert "not reachable from start" in str(exc_info.value)
 
     async def test_flow_duplicate_route_error(self) -> None:
@@ -265,19 +276,20 @@ class TestMessageFlow:
         node1 = TransformNode(name="transform1")
         node2 = TransformNode(name="transform2")
 
-        builder = message_flow("test", start).route(ProcessedEvent, node1)
+        builder = message_flow("test", start).from_node(start)
+        builder = builder.route(ProcessedEvent, node1)
 
-        # Try to add duplicate route for same message type
+        # Try to add duplicate route for same message type from same node
         with pytest.raises(ValueError) as exc_info:
             builder.route(ProcessedEvent, node2)
-        
+
         assert "Route already defined" in str(exc_info.value)
 
     async def test_flow_name_property(self) -> None:
         """Test flow name is preserved."""
         start = StartNode()
         flow = message_flow("my_flow", start).end(ProcessedEvent)
-        
+
         assert flow.name == "my_flow"
 
     async def test_flow_immutability(self) -> None:
@@ -298,21 +310,27 @@ class TestMessageFlow:
         transform = TransformNode()
         validate = ValidateNode()
 
-        # Each route returns a new builder
+        # Each route returns a new builder/context
         builder1 = message_flow("test", start)
-        builder2 = builder1.route(ProcessedEvent, transform)
-        builder3 = builder2.route(ValidateCommand, validate)
-        
-        # Builders are different instances
-        assert builder1 is not builder2
-        assert builder2 is not builder3
-        
+        context1 = builder1.from_node(start)
+        context2 = context1.route(ProcessedEvent, transform)
+        context3 = context2.from_node(transform)
+        context4 = context3.route(ValidateCommand, validate)
+
+        # Builders/contexts are different instances
+        assert builder1 is not context1
+        assert context2 is not context3
+        assert context3 is not context4
+
         # But can chain fluently
         flow = (
             message_flow("fluent", start)
+            .from_node(start)
             .route(ProcessedEvent, transform)
+            .from_node(transform)
             .route(ValidateCommand, validate)
+            .from_node(validate)
             .end(ValidationPassedEvent)
         )
-        
+
         assert flow.name == "fluent"
