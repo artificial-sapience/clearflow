@@ -5,12 +5,12 @@ process method and message transformation patterns.
 
 """
 
-from dataclasses import dataclass
+from dataclasses import FrozenInstanceError, dataclass
 from typing import override
 
 import pytest
 
-from clearflow.message_node import Node
+from clearflow import MessageNode as Node
 from tests.conftest_message import (
     AnalysisCompleteEvent,
     AnalyzeCommand,
@@ -138,7 +138,7 @@ class TestMessageNode:
         node = ProcessorNode(name="immutable_processor")
 
         # Should not be able to modify node
-        with pytest.raises(Exception):  # FrozenInstanceError or AttributeError
+        with pytest.raises((FrozenInstanceError, AttributeError)):
             node.name = "modified"  # type: ignore[misc]
 
     async def test_node_union_return_types(self) -> None:
@@ -278,3 +278,13 @@ class TestMessageNode:
         assert isinstance(
             validate_result, (ValidationPassedEvent, ValidationFailedEvent)
         )
+
+    async def test_node_name_validation(self) -> None:
+        """Test that nodes validate their names during initialization."""
+        # Empty name should raise ValueError
+        with pytest.raises(ValueError, match="Node name must be a non-empty string"):
+            ProcessorNode(name="")
+
+        # Whitespace-only name should raise ValueError
+        with pytest.raises(ValueError, match="Node name must be a non-empty string"):
+            ProcessorNode(name="   ")

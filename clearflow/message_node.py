@@ -5,6 +5,10 @@ from dataclasses import dataclass
 
 from clearflow.message import Message
 
+__all__ = [
+    "Node",
+]
+
 
 @dataclass(frozen=True, kw_only=True)
 class Node[TMessageIn: Message, TMessageOut: Message](ABC):

@@ -7,9 +7,8 @@ demonstrating mission-critical AI orchestration patterns with message-driven flo
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
-from clearflow.message import Command, Event, Message
+from clearflow import Command, Event
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -90,7 +89,12 @@ def create_test_command(
     triggered_by_id: uuid.UUID | None = None,
     flow_id: uuid.UUID | None = None,
 ) -> ProcessCommand:
-    """Create a test command with valid fields."""
+    """Create a test command with valid fields.
+
+    Returns:
+        A ProcessCommand with test data.
+
+    """
     return ProcessCommand(
         data="test data",
         triggered_by_id=triggered_by_id,
@@ -103,7 +107,12 @@ def create_test_event(
     triggered_by_id: uuid.UUID | None = None,
     flow_id: uuid.UUID | None = None,
 ) -> ProcessedEvent:
-    """Create a test event with valid fields."""
+    """Create a test event with valid fields.
+
+    Returns:
+        A ProcessedEvent with test data.
+
+    """
     if triggered_by_id is None:
         triggered_by_id = uuid.uuid4()
 
@@ -116,5 +125,10 @@ def create_test_event(
 
 
 def create_flow_id() -> uuid.UUID:
-    """Create a new flow ID for testing."""
+    """Create a new flow ID for testing.
+
+    Returns:
+        A new UUID for flow identification.
+
+    """
     return uuid.uuid4()

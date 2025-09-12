@@ -6,12 +6,12 @@ causality tracking, and immutability guarantees for mission-critical AI.
 """
 
 import uuid
-from dataclasses import FrozenInstanceError, dataclass
+from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime
 
 import pytest
 
-from clearflow.message import Command, Event, Message
+from clearflow import Command, Event, Message
 from tests.conftest_message import (
     ProcessCommand,
     ProcessedEvent,
@@ -180,7 +180,7 @@ class TestEvent:
         assert evt.triggered_by_id == trigger_id
 
         # Event without trigger should fail - ValueError from __post_init__
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="Events must have a triggered_by_id") as exc_info:
             ProcessedEvent(
                 result="success",
                 processing_time_ms=50.0,
@@ -269,8 +269,8 @@ class TestMessageComparison:
         evt = create_test_event()
 
         # Should be hashable
-        cmd_hash = hash(cmd)
-        evt_hash = hash(evt)
+        hash(cmd)
+        hash(evt)
 
         # Can be used in sets
         message_set = {cmd, evt}

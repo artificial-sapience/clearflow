@@ -6,6 +6,12 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import final
 
+__all__ = [
+    "Command",
+    "Event",
+    "Message",
+]
+
 
 def _utc_now() -> datetime:
     """Create a timezone-aware datetime in UTC.

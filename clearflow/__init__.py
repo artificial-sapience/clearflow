@@ -6,10 +6,23 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Protocol, cast, final, override
 
+# Import message API components
+from clearflow.message import Command, Event, Message
+from clearflow.message_flow import message_flow
+from clearflow.message_node import Node as MessageNode
+from clearflow.observer import ObservableFlow, Observer
+
 __all__ = [
+    "Command",
+    "Event",
+    "Message",
+    "MessageNode",
     "Node",
     "NodeResult",
+    "ObservableFlow",
+    "Observer",
     "flow",
+    "message_flow",
 ]
 
 RouteKey = tuple[str, str]  # (node_name, outcome)

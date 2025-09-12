@@ -5,19 +5,16 @@ concurrent execution, and decorator-based flow observation.
 
 """
 
-from dataclasses import dataclass
+from dataclasses import FrozenInstanceError, dataclass
 from typing import override
 
 import pytest
 
-from clearflow.message import Event, Message
-from clearflow.message_flow import message_flow
-from clearflow.message_node import Node
-from clearflow.observer import ObservableFlow, Observer
+from clearflow import Event, Message, ObservableFlow, Observer, message_flow
+from clearflow import MessageNode as Node
 from tests.conftest_message import (
     ProcessCommand,
     ProcessedEvent,
-    SecurityAlertEvent,
     ValidateCommand,
     ValidationFailedEvent,
     ValidationPassedEvent,
@@ -62,7 +59,8 @@ class SecurityObserver(Observer[ProcessedEvent]):
         for word in self.forbidden_words:
             if word in message.result.lower():
                 # Fail-fast: exception stops flow
-                raise SecurityException(f"Security violation: forbidden word '{word}'")
+                error_msg = f"Security violation: forbidden word '{word}'"
+                raise SecurityError(error_msg)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -78,8 +76,8 @@ class ValidationObserver(Observer[ValidationFailedEvent]):
 
 
 # Test exception
-class SecurityException(Exception):
-    """Exception raised by security observer."""
+class SecurityError(Exception):
+    """Error raised by security observer."""
 
 
 # Test nodes for flows
@@ -249,8 +247,8 @@ class TestObservableFlow:
         flow_id = create_flow_id()
         input_msg = ProcessCommand(data="danger", triggered_by_id=None, flow_id=flow_id)
 
-        # Should raise SecurityException
-        with pytest.raises(SecurityException) as exc_info:
+        # Should raise SecurityError
+        with pytest.raises(SecurityError) as exc_info:
             await observable.process(input_msg)
 
         assert "Security violation" in str(exc_info.value)
@@ -359,7 +357,7 @@ class TestObservableFlow:
         observable = ObservableFlow(name="immutable", flow=core_flow, observers={})
 
         # Should not be able to modify
-        with pytest.raises(Exception):  # FrozenInstanceError or AttributeError
+        with pytest.raises((FrozenInstanceError, AttributeError)):
             observable.name = "modified"  # type: ignore[misc]
 
     async def test_observable_flow_composability(self) -> None:

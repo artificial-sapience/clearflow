@@ -8,6 +8,10 @@ from typing import cast, final, override
 from clearflow.message import Message
 from clearflow.message_node import Node
 
+__all__ = [
+    "message_flow",
+]
+
 MessageRouteKey = tuple[type[Message], str]  # (message_type, node_name)
 
 

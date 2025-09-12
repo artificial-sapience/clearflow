@@ -5,16 +5,15 @@ for mission-critical AI orchestration with type-safe message routing.
 
 """
 
-from dataclasses import dataclass
+from dataclasses import FrozenInstanceError, dataclass
 from typing import override
 
 import pytest
 
-from clearflow.message_flow import message_flow
-from clearflow.message_node import Node
+from clearflow import MessageNode as Node
+from clearflow import message_flow
 from tests.conftest_message import (
     AnalysisCompleteEvent,
-    AnalyzeCommand,
     ErrorEvent,
     ProcessCommand,
     ProcessedEvent,
@@ -213,7 +212,7 @@ class TestMessageFlow:
         input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
 
         # Should raise ValueError for missing route
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="No route defined") as exc_info:
             await flow.process(input_msg)
 
         assert "No route defined for message type" in str(exc_info.value)
@@ -265,7 +264,7 @@ class TestMessageFlow:
         builder = message_flow("test", start)
 
         # Try to route from unreachable node
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="not reachable from start") as exc_info:
             builder.from_node(unreachable).route(ValidationPassedEvent, start)
 
         assert "not reachable from start" in str(exc_info.value)
@@ -280,7 +279,7 @@ class TestMessageFlow:
         builder = builder.route(ProcessedEvent, node1)
 
         # Try to add duplicate route for same message type from same node
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="Route already defined") as exc_info:
             builder.route(ProcessedEvent, node2)
 
         assert "Route already defined" in str(exc_info.value)
@@ -298,10 +297,10 @@ class TestMessageFlow:
         flow = message_flow("immutable", start).end(ProcessedEvent)
 
         # Should not be able to modify flow
-        with pytest.raises(Exception):  # FrozenInstanceError or AttributeError
+        with pytest.raises((FrozenInstanceError, AttributeError)):
             flow.name = "modified"  # type: ignore[misc]
 
-        with pytest.raises(Exception):
+        with pytest.raises((FrozenInstanceError, AttributeError)):
             flow.start_node = StartNode(name="new")  # type: ignore[misc]
 
     async def test_flow_builder_chaining(self) -> None:

@@ -80,26 +80,50 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
     return any(_check_line_for_suppression(line, pattern) for line in lines_to_check)
 
 
-def _check_private_imports(node: ast.ImportFrom, file_path: Path, *, is_internal: bool) -> Violation | None:
+def _check_private_imports(node: ast.ImportFrom, file_path: Path, *, is_internal: bool) -> tuple[Violation, ...]:
     """Check for imports from private implementation modules.
 
     Returns:
-        Violation if private import found, None otherwise.
+        Tuple of violations found.
 
     """
+    violations: list[Violation] = []
     if not node.module:
-        return None
+        return tuple(violations)
+
+    # Check for _internal module imports (existing check)
     private_module = "clearflow." + "_internal"
     if private_module in node.module and not is_internal:
-        return Violation(
+        violations.append(Violation(
             file=file_path,
             line=node.lineno,
             column=node.col_offset,
             code="ARCH003",
             message=f"Importing from private module '{node.module}'",
             requirement="REQ-ARCH-003",
-        )
-    return None
+        ))
+
+    # Check for test files importing from non-public API modules
+    is_test_file = "test" in str(file_path) or file_path.name.startswith("conftest")
+    if is_test_file and node.module and node.module.startswith("clearflow."):
+        # List of non-public modules that tests should not import from directly
+        non_public_modules = [
+            "clearflow.message",
+            "clearflow.message_node",
+            "clearflow.message_flow",
+            "clearflow.observer"
+        ]
+        if node.module in non_public_modules:
+            violations.append(Violation(
+                file=file_path,
+                line=node.lineno,
+                column=node.col_offset,
+                code="ARCH011",
+                message=f"Test file importing from non-public API module '{node.module}' - tests must use only public API from clearflow.__init__.py",
+                requirement="REQ-ARCH-011",
+            ))
+
+    return tuple(violations)
 
 
 def _check_mock_imports(node: ast.ImportFrom, file_path: Path) -> tuple[Violation, ...]:
@@ -296,9 +320,7 @@ def _check_import_from_node(
     violations: list[Violation] = []
 
     # Check private imports
-    violation = _check_private_imports(node, file_path, is_internal=is_internal)
-    if violation:
-        violations.append(violation)
+    violations.extend(_check_private_imports(node, file_path, is_internal=is_internal))
 
     # Check mock imports
     violations.extend(_check_mock_imports(node, file_path))

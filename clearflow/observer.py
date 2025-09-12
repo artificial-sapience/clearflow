@@ -9,6 +9,11 @@ from typing import cast, final, override
 
 from clearflow.message import Message
 
+__all__ = [
+    "ObservableFlow",
+    "Observer",
+]
+
 # Import internal flow implementation for decorator pattern
 # This is intentionally using a private class within the same package
 from clearflow.message_flow import (
