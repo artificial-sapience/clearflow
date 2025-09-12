@@ -960,6 +960,198 @@ The migration path ensures existing users can adopt gradually, and the benefits 
 4. Refine based on feedback
 5. Begin phased implementation
 
+## Design Evolution: Observing Flows, Not Nodes
+
+### The LSP Violation Discovery
+
+During implementation, we discovered a critical design flaw in the initial ObservableFlow design. The original approach attempted to wrap any `Node` and then detect at runtime whether it was actually a `_MessageFlow` to intercept intermediate messages:
+
+```python
+# PROBLEMATIC DESIGN - Violates LSP
+class ObservableFlow[TStart: Message, TEnd: Message](Node[TStart, TEnd]):
+    core_node: Node[TStart, TEnd]  # Could be any node
+    
+    async def process(self, message: TStart) -> TEnd:
+        # Runtime type checking - code smell!
+        if isinstance(self.core_node, _MessageFlow):
+            return await self._process_flow_with_interception(message)
+        else:
+            # Just observe input/output for regular nodes
+            ...
+```
+
+This violated the Liskov Substitution Principle (LSP) - we shouldn't need to check subtypes at runtime. The `ObservableFlow` was trying to be too generic, attempting to observe both individual nodes and flows with different behaviors.
+
+### The Key Insight: We Only Need to Observe Flows
+
+The solution came from a fundamental realization:
+
+1. **Individual nodes are atomic operations** - observing their input/output provides limited value
+2. **Flows are where orchestration happens** - this is what we actually want to observe
+3. **Flows contain the interesting intermediate messages** - the routing decisions and transformations
+
+This led to a cleaner conceptual model: **"We observe workflows (flows), not individual operations (nodes)"**
+
+### The Decorator Pattern Solution
+
+Instead of trying to make `ObservableFlow` handle any node, we explicitly designed it to decorate only `_MessageFlow`:
+
+```python
+@final
+@dataclass(frozen=True, kw_only=True)
+class ObservableFlow[TStart: Message, TEnd: Message](Node[TStart, TEnd]):
+    """Observable wrapper that is also a Node for composability.
+    
+    Decorates ONLY message flows (_MessageFlow) with observation capabilities.
+    This is intentional - we observe workflows, not individual operations.
+    Being a Node allows observable flows to be nested within other flows.
+    """
+    
+    name: str
+    flow: _MessageFlow[TStart, TEnd]  # Explicitly requires a flow, not any node!
+    observers: Mapping[type[Message], tuple[Observer[Message], ...]]
+    
+    @override
+    async def process(self, message: TStart) -> TEnd:
+        """Process flow with observation of all intermediate messages."""
+        # Direct access to flow internals - no casting or isinstance needed!
+        current_node = self.flow.start_node
+        current_message: Message = message
+        
+        # Observe the initial message
+        await self._notify_observers(current_message)
+        
+        while True:
+            # Execute node
+            output_message = await current_node.process(current_message)
+            
+            # Observe the output
+            await self._notify_observers(output_message)
+            
+            # Route to next node
+            route_key = (type(output_message), current_node.name)
+            next_node = self.flow.routes.get(route_key)
+            
+            if next_node is None:
+                return cast(TEnd, output_message)
+            
+            current_node = next_node
+            current_message = output_message
+```
+
+### Design Benefits
+
+This approach provides several key advantages:
+
+1. **No LSP Violation**: `ObservableFlow` explicitly requires `_MessageFlow`, not generic `Node`
+2. **Type Safety**: The type system enforces that only flows can be made observable
+3. **No Runtime Type Checking**: No `isinstance()`, `hasattr()`, or type ignores needed
+4. **Conceptual Clarity**: Clear distinction between observing workflows vs. operations
+5. **Composability Preserved**: `ObservableFlow` is still a `Node`, maintaining nesting ability
+
+### Usage Pattern
+
+```python
+# Build a flow (returns _MessageFlow which IS a Node)
+core_flow = (
+    message_flow("OrderProcessing", ValidateOrderNode())
+    .route(OrderValidatedEvent, ProcessPaymentNode())
+    .route(PaymentProcessedEvent, ShipOrderNode())
+    .end(OrderShippedEvent)
+)
+
+# Make it observable (only works with flows!)
+observable_flow = ObservableFlow(
+    name="ObservableOrderProcessing",
+    flow=core_flow,
+    observers={}
+).observe(Event, EventLogger())
+ .observe(PaymentProcessedEvent, FraudDetector())
+ .observe(OrderShippedEvent, CustomerNotifier())
+
+# Use it - it's still a Node!
+result = await observable_flow.process(start_message)
+
+# Compose it in another flow - works because ObservableFlow IS a Node
+parent_flow = (
+    message_flow("ParentWorkflow", observable_flow)
+    .route(OrderShippedEvent, next_node)
+    .end(WorkflowCompleteEvent)
+)
+```
+
+### What About Observing Individual Nodes?
+
+The design intentionally does not support observing individual nodes. This is a feature, not a limitation:
+
+```python
+# This doesn't work - and that's good!
+node = ProcessNode()
+observable = ObservableFlow(node)  # TYPE ERROR! Expected _MessageFlow, got Node
+```
+
+If you truly need to observe a single node, the solution is to wrap it in a trivial flow:
+
+```python
+# Convert a single node to an observable flow
+single_node_flow = (
+    message_flow("SingleNodeFlow", my_node)
+    .end(OutputMessage)
+)
+observable = ObservableFlow(
+    name="ObservableSingleNode",
+    flow=single_node_flow,
+    observers={}
+).observe(Message, logger)
+```
+
+### Implementation Details
+
+The current implementation in `clearflow/observer.py` follows this pattern:
+
+1. `Observer[TMessage]` - Abstract base for observers that process messages without affecting flow
+2. `ObservableFlow[TStart, TEnd]` - Decorator that wraps `_MessageFlow` (not generic `Node`)
+3. Direct access to flow internals (`start_node`, `routes`) without type casting
+4. Observers execute concurrently with error isolation
+
+### Composability Through Decoration
+
+The decorator pattern maintains full composability:
+
+```python
+# Level 1: Core business flow
+core_flow = message_flow("Core", start_node).route(...).end(...)
+
+# Level 2: Add logging
+logged_flow = ObservableFlow(name="Logged", flow=core_flow)
+    .observe(Event, EventLogger())
+
+# Level 3: Add metrics
+monitored_flow = ObservableFlow(name="Monitored", flow=logged_flow)
+    .observe(Message, MetricsCollector())
+
+# Level 4: Compose in a parent flow (ObservableFlow IS a Node)
+parent_flow = message_flow("Parent", monitored_flow)
+    .route(...)
+    .end(...)
+
+# Level 5: Make the parent observable too!
+observable_parent = ObservableFlow(name="ObservableParent", flow=parent_flow)
+    .observe(Event, ParentEventLogger())
+```
+
+### Design Principles Reinforced
+
+This evolution reinforces ClearFlow's core principles:
+
+1. **Explicit over Implicit**: Observation is explicit at the flow level
+2. **Type Safety**: No runtime type checking or suppressions
+3. **Minimal Complexity**: Clear separation between nodes and flows
+4. **Composability**: Flows as nodes, observable flows as nodes
+5. **Zero Magic**: No hidden behavior or automatic detection
+
+The design clearly states: **We observe workflows (message flows), not individual operations (nodes).**
+
 ## Appendix: Comparison with Current API
 
 ### Current API

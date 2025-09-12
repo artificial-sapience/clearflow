@@ -6,10 +6,17 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
-from typing import final
+from typing import cast, final, override
 
 from clearflow.message import Message
-from clearflow.message_flow import MessageFlow
+
+# Import internal flow implementation for decorator pattern
+# This is intentionally using a private class within the same package
+from clearflow.message_flow import (
+    MessageRouteKey,
+    _MessageFlow,  # pyright: ignore[reportPrivateUsage]  # Internal package use
+)
+from clearflow.message_node import Node
 
 logger = logging.getLogger(__name__)
 
@@ -40,14 +47,18 @@ class Observer[TMessage: Message](ABC):
 
 @final
 @dataclass(frozen=True, kw_only=True)
-class ObservableFlow[TStart: Message, TEnd: Message]:
-    """Wraps a core flow to add observation capabilities.
+class ObservableFlow[TStart: Message, TEnd: Message](Node[TStart, TEnd]):
+    """Observable decorator for message flows (not individual nodes).
 
+    Decorates ONLY message flows (_MessageFlow) with observation capabilities.
+    This is intentional - we observe workflows, not individual operations.
     Provides non-invasive observation of message flows without affecting
     the core business logic or routing behavior.
+    Being a Node allows observable flows to be nested within other flows.
     """
 
-    core_flow: MessageFlow[TStart, TEnd]
+    name: str
+    flow: _MessageFlow[TStart, TEnd]  # Explicitly requires a flow, not any node
     observers: Mapping[type[Message], tuple[Observer[Message], ...]] = field(
         default_factory=lambda: MappingProxyType({})
     )
@@ -69,30 +80,20 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
         new_observers_dict = {**self.observers, message_type: (*current, observer)}
         return replace(self, observers=MappingProxyType(new_observers_dict))
 
-    async def execute(self, start_message: TStart) -> TEnd:
-        """Execute flow with automatic observation.
+    @override
+    async def process(self, message: TStart) -> TEnd:
+        """Process flow with observation of all intermediate messages.
 
         Args:
-            start_message: Initial message to start the flow
+            message: Initial message to start the flow
 
         Returns:
-            Final message from the core flow
+            Final message when flow reaches termination
 
         """
-        return await self._execute_with_interception(start_message)
-
-    async def _execute_with_interception(self, start_message: TStart) -> TEnd:
-        """Execute core flow while intercepting all messages.
-
-        Args:
-            start_message: Initial message to start the flow
-
-        Returns:
-            Final message from the core flow
-
-        """
-        current_message = start_message
-        current_node = self.core_flow.start_node
+        # Direct access to flow internals - no casting or isinstance needed!
+        current_node = self.flow.start_node
+        current_message: Message = message
 
         # Observe the initial message
         await self._notify_observers(current_message)
@@ -101,15 +102,15 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
             # Execute node
             output_message = await current_node.process(current_message)
 
-            # INTERCEPT: Notify observers asynchronously
+            # Observe the output
             await self._notify_observers(output_message)
 
-            # Check if we're at termination
-            route_key = (type(output_message), current_node.name)
-            next_node = self.core_flow.routes.get(route_key)
+            # Route to next node
+            route_key: MessageRouteKey = (type(output_message), current_node.name)
+            next_node = self.flow.routes.get(route_key)
 
             if next_node is None:
-                return output_message  # type: ignore[return-value]
+                return cast("TEnd", output_message)
 
             # Continue routing
             current_node = next_node

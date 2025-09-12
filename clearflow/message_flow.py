@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import cast, final
+from typing import cast, final, override
 
 from clearflow.message import Message
 from clearflow.message_node import Node
@@ -13,22 +13,24 @@ MessageRouteKey = tuple[type[Message], str]  # (message_type, node_name)
 
 @final
 @dataclass(frozen=True, kw_only=True)
-class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
-    """Core message flow that routes messages between nodes.
+class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessage, TEndMessage]):
+    """Private message flow that is also a Node for composability.
 
     Executes flows by routing messages based on their types to appropriate nodes.
     Maintains type safety through compile-time checking of message compatibility.
+    Being a Node allows flows to be nested within other flows.
     """
 
     name: str
     start_node: Node[Message, Message]
     routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
 
-    async def execute(self, start_message: TStartMessage) -> TEndMessage:
-        """Execute the flow by routing messages through nodes.
+    @override
+    async def process(self, message: TStartMessage) -> TEndMessage:
+        """Process message by routing through the flow.
 
         Args:
-            start_message: Initial message to start the flow
+            message: Initial message to start the flow
 
         Returns:
             Final message when flow reaches termination
@@ -38,7 +40,7 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
 
         """
         current_node = self.start_node
-        current_message: Message = start_message
+        current_message: Message = message
 
         while True:
             # Execute node
@@ -67,14 +69,14 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
 
 @final
 @dataclass(frozen=True, kw_only=True)
-class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
-    """Builder for composing type-safe message routes.
+class _MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
+    """Private builder for composing type-safe message routes.
 
     Type parameters:
         TStartMessage: The input message type the flow accepts
         TCurrentMessage: The current message type in the flow
 
-    Call end() to specify where the flow terminates and get the completed flow.
+    Call end() to specify where the flow terminates and get the completed flow as a Node.
     """
 
     _name: str
@@ -117,7 +119,7 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
         self,
         message_type: type[TCurrentMessage],
         to_node: Node[TCurrentMessage, TNextMessage],
-    ) -> "MessageFlowBuilder[TStartMessage, TNextMessage]":
+    ) -> "_MessageFlowBuilder[TStartMessage, TNextMessage]":
         """Route message type to next node.
 
         Args:
@@ -146,7 +148,7 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
         new_routes = {**self._routes, route_key: to_node}
         new_reachable = self._reachable_nodes | {to_node.name}
 
-        return MessageFlowBuilder[TStartMessage, TNextMessage](
+        return _MessageFlowBuilder[TStartMessage, TNextMessage](
             _name=self._name,
             _start_node=self._start_node,
             _routes=cast(
@@ -155,14 +157,14 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
             _reachable_nodes=new_reachable,
         )
 
-    def end(self, message_type: type[TCurrentMessage]) -> MessageFlow[TStartMessage, TCurrentMessage]:
+    def end(self, message_type: type[TCurrentMessage]) -> Node[TStartMessage, TCurrentMessage]:
         """Mark message type as terminal, completing the flow.
 
         Args:
             message_type: The message type that completes the flow
 
         Returns:
-            A complete message flow
+            A Node that represents the complete flow (for composability)
 
         """
         # Find the node that produces this message type
@@ -180,7 +182,7 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
 
         new_routes = {**self._routes, route_key: None}
 
-        return MessageFlow[TStartMessage, TCurrentMessage](
+        return _MessageFlow[TStartMessage, TCurrentMessage](
             name=self._name,
             start_node=cast("Node[Message, Message]", self._start_node),
             routes=cast("Mapping[MessageRouteKey, Node[Message, Message] | None]", MappingProxyType(new_routes)),
@@ -190,7 +192,7 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
 def message_flow[TStartMessage: Message, TStartOut: Message](
     name: str,
     start_node: Node[TStartMessage, TStartOut],
-) -> MessageFlowBuilder[TStartMessage, TStartOut]:
+) -> _MessageFlowBuilder[TStartMessage, TStartOut]:
     """Create a message flow with the given name and starting node.
 
     Args:
@@ -201,7 +203,7 @@ def message_flow[TStartMessage: Message, TStartOut: Message](
         Builder for route definition and flow completion
 
     """
-    return MessageFlowBuilder[TStartMessage, TStartOut](
+    return _MessageFlowBuilder[TStartMessage, TStartOut](
         _name=name,
         _start_node=start_node,
         _routes=MappingProxyType({}),
