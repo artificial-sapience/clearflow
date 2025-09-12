@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-"""Check deep immutability compliance for the ClearFlow project.
+"""Check deep immutability compliance for mission-critical Python projects.
 
-This script enforces deep immutability requirements.
+This script enforces deep immutability requirements for both ClearFlow and Sociocracy.
 Zero tolerance for violations in mission-critical software.
 
 Requirements enforced:
 - All types SHALL be deeply immutable throughout the system
+  - No mutable collections: list, dict, set, bytearray, collections.*
+  - Use immutable alternatives: tuple, frozenset, Mapping, bytes, frozen dataclasses
   - Pydantic models must use frozen=True in ConfigDict
   - Dataclasses must use @dataclass(frozen=True)
-  - Collections must use tuple instead of list
   - No mutable default arguments
 """
 
@@ -17,6 +18,28 @@ import re
 import sys
 from pathlib import Path
 from typing import NamedTuple
+
+
+# Auto-detect project from pyproject.toml
+def detect_project() -> str:
+    """Detect the project name.
+
+    Returns:
+        Project name string
+
+    """
+    pyproject_path = Path("pyproject.toml")
+    if pyproject_path.exists():
+        content = pyproject_path.read_text(encoding="utf-8")
+        if 'name = "clearflow"' in content:
+            return "clearflow"
+        if 'name = "sociocracy"' in content:
+            return "sociocracy"
+    # Default to clearflow if can't detect
+    return "clearflow"
+
+
+PROJECT_NAME = detect_project()
 
 
 class Violation(NamedTuple):
@@ -39,10 +62,11 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
         code: The code to check for suppression (e.g., "IMM001")
 
     Returns:
-        True if the line has a clearflow: ignore comment for this specific code
+        True if the line has a project-specific ignore comment for this specific code
 
     Format:
-        # clearflow: ignore[IMM001]  - Specific code suppression
+        # clearflow: ignore[IMM001]  - Specific code suppression for ClearFlow
+        # sociocracy: ignore[IMM001]  - Specific code suppression for Sociocracy
 
     """
     lines = content.splitlines()
@@ -51,32 +75,54 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
 
     line = lines[line_num - 1]  # Convert to 0-indexed
 
-    # Check for # clearflow: ignore[CODE] pattern
-    pattern = rf"#\s*clearflow:\s*ignore\[{code}\]"
+    # Check for # PROJECT: ignore[CODE] pattern
+    pattern = rf"#\s*{PROJECT_NAME}:\s*ignore\[{code}\]"
     return bool(re.search(pattern, line, re.IGNORECASE))
 
 
-def _is_mutable_list_annotation(node: ast.Subscript) -> str | None:
-    """Check if node is a mutable list annotation and return the type name.
+def _get_mutable_collection_info(node: ast.Subscript | ast.Name) -> tuple[str, str] | None:
+    """Check if node is a mutable collection annotation and return info.
 
     Returns:
-        String description of the list type found, or None if not a list.
+        Tuple of (type_name, suggestion) or None if not a mutable collection.
 
     """
-    if not isinstance(node.value, ast.Name):
-        return None
-    if node.value.id == "list":
-        return "list"
-    if node.value.id == "List":
-        return "List"
+    # Handle both Subscript (e.g., list[int]) and Name (e.g., dict) nodes
+    if isinstance(node, ast.Subscript):
+        if not isinstance(node.value, ast.Name):
+            return None
+        name = node.value.id
+    else:  # node is ast.Name
+        name = node.id
+
+    # Map of mutable types to their immutable alternatives
+    mutable_types = {
+        "list": ("list", "tuple"),
+        "List": ("List", "tuple"),
+        "dict": ("dict", "Mapping or frozen dataclass"),
+        "Dict": ("Dict", "Mapping or frozen dataclass"),
+        "set": ("set", "frozenset"),
+        "Set": ("Set", "frozenset"),
+        "bytearray": ("bytearray", "bytes"),
+        "deque": ("collections.deque", "tuple"),
+        "defaultdict": ("collections.defaultdict", "Mapping or frozen dataclass"),
+        "OrderedDict": ("collections.OrderedDict", "Mapping or frozen dataclass"),
+        "Counter": ("collections.Counter", "frozen dataclass"),
+        "ChainMap": ("collections.ChainMap", "Mapping or frozen dataclass"),
+        "UserDict": ("collections.UserDict", "frozen dataclass"),
+        "UserList": ("collections.UserList", "tuple"),
+    }
+
+    if name in mutable_types:
+        return mutable_types[name]
     return None
 
 
-def check_list_annotations(file_path: Path, content: str) -> tuple[Violation, ...]:
-    """Check for list type annotations that should be tuple.
+def check_mutable_collections(file_path: Path, content: str) -> tuple[Violation, ...]:
+    """Check for mutable collection type annotations.
 
     Returns:
-        List of violations for mutable list usage in type annotations.
+        List of violations for mutable collection usage in type annotations.
 
     """
     violations: list[Violation] = []
@@ -93,16 +139,18 @@ def check_list_annotations(file_path: Path, content: str) -> tuple[Violation, ..
         return tuple(violations)
 
     for node in ast.walk(tree):
-        if isinstance(node, ast.Subscript):
-            list_type = _is_mutable_list_annotation(node)
-            if list_type and not has_suppression(content, node.lineno, "IMM001"):
+        # Check both Subscript (e.g., list[int]) and Name (e.g., dict) nodes
+        if isinstance(node, (ast.Subscript, ast.Name)):
+            mutable_info = _get_mutable_collection_info(node)
+            if mutable_info and not has_suppression(content, node.lineno, "IMM001"):
+                type_name, suggestion = mutable_info
                 violations.append(
                     Violation(
                         file=file_path,
                         line=node.lineno,
                         column=node.col_offset,
                         code="IMM001",
-                        message=f"Using '{list_type}' in type annotation - use 'tuple[T, ...]' for immutable collections",
+                        message=f"Using mutable type '{type_name}' in type annotation - use '{suggestion}' for immutability",
                         requirement="REQ-ARCH-004",
                     ),
                 )
@@ -591,7 +639,7 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         return tuple(violations)
 
     # Run all checks
-    violations.extend(check_list_annotations(file_path, content))
+    violations.extend(check_mutable_collections(file_path, content))
     violations.extend(check_dataclass_frozen(file_path, content))
     violations.extend(check_pydantic_frozen(file_path, content))
     violations.extend(check_mutable_defaults(file_path, content))
@@ -642,7 +690,7 @@ def print_report(violations: tuple[Violation, ...]) -> None:
         by_code[v.code].append(v)
 
     code_descriptions = {
-        "IMM001": "Mutable list type annotations",
+        "IMM001": "Mutable collection type annotations (list, dict, set, etc.)",
         "IMM002": "Dataclasses without frozen=True",
         "IMM003": "Pydantic models without frozen=True",
         "IMM004": "Mutable default arguments",
@@ -683,7 +731,7 @@ def print_report(violations: tuple[Violation, ...]) -> None:
 def main() -> None:
     """Execute the immutability compliance check."""
     # Get items from command line arguments, or use defaults
-    items = sys.argv[1:] if len(sys.argv) > 1 else ["clearflow", "tests", "examples"]
+    items = sys.argv[1:] if len(sys.argv) > 1 else [PROJECT_NAME, "tests", "examples"]
 
     all_violations: list[Violation] = []
     for item in items:

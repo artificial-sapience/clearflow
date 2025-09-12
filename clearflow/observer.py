@@ -3,7 +3,9 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from types import MappingProxyType
 from typing import final
 
 from clearflow.message import Message
@@ -12,7 +14,6 @@ from clearflow.message_flow import MessageFlow
 logger = logging.getLogger(__name__)
 
 
-@final
 @dataclass(frozen=True, kw_only=True)
 class Observer[TMessage: Message](ABC):
     """Observer that processes messages without affecting flow.
@@ -47,7 +48,9 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
     """
 
     core_flow: MessageFlow[TStart, TEnd]
-    observers: dict[type[Message], tuple[Observer, ...]] = field(default_factory=dict)
+    observers: Mapping[type[Message], tuple[Observer[Message], ...]] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
 
     def observe[TMsg: Message](
         self, message_type: type[TMsg], observer: Observer[TMsg]
@@ -63,8 +66,8 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
 
         """
         current = self.observers.get(message_type, ())
-        new_observers = {**self.observers, message_type: (*current, observer)}
-        return replace(self, observers=new_observers)
+        new_observers_dict = {**self.observers, message_type: (*current, observer)}
+        return replace(self, observers=MappingProxyType(new_observers_dict))
 
     async def execute(self, start_message: TStart) -> TEnd:
         """Execute flow with automatic observation.
@@ -128,7 +131,7 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
             await asyncio.gather(*tasks, return_exceptions=True)
 
     @staticmethod
-    async def _safe_observe(observer: Observer, message: Message) -> None:
+    async def _safe_observe(observer: Observer[Message], message: Message) -> None:
         """Execute observer with error isolation.
 
         Args:
@@ -141,7 +144,7 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
         except Exception:
             logger.exception("Observer %s failed", observer.name)
 
-    def _get_observers_for(self, message_type: type[Message]) -> tuple[Observer, ...]:
+    def _get_observers_for(self, message_type: type[Message]) -> tuple[Observer[Message], ...]:
         """Get all observers that can handle this message type.
 
         Args:
