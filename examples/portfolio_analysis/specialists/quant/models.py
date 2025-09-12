@@ -1,5 +1,6 @@
 """Data models for Quantitative Analyst."""
 
+from collections.abc import Mapping
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -22,14 +23,14 @@ class QuantInsights:
     """Stage 2: Quantitative analysis insights and opportunities."""
 
     market_trend: Literal["bullish", "bearish", "sideways"] = Field(description="Overall market trend assessment")
-    sector_analysis: dict[str, float] = Field(description="Sector momentum scores (-1 to 1)")
+    sector_analysis: Mapping[str, float] = Field(description="Sector momentum scores (-1 to 1)")
     opportunities: tuple[OpportunitySignal, ...] = Field(description="Identified trading opportunities")
     overall_confidence: float = Field(ge=0, le=1, description="Overall analysis confidence")
     analysis_summary: str = Field(max_length=500, description="Brief summary of analysis")
 
     @field_validator("sector_analysis")
     @classmethod
-    def validate_sector_scores(cls, v: dict[str, float]) -> dict[str, float]:
+    def validate_sector_scores(cls, v: Mapping[str, float]) -> Mapping[str, float]:
         """Ensure sector scores are within valid range.
 
         Returns:

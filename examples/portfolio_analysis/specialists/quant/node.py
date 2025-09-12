@@ -1,5 +1,6 @@
 """Quantitative Analyst node for market analysis."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from operator import itemgetter
 from typing import override
@@ -48,7 +49,7 @@ class QuantAnalyst(Node[MarketData, QuantInsights | AnalysisError]):
                 print(f"     - {opp.symbol}: {opp.confidence:.0%} confidence")
 
     @staticmethod
-    def _display_sector_analysis(sector_analysis: dict[str, float]) -> None:
+    def _display_sector_analysis(sector_analysis: Mapping[str, float]) -> None:
         """Display sector outlook with sentiment analysis."""
         if sector_analysis:
             print("   • Sector Outlook:")

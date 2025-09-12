@@ -1,50 +1,41 @@
 # Continue Session Prompt
 
-Please continue our work on implementing the message-driven architecture for ClearFlow. 
+Please continue our work on the ClearFlow message-driven architecture implementation.
 
 ## Context
-Read `session-context.md` for full context of our previous session's work on the message-driven architecture design and implementation.
+Read `session-context.md` for the full context of our previous session where we successfully implemented and quality-checked the core message modules.
 
-## Current Status
-We have successfully designed and implemented the core message-driven architecture modules but need to complete the implementation. Review `plan.md` for the detailed task breakdown and current status.
+## Current Priority
+Read `plan.md` for the detailed task list. The immediate priorities are:
 
-## Immediate Tasks (Priority Order)
+### 1. Fix Examples Directory (45 min)
+Complete the immutability fixes we started:
+- We already began fixing `portfolio/models.py` and `quant/models.py`
+- Still need to complete fixes for `risk/models.py` and `risk/node.py`
+- Replace all `dict` with `Mapping` and `list` with `tuple`
+- Ensure `./quality-check.sh` passes 100% without suppressions
 
-### 1. Fix Quality Issues (30 minutes)
-The core modules pass architecture and immutability checks but have remaining linting issues:
-- Run `./quality-check.sh message.py message_node.py message_flow.py observer.py` 
-- Fix the 29 remaining whitespace/documentation linting issues (mostly auto-fixable with `ruff format`)
-- Address the RUF006 warning in `observer.py` about storing `asyncio.create_task` reference
-- Ensure all modules pass complete quality checks
+### 2. Create Tests for Message Modules (2 hours)
+After quality passes, create comprehensive tests in `tests/`:
+- `test_message.py` - Test Message, Event, Command classes
+- `test_message_node.py` - Test node processing
+- `test_message_flow.py` - Test flow routing
+- `test_observer.py` - Test observer pattern
 
-### 2. Create Basic Tests (2 hours)
-Create comprehensive tests for the new message-driven system:
-- Message creation, causality tracking, and metadata
-- Node processing with type safety validation
-- Flow execution and routing behavior
-- Observer pattern with error isolation
-- Integration tests for the complete system
+### 3. Build Working Examples (3 hours)
+Create examples demonstrating the new architecture's capabilities for AI orchestration.
 
-### 3. Build Working Examples (3 hours) 
-Create concrete examples that demonstrate the AI orchestration capabilities:
-- Simple message flow showing Commands vs Events
-- AI decision-making example (agent choosing between different strategies)
-- Observable flow with logging and metrics collection
-- Port the existing RAG example to use the new message-driven architecture
-
-## Key Implementation Files
-- `message.py` - Message, Event, Command base classes
-- `message_node.py` - Node[TMessageIn, TMessageOut] implementation  
-- `message_flow.py` - MessageFlow and MessageFlowBuilder
-- `observer.py` - Observer pattern and ObservableFlow wrapper
+## Key Constraints
+- **NO SUPPRESSIONS**: Fix all issues at root cause
+- Never use `# noqa`, `# type: ignore`, or `# pyright: ignore`
+- All code must pass `./quality-check.sh` 100%
+- Maintain zero dependencies in ClearFlow core
+- Use `Mapping` for immutable dict types, `tuple` for immutable sequences
 
 ## Success Criteria
-- All quality checks pass without violations
-- Basic tests provide coverage for core functionality  
-- Working examples demonstrate AI orchestration capabilities
-- Code maintains ClearFlow's zero-dependency, explicit-behavior philosophy
+The session is successful when:
+1. Full `./quality-check.sh` passes (including examples)
+2. Tests provide 100% coverage for message modules
+3. Working examples demonstrate Commands vs Events and AI orchestration
 
-## Next Phase
-After completing these tasks, we'll move to Phase 2 (examples and integration) and Phase 3 (validation and polish) as outlined in `plan.md`.
-
-Please start by running the quality check and fixing any remaining issues, then proceed with creating the test suite.
+Please start by running `./quality-check.sh` to see current status, then continue fixing the immutability violations in the examples directory.

@@ -154,14 +154,13 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
             Tuple of observers that can handle the message type
 
         """
-        observers = []
+        exact_observers = self.observers.get(message_type, ())
 
-        # Check exact type
-        observers.extend(self.observers.get(message_type, ()))
+        base_observers = tuple(
+            obs
+            for obs_type, obs_list in self.observers.items()
+            if obs_type != message_type and issubclass(message_type, obs_type)
+            for obs in obs_list
+        )
 
-        # Check base types (e.g., Observer[Event] handles all Events)
-        for obs_type, obs_list in self.observers.items():
-            if obs_type != message_type and issubclass(message_type, obs_type):
-                observers.extend(obs_list)
-
-        return tuple(observers)
+        return exact_observers + base_observers

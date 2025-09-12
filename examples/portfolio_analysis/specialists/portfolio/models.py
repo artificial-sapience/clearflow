@@ -1,5 +1,6 @@
 """Data models for Portfolio Manager."""
 
+from collections.abc import Mapping
 from typing import Literal
 
 from pydantic import Field
@@ -26,5 +27,5 @@ class PortfolioRecommendations:
     execution_timeline: Literal["immediate", "gradual", "conditional"] = Field(
         description="Recommended execution approach"
     )
-    expected_outcomes: dict[str, str] = Field(description="Expected returns, risks, and other outcomes")
+    expected_outcomes: Mapping[str, str] = Field(description="Expected returns, risks, and other outcomes")
     manager_summary: str = Field(max_length=500, description="Portfolio manager summary")

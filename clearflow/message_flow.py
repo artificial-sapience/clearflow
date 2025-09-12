@@ -149,7 +149,9 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
         return MessageFlowBuilder[TStartMessage, TNextMessage](
             _name=self._name,
             _start_node=self._start_node,
-            _routes=MappingProxyType(new_routes),
+            _routes=cast(
+                "MappingProxyType[MessageRouteKey, Node[Message, Message] | None]", MappingProxyType(new_routes)
+            ),
             _reachable_nodes=new_reachable,
         )
 
@@ -180,8 +182,8 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
 
         return MessageFlow[TStartMessage, TCurrentMessage](
             name=self._name,
-            start_node=self._start_node,
-            routes=MappingProxyType(new_routes),
+            start_node=cast("Node[Message, Message]", self._start_node),
+            routes=cast("Mapping[MessageRouteKey, Node[Message, Message] | None]", MappingProxyType(new_routes)),
         )
 
 
