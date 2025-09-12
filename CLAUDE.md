@@ -314,9 +314,69 @@ import subprocess  # noqa: S404  # Required for running uv/mcpdoc commands in de
 
 **Pattern**: Development/configuration scripts with hardcoded commands are safe to suppress
 
+## Session Learnings
+
+### Public API Design Patterns
+
+**Pattern**: When adding new API components, always export through `__init__.py`
+**Example**: Message API requires all components in `__all__` list:
+```python
+__all__ = [
+    # Original API  
+    "Node", "NodeResult", "flow",
+    # Message API
+    "Message", "Event", "Command", "MessageNode", "message_flow", "Observer", "ObservableFlow",
+]
+```
+
+**Architecture Rule**: Tests must import from public API only
+**Implementation**: Added ARCH011 linter rule to detect `from clearflow.submodule import ...` in tests
+**Enforcement**: Tests use `from clearflow import MessageNode, message_flow` instead of submodule imports
+
+### Coverage Gap Patterns
+
+**Pattern**: Missing coverage often indicates missing validation tests
+**Example**: Node name validation (lines 41-42) required test with empty/whitespace names:
+```python
+async def test_node_name_validation() -> None:
+    with pytest.raises(ValueError, match="Node name must be a non-empty string"):
+        ProcessorNode(name="")
+    with pytest.raises(ValueError, match="Node name must be a non-empty string"):
+        ProcessorNode(name="   ")
+```
+
+### PLR6301 Handling for Mission-Critical Software
+
+**Decision**: Convert test methods to standalone functions when they don't use `self`
+**Rationale**: Aligns with "fix root cause" principle, improves clarity, follows pylint best practice
+**Pattern**: 
+```python
+# Instead of:
+class TestMessage:
+    async def test_message_type_property(self) -> None: ...
+
+# Use:
+async def test_message_type_property() -> None:
+    """Test that message_type returns the concrete class type."""
+    ...
+```
+
+### Architecture Linter Enhancement
+
+**Pattern**: Extend linter for new architectural requirements
+**Example**: Added ARCH011 to prevent tests accessing non-public modules:
+```python
+non_public_modules = [
+    "clearflow.message", "clearflow.message_node", 
+    "clearflow.message_flow", "clearflow.observer"
+]
+if node.module in non_public_modules and is_test_file:
+    # Violation: test importing from non-public API
+```
+
 ## Messaging Principles
 
 - **Avoid vague claims** - "Full transparency" misleads about features we don't have
-- **Use active voice** - "Compose flows" not "Composing flows"
+- **Use active voice** - "Compose flows" not "Composing flows"  
 - **Acknowledge AI nature** - "emergent AI" not "unpredictable AI" (less adversarial)
 - **Be specific** - "Type-safe", "Zero dependencies" are verifiable features
