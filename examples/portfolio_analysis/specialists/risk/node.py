@@ -55,7 +55,7 @@ class RiskAnalyst(Node[QuantInsights, RiskAssessment | RiskLimitError]):
         # Display concentration risks if any
         if metrics.concentration_risk:
             print("   • Concentration Risks:")
-            for asset, concentration in list(metrics.concentration_risk.items())[:3]:
+            for asset, concentration in tuple(metrics.concentration_risk.items())[:3]:
                 print(f"     - {asset}: {concentration:.1%}")
         # Display top warnings
         if assessment.risk_warnings:
