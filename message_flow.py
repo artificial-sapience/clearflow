@@ -15,7 +15,7 @@ MessageRouteKey = tuple[type[Message], str]  # (message_type, node_name)
 @dataclass(frozen=True, kw_only=True)
 class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
     """Core message flow that routes messages between nodes.
-    
+
     Executes flows by routing messages based on their types to appropriate nodes.
     Maintains type safety through compile-time checking of message compatibility.
     """
@@ -69,11 +69,11 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
 @dataclass(frozen=True, kw_only=True)
 class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
     """Builder for composing type-safe message routes.
-    
+
     Type parameters:
         TStartMessage: The input message type the flow accepts
         TCurrentMessage: The current message type in the flow
-        
+
     Call end() to specify where the flow terminates and get the completed flow.
     """
 
@@ -83,11 +83,7 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
     _reachable_nodes: frozenset[str]  # Node names that are reachable from start
 
     def _validate_and_create_route(
-        self,
-        message_type: type[Message],
-        from_node_name: str,
-        *,
-        is_termination: bool = False
+        self, message_type: type[Message], from_node_name: str, *, is_termination: bool = False
     ) -> MessageRouteKey:
         """Validate that a route can be added.
 
@@ -112,10 +108,7 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
         # Check for duplicate routes
         route_key: MessageRouteKey = (message_type, from_node_name)
         if route_key in self._routes:
-            msg = (
-                f"Route already defined for message type '{message_type.__name__}' "
-                f"from node '{from_node_name}'"
-            )
+            msg = f"Route already defined for message type '{message_type.__name__}' from node '{from_node_name}'"
             raise ValueError(msg)
 
         return route_key
@@ -134,13 +127,10 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
         Returns:
             Builder for continued route definition
 
-        Raises:
-            ValueError: If route validation fails
-
         """
         # Find the node that produces this message type
         producing_node_name = None
-        for (msg_type, node_name), _ in self._routes.items():
+        for msg_type, node_name in self._routes:
             if msg_type == message_type:
                 producing_node_name = node_name
                 break
@@ -172,13 +162,10 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
         Returns:
             A complete message flow
 
-        Raises:
-            ValueError: If message type route validation fails
-
         """
         # Find the node that produces this message type
         producing_node_name = None
-        for (msg_type, node_name), _ in self._routes.items():
+        for msg_type, node_name in self._routes:
             if msg_type == message_type:
                 producing_node_name = node_name
                 break
@@ -187,9 +174,7 @@ class MessageFlowBuilder[TStartMessage: Message, TCurrentMessage: Message]:
         if producing_node_name is None:
             producing_node_name = self._start_node.name
 
-        route_key = self._validate_and_create_route(
-            message_type, producing_node_name, is_termination=True
-        )
+        route_key = self._validate_and_create_route(message_type, producing_node_name, is_termination=True)
 
         new_routes = {**self._routes, route_key: None}
 

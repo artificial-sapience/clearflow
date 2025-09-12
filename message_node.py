@@ -11,16 +11,16 @@ from clearflow.message import Message
 @dataclass(frozen=True, kw_only=True)
 class Node[TMessageIn: Message, TMessageOut: Message](ABC):
     """Orchestration node that can embody AI intelligence.
-    
+
     Accepts: Commands or Events (triggers for processing)
     Produces: Commands (intent/delegation) or Events (completed facts)
-    
+
     This flexibility allows AI agents to:
     - Orchestrate complex workflows via Commands
-    - Record completion via Events  
+    - Record completion via Events
     - Delegate to specialized agents/tools
     - Dynamically adapt their strategy
-    
+
     Type parameters:
         TMessageIn: Input message type that this node processes
         TMessageOut: Output message type that this node produces
@@ -42,10 +42,10 @@ class Node[TMessageIn: Message, TMessageOut: Message](ABC):
     @abstractmethod
     async def process(self, message: TMessageIn) -> TMessageOut:
         """Process message, potentially using AI intelligence to decide next action.
-        
+
         Args:
             message: Input message to process
-            
+
         Returns:
             Output message representing the result of processing
 

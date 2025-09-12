@@ -3,7 +3,6 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable
 from dataclasses import dataclass, field, replace
 from typing import final
 
@@ -17,12 +16,12 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True, kw_only=True)
 class Observer[TMessage: Message](ABC):
     """Observer that processes messages without affecting flow.
-    
+
     Observers:
     - Cannot modify messages
     - Cannot affect routing
-    - Execute asynchronously
-    - Errors don't break main flow
+    - Execute concurrently (main flow waits for completion)
+    - Errors are isolated and don't break main flow
     """
 
     name: str
@@ -30,7 +29,7 @@ class Observer[TMessage: Message](ABC):
     @abstractmethod
     async def observe(self, message: TMessage) -> None:
         """Process message for side effects only.
-        
+
         Args:
             message: Message to observe and process
 
@@ -42,7 +41,7 @@ class Observer[TMessage: Message](ABC):
 @dataclass(frozen=True, kw_only=True)
 class ObservableFlow[TStart: Message, TEnd: Message]:
     """Wraps a core flow to add observation capabilities.
-    
+
     Provides non-invasive observation of message flows without affecting
     the core business logic or routing behavior.
     """
@@ -51,33 +50,28 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
     observers: dict[type[Message], tuple[Observer, ...]] = field(default_factory=dict)
 
     def observe[TMsg: Message](
-        self,
-        message_type: type[TMsg],
-        observer: Observer[TMsg]
+        self, message_type: type[TMsg], observer: Observer[TMsg]
     ) -> "ObservableFlow[TStart, TEnd]":
         """Add an observer for a specific message type.
-        
+
         Args:
             message_type: Type of message to observe
             observer: Observer instance to add
-            
+
         Returns:
             New ObservableFlow with the observer added
 
         """
         current = self.observers.get(message_type, ())
-        new_observers = {
-            **self.observers,
-            message_type: (*current, observer)
-        }
+        new_observers = {**self.observers, message_type: (*current, observer)}
         return replace(self, observers=new_observers)
 
     async def execute(self, start_message: TStart) -> TEnd:
         """Execute flow with automatic observation.
-        
+
         Args:
             start_message: Initial message to start the flow
-            
+
         Returns:
             Final message from the core flow
 
@@ -86,10 +80,10 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
 
     async def _execute_with_interception(self, start_message: TStart) -> TEnd:
         """Execute core flow while intercepting all messages.
-        
+
         Args:
             start_message: Initial message to start the flow
-            
+
         Returns:
             Final message from the core flow
 
@@ -120,7 +114,7 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
 
     async def _notify_observers(self, message: Message) -> None:
         """Notify all observers registered for this message type.
-        
+
         Args:
             message: Message to send to observers
 
@@ -128,23 +122,10 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
         observers = self._get_observers_for(type(message))
 
         if observers:
-            # Run observers in parallel, don't block main flow
+            # Run observers concurrently and await completion
             tasks = tuple(self._safe_observe(obs, message) for obs in observers)
-            # Use create_task to avoid blocking the main flow, store reference to avoid warning
-            task = asyncio.create_task(self._gather_observer_tasks(tasks))
-            # Task runs in background - we don't need to await it
-
-    @staticmethod
-    async def _gather_observer_tasks(tasks: tuple[Awaitable[None], ...]) -> None:
-        """Gather observer tasks with exception handling.
-
-        Args:
-            tasks: Tuple of observer tasks to execute
-        """
-        try:
+            # Use gather with return_exceptions to ensure error isolation
             await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception:
-            logger.exception("Unexpected error in observer task gathering")
 
     @staticmethod
     async def _safe_observe(observer: Observer, message: Message) -> None:
@@ -153,6 +134,7 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
         Args:
             observer: Observer to execute
             message: Message to pass to observer
+
         """
         try:
             await observer.observe(message)
@@ -167,6 +149,7 @@ class ObservableFlow[TStart: Message, TEnd: Message]:
 
         Returns:
             Tuple of observers that can handle the message type
+
         """
         observers = []
 

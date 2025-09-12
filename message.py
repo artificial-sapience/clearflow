@@ -21,7 +21,7 @@ def _utc_now() -> datetime:
 @dataclass(frozen=True, kw_only=True)
 class Message(ABC):
     """Base message class for all messages in the system.
-    
+
     All messages are immutable frozen dataclasses with causality tracking.
     Messages form the foundation of type-safe routing and orchestration.
     """
@@ -41,10 +41,10 @@ class Message(ABC):
 @dataclass(frozen=True, kw_only=True)
 class Event(Message):
     """Base Event extending Message for causality tracking.
-    
+
     Events capture facts - things that have happened in the system.
     Events MUST have a triggered_by_id (unlike Commands which can be initial).
-    
+
     Inherits from Message:
         id: Unique identifier for this message
         triggered_by_id: UUID of the message that triggered this event (required for events)
@@ -59,10 +59,10 @@ class Event(Message):
 @dataclass(frozen=True, kw_only=True)
 class Command(Message):
     """Base Command extending Message for causality tracking.
-    
+
     Commands capture intent - requests for something to happen.
     Commands can have triggered_by_id=None (initial commands that start flows).
-    
+
     Inherits from Message:
         id: Unique identifier for this message
         triggered_by_id: UUID of the message that triggered this command (optional)
