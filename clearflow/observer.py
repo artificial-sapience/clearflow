@@ -1,7 +1,6 @@
 """Observer pattern implementation for message flows."""
 
 import asyncio
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
@@ -18,18 +17,19 @@ from clearflow.message_flow import (
 )
 from clearflow.message_node import Node
 
-logger = logging.getLogger(__name__)
-
 
 @dataclass(frozen=True, kw_only=True)
 class Observer[TMessage: Message](ABC):
-    """Observer that processes messages without affecting flow.
+    """Observer that processes messages without affecting routing.
 
     Observers:
     - Cannot modify messages
-    - Cannot affect routing
+    - Cannot affect routing decisions
     - Execute concurrently (main flow waits for completion)
-    - Errors are isolated and don't break main flow
+    - Exceptions propagate and stop flow execution immediately (fail-fast)
+
+    Example: A SecurityObserver can throw SecurityViolationException to halt
+    suspicious operations immediately.
     """
 
     name: str
@@ -126,24 +126,10 @@ class ObservableFlow[TStart: Message, TEnd: Message](Node[TStart, TEnd]):
         observers = self._get_observers_for(type(message))
 
         if observers:
-            # Run observers concurrently and await completion
-            tasks = tuple(self._safe_observe(obs, message) for obs in observers)
-            # Use gather with return_exceptions to ensure error isolation
-            await asyncio.gather(*tasks, return_exceptions=True)
-
-    @staticmethod
-    async def _safe_observe(observer: Observer[Message], message: Message) -> None:
-        """Execute observer with error isolation.
-
-        Args:
-            observer: Observer to execute
-            message: Message to pass to observer
-
-        """
-        try:
-            await observer.observe(message)
-        except Exception:
-            logger.exception("Observer %s failed", observer.name)
+            # Run observers concurrently - exceptions will propagate immediately
+            tasks = tuple(obs.observe(message) for obs in observers)
+            # Without return_exceptions, any observer exception stops the flow
+            await asyncio.gather(*tasks)
 
     def _get_observers_for(self, message_type: type[Message]) -> tuple[Observer[Message], ...]:
         """Get all observers that can handle this message type.

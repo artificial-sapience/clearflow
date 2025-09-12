@@ -1,62 +1,65 @@
 # ClearFlow Message-Driven Architecture Implementation Plan
 
-## Current Status: Testing & Examples Phase
+## Current Sprint: Message-Driven Architecture
 
-### ✅ Completed (Delete from plan after this session)
-- **Core Implementation**: All 4 message modules created and located in `clearflow/clearflow/`
-- **Quality Compliance**: Message modules pass ALL quality checks (100%)
-  - Architecture, immutability, linting, formatting, pyright, security, complexity
+### 🔧 In Progress: Flow Builder Routing Fix
 
-## 🚧 Immediate Tasks
+**Issue**: The `_MessageFlowBuilder` has a logic problem tracking which node produces which message type.
 
-### 1. Fix Examples Directory Quality Issues (45 min)
-- **Issue**: 15 immutability violations in `examples/portfolio_analysis/`
-- **Files to fix**:
-  - `specialists/portfolio/models.py` - Replace `dict` with `Mapping`
-  - `specialists/quant/models.py` - Replace `dict` with `Mapping`
-  - `specialists/quant/node.py` - Update type hints
-  - `specialists/risk/models.py` - Replace `dict` with `Mapping`
-  - `specialists/risk/node.py` - Replace `list` with `tuple`
-- **Goal**: Full `./quality-check.sh` passes without suppressions
+**Problem Details**:
+- When calling `.route(MessageType, destination_node)`, the builder needs to know which node produces MessageType
+- Current logic incorrectly searches existing routes to find the producer
+- The builder assumes untracked messages come from the start node, which is incorrect for chained routes
 
-### 2. Create Basic Tests (2 hours)
-- Test message creation and causality tracking
-- Test node processing and type safety
-- Test flow execution and routing
-- Test observer pattern and error isolation
-- Achieve 100% coverage for message modules
+**Test Failure**: `test_message_flow.py::TestMessageFlow::test_flow_with_routing`
+- Error: "No route defined for message type 'ValidateCommand' from node 'transform'"
+- The transform node outputs ValidateCommand, but the flow doesn't have the route registered correctly
 
-### 3. Build Working Examples (3 hours)
-- Simple message flow example showing Commands vs Events
-- AI orchestration example (agent choosing strategies)
-- Observable flow with logging and metrics
-- Port existing RAG example to message-driven architecture
-
-### 4. Integration & Migration (2 hours)
-- Update main `__init__.py` to export message modules
-- Document migration path from string-based to message-driven
-- Create compatibility guide for gradual migration
-- Update CLAUDE.md with new patterns
-
-## Architecture Summary
-
-### Core Modules (100% Quality Compliant)
+**Root Cause Analysis**:
+```python
+# In _MessageFlowBuilder.route() around line 135:
+for msg_type, node_name in self._routes:
+    if msg_type == message_type:
+        producing_node_name = node_name
+        break
 ```
-clearflow/clearflow/
-├── message.py       # Message, Event, Command with causality
-├── message_node.py  # Node[TMessageIn, TMessageOut]
-├── message_flow.py  # MessageFlow and builder with routing
-└── observer.py      # Observer pattern with error isolation
-```
+This searches existing routes to find who produces the message, but routes are keyed by (message_type, producer), so this logic is circular.
 
-### Key Technical Decisions
-- **Immutability**: Using `Mapping` and `MappingProxyType` for deep immutability
-- **Type Safety**: Fixed variance issues with proper type casts
-- **Observer Pattern**: Changed from fire-and-forget to concurrent await (`asyncio.gather`)
-- **Zero Dependencies**: Maintained stdlib-only approach
+**Potential Solutions**:
+1. Track the destination nodes from previous routes as potential producers
+2. Require explicit "from_node" parameter in route() method
+3. Infer from the order of route() calls (each destination becomes next producer)
 
-## Success Metrics
-- [ ] Full codebase passes `./quality-check.sh` (including examples)
-- [ ] 100% test coverage for message modules
-- [ ] Working examples demonstrate AI orchestration
-- [ ] Migration path documented and tested
+### 📋 Remaining Tasks
+
+1. **Fix Flow Builder Logic** (Priority: HIGH)
+   - Fix the producing node tracking in `_MessageFlowBuilder.route()`
+   - Ensure routes are correctly registered with proper (message_type, producer_node) keys
+   - Make all flow routing tests pass
+
+2. **Achieve 100% Test Coverage** (Priority: HIGH)
+   - Current test files created:
+     - test_message.py (16 tests passing)
+     - test_message_node.py (9 tests passing) 
+     - test_message_flow.py (1 failing due to routing issue)
+     - test_observer.py (not yet run due to early failure)
+   - Fix routing issue first, then ensure all tests pass
+   - Add any missing test cases for edge conditions
+
+3. **Integration Testing** (Priority: MEDIUM)
+   - Test message flows with observer pattern
+   - Test nested observable flows
+   - Verify fail-fast behavior in complex scenarios
+
+## Design Decisions Log
+
+### Key Architectural Choices
+1. **Flows as Nodes**: `_MessageFlow` extends `Node` for composability
+2. **Observable Flows Only**: `ObservableFlow` decorates only `_MessageFlow`, not generic `Node`
+3. **Fail-Fast Observers**: Exceptions propagate immediately, no error isolation
+4. **Package-Internal Privacy**: `_MessageFlow` is private to external users but accessible within clearflow package
+
+### API Design
+- Public: `message_flow()` function returns builder
+- Private: `_MessageFlow` and `_MessageFlowBuilder` classes
+- Decorator: `ObservableFlow` wraps flows with observation

@@ -1,41 +1,33 @@
-# Continue Session Prompt
+# Continue Session: Fix Message Flow Routing
 
-Please continue our work on the ClearFlow message-driven architecture implementation.
+Please continue working on the ClearFlow message-driven architecture implementation. 
 
 ## Context
-Read `session-context.md` for the full context of our previous session where we successfully implemented and quality-checked the core message modules.
+See `session-context.md` for full background. We've successfully implemented the core message-driven architecture but have a critical bug in the flow builder routing logic.
 
-## Current Priority
-Read `plan.md` for the detailed task list. The immediate priorities are:
+## Immediate Task
+Fix the `_MessageFlowBuilder.route()` method in `clearflow/message_flow.py` to correctly track which node produces each message type.
 
-### 1. Fix Examples Directory (45 min)
-Complete the immutability fixes we started:
-- We already began fixing `portfolio/models.py` and `quant/models.py`
-- Still need to complete fixes for `risk/models.py` and `risk/node.py`
-- Replace all `dict` with `Mapping` and `list` with `tuple`
-- Ensure `./quality-check.sh` passes 100% without suppressions
+## The Bug
+```python
+# Current test failure:
+test_message_flow.py::TestMessageFlow::test_flow_with_routing
+Error: "No route defined for message type 'ValidateCommand' from node 'transform'"
+```
 
-### 2. Create Tests for Message Modules (2 hours)
-After quality passes, create comprehensive tests in `tests/`:
-- `test_message.py` - Test Message, Event, Command classes
-- `test_message_node.py` - Test node processing
-- `test_message_flow.py` - Test flow routing
-- `test_observer.py` - Test observer pattern
+The builder incorrectly assumes all messages come from the start node instead of tracking that each destination node becomes the producer of subsequent messages.
 
-### 3. Build Working Examples (3 hours)
-Create examples demonstrating the new architecture's capabilities for AI orchestration.
+## Solution Approach
+The most straightforward fix is to track that when we route a message to a destination node, that destination becomes the producer of the next routed message. Consider maintaining a "last routed node" or inferring producers from the routing sequence.
 
-## Key Constraints
-- **NO SUPPRESSIONS**: Fix all issues at root cause
-- Never use `# noqa`, `# type: ignore`, or `# pyright: ignore`
-- All code must pass `./quality-check.sh` 100%
-- Maintain zero dependencies in ClearFlow core
-- Use `Mapping` for immutable dict types, `tuple` for immutable sequences
+## After Fixing the Bug
+1. Run all tests to ensure they pass
+2. Check test coverage - aim for 100%
+3. Run quality checks with `./quality-check.sh`
 
-## Success Criteria
-The session is successful when:
-1. Full `./quality-check.sh` passes (including examples)
-2. Tests provide 100% coverage for message modules
-3. Working examples demonstrate Commands vs Events and AI orchestration
+## Files to Focus On
+- `clearflow/message_flow.py` - Fix the `_MessageFlowBuilder.route()` method
+- `tests/test_message_flow.py` - Ensure all flow tests pass
+- `tests/test_observer.py` - Run observer tests once flow tests pass
 
-Please start by running `./quality-check.sh` to see current status, then continue fixing the immutability violations in the examples directory.
+See `plan.md` for the complete task list and priorities.

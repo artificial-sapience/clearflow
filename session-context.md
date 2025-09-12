@@ -1,98 +1,110 @@
-# Session Context: Message-Driven Architecture Implementation
+# Session Context: ClearFlow Message-Driven Architecture
 
 ## Session Overview
-Successfully implemented and quality-checked the message-driven architecture for ClearFlow. All core modules now pass 100% of quality checks without suppressions.
+This session focused on implementing and refining the message-driven architecture for ClearFlow, transitioning from string-based outcomes to strongly-typed messages for improved type safety and AI orchestration capabilities.
 
-## Major Accomplishments
+## Completed Work
 
-### 1. Core Module Implementation ✅
-Created four modules in `clearflow/clearflow/`:
-- `message.py` - Base classes with causality tracking
-- `message_node.py` - Generic node for message processing
-- `message_flow.py` - Type-safe flow routing
-- `observer.py` - Observer pattern for cross-cutting concerns
+### 1. Core Implementation
+Successfully implemented the message-driven architecture across four main modules:
 
-### 2. Quality Compliance Achieved ✅
-Fixed ALL issues for message modules:
-- **Immutability**: Replaced `dict` with `Mapping` and `MappingProxyType`
-- **Type Safety**: Fixed pyright variance issues with proper type casts
-- **Observer Pattern**: Refactored from fire-and-forget to concurrent await
-- **Removed unused imports**: Cleaned up `typing.final` and `Any`
+- **clearflow/message.py**: Base classes for Message, Command, and Event with automatic UUID generation, timestamp tracking, and causality chains
+- **clearflow/message_node.py**: Node abstraction for processing messages (replaces state-based nodes)
+- **clearflow/message_flow.py**: Flow routing with `_MessageFlow` and `_MessageFlowBuilder` for type-safe message routing
+- **clearflow/observer.py**: Observer pattern for cross-cutting concerns
 
-### 3. Key Technical Solutions
+### 2. Key Design Evolution
 
-#### Immutability Fix
+#### LSP Violation Discovery and Resolution
+- **Problem**: Initial ObservableFlow tried to wrap any Node and detect _MessageFlow at runtime
+- **Solution**: ObservableFlow explicitly decorates only `_MessageFlow` types
+- **Principle**: "We observe workflows (flows), not individual operations (nodes)"
+
+#### Fail-Fast Observer Pattern
+- **Change**: Removed error isolation (`return_exceptions=True` in asyncio.gather)
+- **Benefit**: SecurityObserver can immediately halt suspicious operations
+- **Implementation**: Exceptions propagate naturally, stopping the entire flow
+
+#### Composability Through Node Interface
+- **Design**: `_MessageFlow` extends `Node[TStartMessage, TEndMessage]`
+- **Benefit**: Flows can be nested within other flows
+- **Pattern**: Decorator pattern for ObservableFlow maintains composability
+
+### 3. Documentation Updates
+- Added comprehensive section to `docs/message-driven-architecture-proposal.md`
+- Documented LSP violation discovery and resolution
+- Explained decorator pattern implementation
+- Clarified design principle: observe flows, not nodes
+
+### 4. Test Suite Creation
+Created comprehensive test suite covering all message components:
+- `tests/conftest_message.py`: Shared test utilities and message types
+- `tests/test_message.py`: Tests for Message, Command, Event (16 tests passing)
+- `tests/test_message_node.py`: Tests for message Node abstraction (9 tests passing)
+- `tests/test_message_flow.py`: Tests for flow routing (1 failing - routing issue)
+- `tests/test_observer.py`: Tests for observer pattern (not fully run yet)
+
+## Current Issue: Flow Builder Routing Logic
+
+### The Problem
+The `_MessageFlowBuilder` cannot correctly determine which node produces a message type when building routes.
+
+### Code Location
+File: `clearflow/message_flow.py`, lines 133-143 in `_MessageFlowBuilder.route()`
+
+### Current Incorrect Logic
 ```python
-# Before
-observers: dict[type[Message], tuple[Observer[Message], ...]]
+# Tries to find producer by searching existing routes
+for msg_type, node_name in self._routes:
+    if msg_type == message_type:
+        producing_node_name = node_name
+        break
+```
 
-# After  
-observers: Mapping[type[Message], tuple[Observer[Message], ...]] = field(
-    default_factory=lambda: MappingProxyType({})
+### Why It Fails
+- Routes are keyed by `(message_type, producer_node)`
+- The code searches for a route with the message type, then uses its node_name
+- This is circular - we're trying to create the route but looking for it in existing routes
+- Falls back to assuming start node produces everything (line 143)
+
+### Test Case That Fails
+```python
+flow = (
+    message_flow("pipeline", start)
+    .route(ProcessedEvent, transform)  # Creates: (ProcessedEvent, "start") -> transform
+    .route(ValidateCommand, validate)  # Should create: (ValidateCommand, "transform") -> validate
+                                       # But creates: (ValidateCommand, "start") -> validate
 )
 ```
 
-#### Type Variance Fix
-```python
-# Used type casts to handle generic variance
-return MessageFlow[TStartMessage, TCurrentMessage](
-    name=self._name,
-    start_node=cast("Node[Message, Message]", self._start_node),
-    routes=cast("Mapping[MessageRouteKey, Node[Message, Message] | None]", 
-                MappingProxyType(new_routes)),
-)
-```
+### Runtime Error
+When transform outputs ValidateCommand, the flow looks for route `(ValidateCommand, "transform")` but only has `(ValidateCommand, "start")`, causing: "No route defined for message type 'ValidateCommand' from node 'transform'"
 
-#### Observer Pattern Update
-```python
-# Changed from fire-and-forget
-asyncio.create_task(self._gather_observer_tasks(tasks))
+## Files Modified
 
-# To concurrent await
-await asyncio.gather(*tasks, return_exceptions=True)
-```
+### Core Implementation Files
+- `clearflow/message.py` - Message hierarchy implementation
+- `clearflow/message_node.py` - Node abstraction for messages
+- `clearflow/message_flow.py` - Flow routing (has bug to fix)
+- `clearflow/observer.py` - Observer pattern with fail-fast
 
-## Current Status
+### Test Files Created
+- `tests/conftest_message.py`
+- `tests/test_message.py`
+- `tests/test_message_node.py`
+- `tests/test_message_flow.py`
+- `tests/test_observer.py`
 
-### ✅ Completed
-- Core message modules implementation
-- 100% quality compliance for message modules
-- Proper file structure (`clearflow/clearflow/`)
-- Architecture maintains zero dependencies
+### Documentation
+- `docs/message-driven-architecture-proposal.md` - Added "Design Evolution" section
 
-### ⚠️ Remaining Issues
-- **Examples directory**: 15 immutability violations in `portfolio_analysis/`
-  - Need to replace `dict` → `Mapping` and `list` → `tuple`
-  - Files: portfolio/models.py, quant/models.py, quant/node.py, risk/models.py, risk/node.py
+## Technical Decisions Made
 
-### Quality Check Results
-For message modules (`clearflow/message*.py`, `clearflow/observer.py`):
-- ✅ Architecture compliance
-- ✅ Deep immutability compliance  
-- ✅ Test suite compliance
-- ✅ Linting (ruff)
-- ✅ Formatting
-- ✅ Pyright type checking (0 errors)
-- ✅ Security (Bandit)
-- ✅ Complexity (Xenon Grade A)
-- ✅ Dead code (Vulture)
-- ✅ Cyclomatic complexity (Radon Grade A, avg: 2.6)
+1. **Naming Convention**: `_MessageFlow` with underscore means package-internal, not truly private
+2. **Error Handling**: Fail-fast for observers - no error isolation
+3. **Type Safety**: Explicit typing with no runtime type checking needed
+4. **Composability**: Flows are Nodes, allowing nesting
+5. **Observation Scope**: Only flows are observable, not individual nodes
 
-## Important Notes
-
-### Mapping is Immutable
-Confirmed that `Mapping` from `collections.abc` is read-only:
-- Only provides read methods (`__getitem__`, `get`, `keys`, etc.)
-- No mutation methods (`__setitem__`, `pop`, `update`, etc.)
-- Correct replacement for `dict` in immutable type hints
-
-### Quality Standards
-- **NO SUPPRESSIONS**: All issues must be fixed at root cause
-- Never use `# noqa`, `# type: ignore`, or `# pyright: ignore`
-- All code must achieve Grade A complexity
-
-## Next Session Priority
-See `plan.md` for detailed tasks:
-1. Fix remaining immutability violations in examples directory
-2. Create comprehensive tests for message modules
-3. Build working examples demonstrating AI orchestration
+## Next Steps
+See `plan.md` for detailed task list. Primary focus: Fix the flow builder routing logic.
