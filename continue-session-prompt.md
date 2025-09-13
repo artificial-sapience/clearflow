@@ -1,53 +1,48 @@
-# Continue Session Prompt
+# Continue Session: Fix Portfolio Example LLM Integration
 
-## Mission Status: COMPLETE ✅
+## Critical Issue
+**The message-driven portfolio example has LOST all LLM intelligence** - it's using hardcoded random logic instead of DSPy/OpenAI like the original.
 
-All quality improvement objectives have been successfully completed. The codebase is now in a production-ready state with:
+## Context
+- **Session context**: See session-context.md for what was accomplished
+- **Tasks**: See plan.md for complete task list
+- **Branch**: message-driven
 
-- **0 pyright errors** (down from 2) 
-- **88/88 tests passing** with 100% coverage
-- **Grade A complexity** across all code
-- **Zero unauthorized suppressions**
-- **Public API principle enforced**: MessageFlow made public, all functions return only public types
+## Your Immediate Priority
 
-## Current State
+**Task 1**: Restore LLM intelligence to `examples/portfolio_analysis_message_driven/`
 
-The codebase maintains mission-critical standards:
-- All linting, formatting, architecture, and immutability compliance ✅
-- Complete type safety with proper generic parameters ✅  
-- Test suite compliance with proper complexity management ✅
-- Security audits pass, no dead code ✅
+The original `examples/portfolio_analysis/` uses:
+- DSPy with OpenAI GPT-5-nano
+- Real LLM calls via `dspy.Predict()`
+- Structured outputs with Pydantic
 
-## Key Architectural Improvements Completed
+The message-driven version currently uses:
+- `secrets.SystemRandom()` for fake randomness
+- Hardcoded if/else logic
+- No AI whatsoever
 
-1. **Public API Design**: Made `MessageFlow` public (removed underscore prefix) and exported in `__all__`
-2. **Type Safety**: Fixed all return type annotations and removed unauthorized suppressions
-3. **Test Quality**: Extracted helper functions to achieve Grade A complexity in all test code
-4. **Documentation**: Updated CLAUDE.md with session learnings and architectural patterns
+**Required Actions**:
+1. Copy DSPy integration files from original example
+2. Rewrite all nodes to use DSPy signatures
+3. Ensure real LLM calls are made
+4. Test with actual OpenAI API
 
-## Ready for Normal Development
-
-All infrastructure and quality systems are fully operational. Continue with standard development workflow.
-
-## Next Session Context
-
-Use this prompt to continue:
+## Next Session Prompt
 
 ---
 
-**Claude, the ClearFlow codebase is in a complete, production-ready state. All quality objectives have been achieved:**
+**Claude, continue the ClearFlow migration to message-driven architecture.**
 
-- ✅ 0 pyright errors, 88/88 tests passing, 100% coverage
-- ✅ Grade A complexity, zero unauthorized suppressions  
-- ✅ Public API principles enforced (MessageFlow made public)
-- ✅ All quality checks pass completely
+**CRITICAL**: The portfolio_analysis_message_driven example has lost all LLM intelligence. It's using hardcoded random logic instead of DSPy/OpenAI.
 
-**Current branch**: `message-driven` (clean working directory)
+**Your task**: Fix the portfolio example by restoring full LLM integration from the original example while keeping the message-driven architecture.
 
-**Available for normal development tasks**: feature requests, bug fixes, refactoring, or any other software engineering work. All quality infrastructure is operational.
+**Context**: See session-context.md and plan.md in the working directory.
 
-What would you like to work on?
+Please start by:
+1. Comparing the original portfolio example's LLM usage with the current message-driven version
+2. Planning the integration of DSPy into the message-driven nodes
+3. Beginning the implementation
 
 ---
-
-*Reference files for context: plan.md, session-context.md, CLAUDE.md*

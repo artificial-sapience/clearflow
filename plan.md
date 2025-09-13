@@ -1,87 +1,52 @@
 # ClearFlow Architecture Migration Plan
 
-## ✅ **Phase 1: Message-Driven Architecture - COMPLETE**
+## 🚀 Phase 2: Complete Migration to Message-Driven Architecture
 
-### Major Achievements Completed
-- ✅ PLR6301 test method conversion (48 methods → functions)
-- ✅ AbstractMessageMeta implementation for Command/Event abstraction  
-- ✅ Complete type safety fixes in message flow routing
-- ✅ MessageFlow made public (removed underscore prefix)
-- ✅ All complexity violations fixed (Grade A compliance)
-- ✅ All unauthorized suppressions removed
-- ✅ Public API principle enforced: public functions only return public types
-- ✅ CLAUDE.md updated with session learnings
+**Status**: Phase 1 Complete ✅ - Message-driven architecture implemented with 88/88 tests passing
 
-### Message-Driven System Health Status
-- **88/88 tests passing** ✅ (message-driven tests)
-- **100% coverage** ✅ (message-driven architecture)
-- **0 pyright errors** ✅
-- **All linting passes** ✅
-- **Architecture compliance** ✅
-- **Immutability compliance** ✅
-- **Test suite compliance** ✅
-- **Grade A complexity** ✅
-- **Security audits pass** ✅
-- **No dead code** ✅
+**Critical Issue**: Portfolio example lost LLM intelligence - using hardcoded logic instead of DSPy/OpenAI
 
-## 🚀 **Phase 2: Complete Migration to Message-Driven Architecture**
+### Priority Tasks (Critical - Next Session)
 
-**Objective**: Remove legacy Node-Flow-State architecture and transition entirely to message-driven, observable flows.
+#### 1. 🔴 Fix Portfolio Example LLM Integration
+**CRITICAL**: The message-driven portfolio example has completely lost the LLM intelligence from the original
+- **Problem**: Currently uses `secrets.SystemRandom()` instead of DSPy/OpenAI
+- **Required**: Restore full LLM intelligence using DSPy signatures and OpenAI calls
+- **Tasks**:
+  - Copy `shared/` directory with DSPy config from original example
+  - Copy all `*/signature.py` files for DSPy signatures
+  - Rewrite all nodes to use `dspy.Predict()` with proper signatures
+  - Add `.env.example` with OPENAI_API_KEY placeholder
+  - Test with real OpenAI API to verify LLM calls work
 
-**Justification**: Low adoption (no stars, no issues on GitHub) allows breaking change as minor release with alpha classification.
+#### 2. Complete Quality Compliance for Portfolio Example
+- Fix all relative imports (partially done - needs verification)
+- Add "Returns" sections to all docstrings (DOC201 violations)
+- Remove magic values - already added constants but needs verification
+- Fix exception handling to catch specific exceptions
+- Ensure 100% quality check pass rate
 
-### Architecture Migration Tasks
+### Remaining Phase 2 Tasks
 
-#### Core API Changes
-- [ ] **Remove legacy Node-Flow-State architecture** from `clearflow/__init__.py`
-  - Remove: `Node[TIn, TOut]`, `NodeResult[T]`, `flow()`, `_Flow`, `_FlowBuilder`
-  - Keep only: Message-driven components (`Message`, `Event`, `Command`, `MessageNode`, `MessageFlow`, `message_flow`, `Observer`, `ObservableFlow`)
+#### 3. Remove Legacy Architecture
+- Remove Node-Flow-State from `clearflow/__init__.py`
+- Remove legacy tests from `tests/` directory
+- Maintain 100% coverage with message-driven tests only
 
-#### Test Suite Migration  
-- [ ] **Remove legacy tests** from `tests/` directory
-  - Remove all Node-Flow-State tests (keep only message-driven tests)
-  - Maintain 100% coverage requirement for message-driven architecture
+#### 4. Update Documentation
+- Update README.md for message-driven architecture only
+- Create MIGRATION.md for users transitioning from legacy
+- Update all code examples in docs to use message-driven
 
-#### Example Migration
-- [ ] **Create message-driven versions** of all `examples/`
-  - Convert existing examples to use `MessageNode`, `message_flow`, `Observer` pattern
-  - Replace Node-Flow-State patterns with message-driven equivalents
-  - Maintain educational value and real-world applicability
+#### 5. Release v1.x with Message-Driven Only
+- Minor version bump (not v2.0) justified by Alpha status
+- Announce breaking change in release notes
+- Update PyPI package
 
-#### Documentation Updates
-- [ ] **Update README.md** for message-driven architecture
-  - Replace Node-Flow-State examples with message-driven examples
-  - Update "Core Concepts" section to focus on Message/Event/Command pattern
-  - Update feature highlights to emphasize observable flows and type-safe messaging
-
-- [ ] **Update MIGRATION.md** for message-driven transition
-  - Document migration from Node-Flow-State to message-driven architecture
-  - Provide clear examples of pattern conversions
-  - Include rationale for architectural shift
-
-#### Release Preparation
-- [ ] **Update pyproject.toml** 
-  - Change classifier from "Beta" to "Alpha" to justify breaking changes
-  - Update description to emphasize message-driven architecture
-  - Consider keywords update: add "message-driven", "observable", "event-sourcing"
-
-### Target State
-**Single Architecture**: Message-driven, observable flows only
-- `Message`, `Event`, `Command` as core abstractions
-- `MessageNode` for processing units  
-- `message_flow` for orchestration
-- `Observer` pattern for side effects
-- `ObservableFlow` for decorated flows
-
-### Quality Standards Maintained
-- 100% test coverage via public API only
-- Grade A complexity across all code  
-- Zero pyright errors
-- Mission-critical immutability and type safety
-- Complete architectural compliance
-
-### Release Strategy
-**Minor Version** (not v2.0) with **Alpha Classification**
-- Justifiable due to low adoption and alpha status
-- Clear migration guide for any existing users
-- Comprehensive documentation of new architecture
+### Quality Standards (Enforced)
+- **100% test coverage** via public API only
+- **Grade A complexity** across all code
+- **Zero pyright errors**
+- **ALL code** (examples, tests, docs) must meet mission-critical standards
+- **No relative imports** anywhere in codebase
+- **No suppressions** without explicit user approval

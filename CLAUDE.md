@@ -130,6 +130,40 @@ flow_instance = (
 - No `Any` types except where required (e.g., metaclass patterns)
 - Prefer boring, obvious code over clever solutions
 
+**UNIVERSAL REQUIREMENT**: Every single line of code in this project must meet mission-critical quality standards:
+- Core modules
+- Test files
+- Example code
+- Documentation code blocks
+- Linter scripts
+- Build scripts
+- ALL Python code
+
+**No Exceptions Policy**:
+- Examples are production templates - they MUST demonstrate best practices
+- Tests are production code - they MUST be maintainable and clear
+- Documentation code blocks MUST be executable and correct
+- Even utility scripts MUST pass all quality checks
+
+**Import Standards (Universal)**:
+- **Absolute imports only** - No relative imports anywhere in the codebase
+- **Import from public APIs** - `from clearflow import ...` not `from clearflow.internal import ...`
+- **Explicit is better** - Full paths provide clarity and refactoring safety
+
+**Example Compliance**:
+```python
+# WRONG - relative import in example
+from .messages import Command
+
+# CORRECT - absolute import for examples
+from examples.chat_message_driven.messages import Command
+
+# CORRECT - importing from public API
+from clearflow import MessageNode, message_flow
+```
+
+**Rationale**: In mission-critical systems, there are no "throwaway" files. Every file could be copied, referenced, or used as a template. Maintaining uniform quality prevents bad patterns from propagating into production systems.
+
 **LINTER SUPPRESSION POLICY**:
 
 - **NEVER add linter suppressions without explicit user approval**
@@ -174,6 +208,7 @@ These linters run automatically as part of `./quality-check.sh` and enforce stri
    - Focus on guarantees and limitations
    - No marketing language
    - Examples must work exactly as shown
+   - Examples must pass ALL quality checks (no exceptions)
    - Be explicit about what we don't do
 
 3. **Feature Requests**
@@ -411,6 +446,12 @@ if node.module in non_public_modules and is_test_file:
 
 **Pattern**: Always create message-driven versions alongside legacy examples before removal
 **Benefits**: Validates new architecture, provides migration reference, maintains working code
+
+**Mission-Critical Example Standards**:
+- Examples MUST use absolute imports only (no relative imports)
+- Examples MUST pass ALL quality checks with zero violations
+- Examples MUST demonstrate production best practices
+- Examples MUST be treated as production code, not demos
 
 **Directory Structure**:
 ```
