@@ -26,7 +26,7 @@ def create_indexing_flow() -> MessageFlow[IndexDocumentsCommand, IndexCreatedEve
 
     This flow processes documents through these steps:
     1. IndexDocumentsCommand -> DocumentChunkerNode -> DocumentsChunkedEvent
-    2. DocumentsChunkedEvent -> ChunkEmbedderNode -> ChunksEmbeddedEvent  
+    2. DocumentsChunkedEvent -> ChunkEmbedderNode -> ChunksEmbeddedEvent
     3. ChunksEmbeddedEvent -> IndexCreatorNode -> IndexCreatedEvent
 
     Returns:

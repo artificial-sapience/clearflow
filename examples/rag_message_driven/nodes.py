@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import dataclass
+from operator import itemgetter
 from typing import override
 
 from openai import AsyncOpenAI
@@ -18,6 +19,48 @@ from examples.rag_message_driven.messages import (
     QueryEmbeddedEvent,
 )
 
+# Constants for chunking
+MAX_CHUNK_LENGTH = 200
+
+
+def _should_start_new_chunk(current_chunk: str, sentence: str) -> bool:
+    """Determine if a new chunk should be started.
+
+    Returns:
+        True if new chunk should be started.
+
+    """
+    return len(current_chunk) + len(sentence) > MAX_CHUNK_LENGTH and bool(current_chunk)
+
+
+def _process_document_sentences(sentences: tuple[str, ...]) -> tuple[str, ...]:
+    """Process sentences into chunks for a single document.
+
+    Returns:
+        Tuple of text chunks for the document.
+
+    """
+    current_chunk = ""
+    doc_chunks = ()
+
+    for raw_sentence in sentences:
+        sentence = raw_sentence.strip()
+        if not sentence:
+            continue
+
+        # If adding this sentence would make chunk too long, start a new chunk
+        if _should_start_new_chunk(current_chunk, sentence):
+            doc_chunks = (*doc_chunks, current_chunk.strip())
+            current_chunk = sentence
+        else:
+            current_chunk = (current_chunk + " " + sentence).strip()
+
+    # Add the last chunk if it exists
+    if current_chunk.strip():
+        doc_chunks = (*doc_chunks, current_chunk.strip())
+
+    return doc_chunks
+
 
 def _chunk_documents(documents: tuple[str, ...]) -> tuple[str, ...]:
     """Split documents into smaller chunks.
@@ -26,29 +69,14 @@ def _chunk_documents(documents: tuple[str, ...]) -> tuple[str, ...]:
         Tuple of text chunks.
 
     """
-    chunks = []
+    all_chunks = ()
     for doc in documents:
         # Simple sentence-based chunking
-        sentences = re.split(r'[.!?]+', doc)
-        current_chunk = ""
-        
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if not sentence:
-                continue
-                
-            # If adding this sentence would make chunk too long, start a new chunk
-            if len(current_chunk) + len(sentence) > 200 and current_chunk:
-                chunks.append(current_chunk.strip())
-                current_chunk = sentence
-            else:
-                current_chunk = (current_chunk + " " + sentence).strip()
-        
-        # Add the last chunk if it exists
-        if current_chunk.strip():
-            chunks.append(current_chunk.strip())
-    
-    return tuple(chunks)
+        sentences = tuple(re.split(r"[.!?]+", doc))
+        doc_chunks = _process_document_sentences(sentences)
+        all_chunks = (*all_chunks, *doc_chunks)
+
+    return all_chunks
 
 
 async def _embed_texts(texts: tuple[str, ...]) -> tuple[tuple[float, ...], ...]:
@@ -59,35 +87,45 @@ async def _embed_texts(texts: tuple[str, ...]) -> tuple[tuple[float, ...], ...]:
 
     """
     client = AsyncOpenAI()
-    
-    embeddings = []
+
+    embeddings = ()
     for text in texts:
-        response = await client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text
-        )
+        response = await client.embeddings.create(model="text-embedding-3-small", input=text)
         embedding = tuple(response.data[0].embedding)
-        embeddings.append(embedding)
-    
-    return tuple(embeddings)
+        embeddings = (*embeddings, embedding)
+
+    return embeddings
+
+
+def _calculate_vector_magnitude(vector: tuple[float, ...]) -> float:
+    """Calculate the magnitude of a vector.
+
+    Returns:
+        Vector magnitude.
+
+    """
+    return sum(x**2 for x in vector) ** 0.5
 
 
 def _cosine_similarity(a: tuple[float, ...], b: tuple[float, ...]) -> float:
-    """Calculate cosine similarity between two vectors."""
+    """Calculate cosine similarity between two vectors.
+
+    Returns:
+        Cosine similarity score between 0 and 1.
+
+    """
     dot_product = sum(x * y for x, y in zip(a, b, strict=True))
-    magnitude_a = sum(x ** 2 for x in a) ** 0.5
-    magnitude_b = sum(x ** 2 for x in b) ** 0.5
-    
+    magnitude_a = _calculate_vector_magnitude(a)
+    magnitude_b = _calculate_vector_magnitude(b)
+
     if magnitude_a == 0 or magnitude_b == 0:
         return 0.0
-    
+
     return dot_product / (magnitude_a * magnitude_b)
 
 
 def _retrieve_relevant_chunks(
-    query_embedding: tuple[float, ...], 
-    chunks: tuple[str, ...], 
-    embeddings: tuple[tuple[float, ...], ...]
+    query_embedding: tuple[float, ...], chunks: tuple[str, ...], embeddings: tuple[tuple[float, ...], ...]
 ) -> tuple[str, ...]:
     """Retrieve most relevant chunks for query.
 
@@ -95,20 +133,25 @@ def _retrieve_relevant_chunks(
         Tuple of relevant chunks (top 3).
 
     """
-    similarities = [
+    similarities = tuple(
         (_cosine_similarity(query_embedding, chunk_emb), chunk)
         for chunk_emb, chunk in zip(embeddings, chunks, strict=True)
-    ]
-    
+    )
+
     # Sort by similarity and take top 3
-    similarities.sort(reverse=True, key=lambda x: x[0])
-    return tuple(chunk for _, chunk in similarities[:3])
+    sorted_similarities = tuple(sorted(similarities, reverse=True, key=itemgetter(0)))
+    return tuple(chunk for _, chunk in sorted_similarities[:3])
 
 
 async def _generate_answer(query: str, context_chunks: tuple[str, ...]) -> str:
-    """Generate answer using OpenAI API with retrieved context."""
+    """Generate answer using OpenAI API with retrieved context.
+
+    Returns:
+        Generated answer string.
+
+    """
     client = AsyncOpenAI()
-    
+
     context = "\\n".join(context_chunks)
     prompt = f"""Answer the question based on the provided context.
 
@@ -118,13 +161,13 @@ Context:
 Question: {query}
 
 Answer:"""
-    
+
     response = await client.chat.completions.create(
         model="gpt-5-nano-2025-08-07",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1,
     )
-    
+
     return response.choices[0].message.content or ""
 
 
@@ -143,7 +186,7 @@ class DocumentChunkerNode(MessageNode[IndexDocumentsCommand, DocumentsChunkedEve
 
         """
         chunks = _chunk_documents(message.documents)
-        
+
         return DocumentsChunkedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
@@ -166,7 +209,7 @@ class ChunkEmbedderNode(MessageNode[DocumentsChunkedEvent, ChunksEmbeddedEvent])
 
         """
         embeddings = await _embed_texts(message.chunks)
-        
+
         return ChunksEmbeddedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
@@ -213,7 +256,7 @@ class QueryEmbedderNode(MessageNode[QueryCommand, QueryEmbeddedEvent]):
         """
         query_embeddings = await _embed_texts((message.query,))
         query_embedding = query_embeddings[0]
-        
+
         return QueryEmbeddedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
@@ -243,7 +286,7 @@ class DocumentRetrieverNode(MessageNode[QueryEmbeddedEvent, DocumentsRetrievedEv
             message.chunks,
             message.embeddings,
         )
-        
+
         return DocumentsRetrievedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
@@ -267,7 +310,7 @@ class AnswerGeneratorNode(MessageNode[DocumentsRetrievedEvent, AnswerGeneratedEv
 
         """
         answer = await _generate_answer(message.query, message.relevant_chunks)
-        
+
         return AnswerGeneratedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,

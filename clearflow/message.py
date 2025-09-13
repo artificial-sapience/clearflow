@@ -12,8 +12,6 @@ __all__ = [
 ]
 
 
-
-
 def _utc_now() -> datetime:
     """Create a timezone-aware datetime in UTC.
 
