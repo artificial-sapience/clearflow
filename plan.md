@@ -220,19 +220,13 @@ The ONLY changes are:
 - **Risk**: Quality regressions
   - **Mitigation**: Run quality checks after EVERY change, fix immediately
 
-## Timeline Estimate
+## Current Status
 
-- Phase 1 (Core API): 2-3 hours
-- Phase 2 (Examples): 1-2 hours
-- Phase 3 (Testing): 1-2 hours
-- Phase 4 (Documentation): 1 hour
-- Phase 5 (Migration): 1 hour
-
-**Total: 6-9 hours of focused work**
+**chat_message_driven example**: Partially refactored to simplified 2-node design (UserNode, AssistantNode) but blocked by current message_flow API limitations. Will be completed after Phase 1.
 
 ## Next Immediate Steps
 
 1. Start with Phase 1, Task 1.1 - modify core message_flow.py
 2. **Run `./quality-check.sh clearflow/message_flow.py` - fix ALL violations**
-3. Only proceed to next task after 100% quality compliance
+3. Only proceed to next task after 100% quality compliance on updated files
 4. Continue pattern: implement → quality check → fix → verify → next task

@@ -1,21 +1,25 @@
 # Continue Session Prompt
 
-Copy and paste the text below to initiate the next session:
+Use this prompt to continue our work:
 
 ---
 
-Please continue our work on ClearFlow. We just completed the message-driven architecture migration with both examples now production-ready and quality-compliant.
+Please continue our ClearFlow message_flow API redesign.
 
-**Status**: Both `portfolio_analysis_message_driven` and `rag_message_driven` examples are complete with ZERO quality violations across the entire codebase. Both examples are ready for production API testing.
+**Context**: See session-context.md for full details. We discovered a critical UX flaw in the current `from_node()` API and designed a solution to return to explicit source nodes like the original flow API.
 
-**Current Branch**: message-driven
+**Current Status**:
+- Comprehensive plan ready in plan.md
+- chat_message_driven partially refactored but blocked by API limitations
+- Ready to execute Phase 1: Core API Redesign
 
-**Major Achievements This Session**:
-1. **Fixed DSPy field access errors** in portfolio_analysis_message_driven (prediction.report → prediction.compliance_review, prediction.decision → prediction.trading_decision)
-2. **Complete RAG rewrite** - rag_message_driven now uses FAISS, numpy arrays, and production RAG practices matching examples/rag/
-3. **Model standardization** - All examples now use gpt-5-nano-2025-08-07
-4. **100% quality compliance** maintained across entire codebase
+**Critical Requirements**:
+- The message_flow API must feel IDENTICAL to the flow API
+- Only changes: message types instead of state, message types instead of string outcomes
+- MAINTAIN single termination, orphan detection, all validations from flow API
+- Every task must pass quality checks 100% before proceeding
 
-**Next Priority**: Execute Task 1 from plan.md - Production API testing of both examples with real OpenAI API calls to validate functionality, performance, and error handling.
+**Next Task**:
+Execute Phase 1, Task 1.1 from plan.md - Update message_flow.py core classes to use explicit source nodes: `.route(from_node, message_type, to_node)`
 
-Please review the current plan.md and session-context.md, then proceed with the next priority task.
+Please review plan.md and session-context.md, then begin implementation.
