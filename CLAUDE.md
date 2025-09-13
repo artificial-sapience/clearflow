@@ -325,13 +325,17 @@ __all__ = [
     # Original API  
     "Node", "NodeResult", "flow",
     # Message API
-    "Message", "Event", "Command", "MessageNode", "message_flow", "Observer", "ObservableFlow",
+    "Message", "Event", "Command", "MessageFlow", "MessageNode", "message_flow", "Observer", "ObservableFlow",
 ]
 ```
 
 **Architecture Rule**: Tests must import from public API only
 **Implementation**: Added ARCH011 linter rule to detect `from clearflow.submodule import ...` in tests
 **Enforcement**: Tests use `from clearflow import MessageNode, message_flow` instead of submodule imports
+
+**Critical Rule**: Public functions should only accept and return public types
+**Discovered**: If `message_flow().end()` returns `_MessageFlow`, then `MessageFlow` must be public
+**Solution**: Remove underscore prefix and export in `__all__` rather than using `Any` type suppressions
 
 ### Coverage Gap Patterns
 
@@ -361,6 +365,23 @@ async def test_message_type_property() -> None:
     ...
 ```
 
+### Complexity Management in Production Tests
+
+**Principle**: Tests ARE production code in mission-critical systems with small teams
+**Pattern**: Extract helper functions when test complexity reaches Grade B
+**Example**: Break complex assertions into focused helper functions:
+```python
+def _assert_processed_event_correct(output: ProcessedEvent, input_msg: ProcessCommand, expected_result: str) -> None:
+    assert isinstance(output, ProcessedEvent)
+    assert output.result == expected_result
+    _assert_event_metadata_correct(output, input_msg)
+
+def _assert_event_metadata_correct(output: ProcessedEvent, input_msg: ProcessCommand) -> None:
+    assert output.processing_time_ms == 100.0
+    assert output.triggered_by_id == input_msg.id
+    assert output.flow_id == input_msg.flow_id
+```
+
 ### Architecture Linter Enhancement
 
 **Pattern**: Extend linter for new architectural requirements
@@ -373,6 +394,16 @@ non_public_modules = [
 if node.module in non_public_modules and is_test_file:
     # Violation: test importing from non-public API
 ```
+
+### Suppression Policy Enforcement
+
+**Critical Discovery**: Both quality-check.sh and CLAUDE.md explicitly require user approval for ALL suppressions
+**Violation Pattern**: Adding `# noqa`, `# type: ignore`, or `clearflow: ignore` without asking first
+**Correct Process**: 
+1. Identify need for suppression
+2. Ask user for explicit approval with justification
+3. Only proceed if approved
+4. Always include justification comment in suppression
 
 ## Messaging Principles
 
