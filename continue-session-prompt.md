@@ -4,21 +4,26 @@ Use this prompt to continue our work:
 
 ---
 
-Please continue our ClearFlow message_flow API work.
+Please continue the ClearFlow callback system implementation.
 
-**Context**: See session-context.md for implementation details. We successfully completed Phase 1, implementing explicit source node routing that matches the original flow API pattern.
+**Context**: See session-context.md for the architectural decision to replace Observer with Callbacks. We completed the callback specification (docs/callback-specification.md) and created an implementation plan (plan.md).
 
 **Current Status**:
-- ✅ Core API redesigned with `.route(from_node, outcome, to_node)` syntax
-- ✅ Type erasure solution implemented for union type flexibility
-- ✅ All tests passing with 100% coverage
-- ✅ All examples updated and working
+- ✅ Callback specification complete with 18 requirements
+- ✅ Implementation plan created with 5 phases
+- ✅ Message flow API documentation updated
+- ⏳ Observer pattern still in place (to be replaced)
 
-**Next Priority** (from plan.md):
-Phase 2, Task 2.1: Update API documentation in message_flow.py to:
-- Reflect new routing signatures
-- Explain the type erasure approach and why it's needed
-- Add docstring examples showing common patterns (loops, convergence, error handling)
-- Document the design decision to match original flow API
+**Next Task**: Begin Phase 1, Task 1.1 from plan.md:
+- Implement CallbackHandler base class (REQ-001, REQ-002, REQ-003, REQ-004)
+- Create clearflow/callbacks.py
+- Update clearflow/__init__.py
+- Ensure quality-check.sh passes 100%
 
-Please review session-context.md and plan.md, then begin the documentation updates.
+**Important**:
+- Tests must use only public API
+- No suppressions without explicit approval
+- Each task must pass quality-check.sh before proceeding
+- Callbacks observe but don't control flow (errors logged, not propagated)
+
+Please review session-context.md and plan.md, then begin Task 1.1.

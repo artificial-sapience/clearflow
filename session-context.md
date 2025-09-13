@@ -1,89 +1,102 @@
-# Session Context: Message Flow API Redesign Implementation
+# Session Context: Observer to Callbacks Migration
 
-## Session Achievement
+## Session Summary
 
-Successfully completed Phase 1 of the message_flow API redesign, implementing explicit source node routing to match the original flow API pattern.
+This session focused on completing message_flow API documentation and making a critical architectural decision to replace the Observer pattern with an industry-standard Callback system.
 
-## Key Implementation Details
+## Key Accomplishments
 
-### Core API Changes
+### 1. Message Flow API Documentation ✅
+- Updated `clearflow/message_flow.py` with comprehensive docstrings
+- Documented the type erasure rationale for handling union types
+- Explained the explicit routing pattern design decision
+- Removed code examples from docstrings per user preference
 
-The message_flow API now uses explicit source nodes:
+### 2. Chat Example Improvements ✅
+- Fixed complexity issue in UserNode (Grade B to A) by extracting helper functions
+- Renamed `AssistantMessageSent` to `AssistantMessageReceived` for conceptual symmetry
+- Established proxy pattern: UserNode ↔ Human (console), AssistantNode ↔ LLM (API)
 
-```python
-# Old API (removed)
-message_flow("Name", start)
-.from_node(node1)
-.route(MessageType, node2)
+### 3. Observer Pattern Analysis
 
-# New API (implemented)
-message_flow("Name", start)
-.route(from_node, outcome_type, to_node)
-.end(from_node, outcome_type)
-```
+Discovered fundamental design issues with current Observer implementation:
+- **Misleading name**: "Observer" implies passive watching but can halt flows
+- **Principle of least surprise violation**: Security enforcement through observers is hidden control flow
+- **Wrong abstraction**: Conflates observation with control
 
-### Type System Solution
+## Critical Architectural Decision
 
-Discovered and resolved a fundamental type system challenge with union types:
+### Replace Observer with Callbacks
 
-1. **Problem**: Nodes with union output types (e.g., `UserMessageReceived | ChatEnded`) caused type errors when routing to nodes expecting specific types
-2. **Root Cause**: Original type signature required `to_node` to accept ALL possible outputs from `from_node`
-3. **Solution**: Strategic type erasure at routing boundaries with generics for flexibility
+**Rationale**:
+1. **Industry standard**: LangChain, LlamaIndex, DSPy all use callbacks
+2. **MLflow requirement**: Callbacks are required for integration (not monkey-patching)
+3. **Clear semantics**: Callbacks are for integration hooks, not control flow
+4. **Separation of concerns**: Security/validation belong in explicit nodes
 
-```python
-# Final implementation
-def route[TFromIn: Message, TFromOut: Message, TToIn: Message, TToOut: Message](
-    self,
-    from_node: Node[TFromIn, TFromOut],
-    outcome: type[Message],  # Type-erased for flexibility
-    to_node: Node[TToIn, TToOut],
-) -> "_MessageFlowBuilder[TStartMessage, TStartOut]"
-```
+**Key Insight**: The user pointed out that Observer's fail-fast behavior for security is surprising - security should be an explicit node in the flow, not hidden in an observer.
 
-### Design Decisions
+## Implementation Approach
 
-1. **Matched Original Flow Pattern**: Builder uses `[TStartMessage, TStartOut]` with stable types throughout the chain
-2. **Type Erasure Strategy**: Applied only at routing boundaries, preserving type safety at flow input/output
-3. **Parameter Naming**: Changed `message_type` to `outcome` for clarity and consistency with original flow
-4. **Runtime Validation**: Relies on runtime checks for actual message type compatibility
+### Callback Design
+- Pure observation, no flow control
+- Errors logged but don't propagate
+- Four lifecycle points: flow_start, node_start, node_end, flow_end
+- Zero overhead when no callbacks attached
 
-## Technical Achievements
+### Migration Strategy
+1. Implement callbacks alongside observers
+2. Update all tests and examples
+3. Remove observer pattern completely
+4. Create clearflow-mlflow integration package (separate)
 
-- ✅ All 89 tests passing with 100% coverage
-- ✅ Zero type errors in examples and tests
-- ✅ Quality checks pass completely (no suppressions needed)
-- ✅ All three example flows updated and working
-- ✅ Removed `_MessageFlowBuilderContext` class entirely
-- ✅ Eliminated need for `# type: ignore` comments
+## Documentation Created
 
-## Files Modified
+### 1. Callback Specification (`docs/callback-specification.md`)
+- 18 numbered requirements
+- Industry context and analysis
+- Test mapping for each requirement
+- Comparison with Observer pattern
 
-### Core Implementation
-- `clearflow/message_flow.py` - Complete redesign of builder and routing
+### 2. Implementation Plan (`plan.md`)
+- 5 phases with specific tasks
+- Each task maps to requirements
+- Definition of done: quality-check.sh passes 100%
+- Tests use only public API
 
-### Tests Updated
-- `tests/test_message_flow.py` - All tests use new explicit routing
-- `tests/test_observer.py` - Updated flow construction patterns
+## Technical Details
 
-### Examples Updated
-- `examples/chat_message_driven/chat_flow.py`
-- `examples/portfolio_analysis_message_driven/portfolio_flow.py`
-- `examples/rag_message_driven/rag_flows.py`
+### Changed Files
+- `clearflow/message_flow.py` - Enhanced documentation
+- `examples/chat_message_driven/` - Renamed message types, simplified nodes
+- `docs/callback-specification.md` - Created formal specification
+- `plan.md` - Implementation roadmap
 
-## Remaining Work
+### Key Code Changes
 
-See plan.md for detailed remaining tasks. Key priorities:
-1. Documentation updates to explain new API and type erasure approach
-2. Migration guide for users of the old API
-3. Integration testing with real external services
-4. Performance validation
+1. **Message naming symmetry**:
+   - Before: `UserMessageReceived`, `AssistantMessageSent`
+   - After: `UserMessageReceived`, `AssistantMessageReceived`
 
-## Critical Insights
+2. **Flow builder order**:
+   ```python
+   flow = message_flow("name", start_node)
+       .with_callbacks(handler)  # Before routing
+       .route(...)
+       .end(...)  # Terminal operation
+   ```
 
-The session revealed that Python's type system cannot express the invariant "route only the specified message type from a union to the next node." The original flow API's use of type erasure for `NodeBase` was a deliberate, pragmatic choice that we've now adopted for message flows as well.
+## Next Priority
 
-This approach balances:
-- **Type safety** at flow boundaries (start/end)
-- **Flexibility** for complex routing patterns
-- **Pragmatism** over theoretical purity
-- **User experience** without type annotation burden
+Begin Phase 1 of callback implementation (see plan.md):
+- Task 1.1: Implement CallbackHandler base class
+- Task 1.2: Add callback support to MessageFlow builder
+- Task 1.3: Implement callback invocation
+
+## Important Context
+
+- Observer pattern is still in place and working
+- All tests pass with 100% coverage
+- No breaking changes made yet
+- Callback specification is complete and approved
+- User emphasized: callbacks observe, they don't control
