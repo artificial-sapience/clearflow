@@ -4,22 +4,21 @@ Use this prompt to continue our work:
 
 ---
 
-Please continue our ClearFlow message_flow API redesign.
+Please continue our ClearFlow message_flow API work.
 
-**Context**: See session-context.md for full details. We discovered a critical UX flaw in the current `from_node()` API and designed a solution to return to explicit source nodes like the original flow API.
+**Context**: See session-context.md for implementation details. We successfully completed Phase 1, implementing explicit source node routing that matches the original flow API pattern.
 
 **Current Status**:
-- Comprehensive plan ready in plan.md
-- chat_message_driven partially refactored but blocked by API limitations
-- Ready to execute Phase 1: Core API Redesign
+- ✅ Core API redesigned with `.route(from_node, outcome, to_node)` syntax
+- ✅ Type erasure solution implemented for union type flexibility
+- ✅ All tests passing with 100% coverage
+- ✅ All examples updated and working
 
-**Critical Requirements**:
-- The message_flow API must feel IDENTICAL to the flow API
-- Only changes: message types instead of state, message types instead of string outcomes
-- MAINTAIN single termination, orphan detection, all validations from flow API
-- Every task must pass quality checks 100% before proceeding
+**Next Priority** (from plan.md):
+Phase 2, Task 2.1: Update API documentation in message_flow.py to:
+- Reflect new routing signatures
+- Explain the type erasure approach and why it's needed
+- Add docstring examples showing common patterns (loops, convergence, error handling)
+- Document the design decision to match original flow API
 
-**Next Task**:
-Execute Phase 1, Task 1.1 from plan.md - Update message_flow.py core classes to use explicit source nodes: `.route(from_node, message_type, to_node)`
-
-Please review plan.md and session-context.md, then begin implementation.
+Please review session-context.md and plan.md, then begin the documentation updates.

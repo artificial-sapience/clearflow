@@ -36,6 +36,42 @@ def _to_openai_messages(history: tuple[ChatMessage, ...]) -> tuple[ChatCompletio
     return result
 
 
+def _setup_chat_history(message: StartChat | AssistantMessageSent) -> tuple[ChatMessage, ...]:
+    """Set up conversation history and display messages.
+
+    Returns:
+        Current conversation history.
+
+    """
+    if isinstance(message, StartChat):
+        history: tuple[ChatMessage, ...] = (ChatMessage(role="system", content=message.system_prompt),)
+        if message.initial_message:
+            print(f"Assistant: {message.initial_message}")
+            print("-" * 50)
+        return history
+
+    # Display assistant's message
+    print(f"\nAssistant: {message.message}")
+    print("-" * 50)
+    return message.conversation_history
+
+
+def _create_chat_ended(message: StartChat | AssistantMessageSent, history: tuple[ChatMessage, ...]) -> ChatEnded:
+    """Create ChatEnded event.
+
+    Returns:
+        ChatEnded event with proper metadata.
+
+    """
+    print("\nGoodbye!")
+    return ChatEnded(
+        triggered_by_id=message.id,
+        flow_id=message.flow_id,
+        final_history=history,
+        reason="user_quit",
+    )
+
+
 @dataclass(frozen=True, kw_only=True)
 class UserNode(MessageNode[StartChat | AssistantMessageSent, UserMessageReceived | ChatEnded]):
     """The human participant in the chat.
@@ -56,18 +92,7 @@ class UserNode(MessageNode[StartChat | AssistantMessageSent, UserMessageReceived
             UserMessageReceived with user's message or ChatEnded if quitting.
 
         """
-        # Initialize conversation history for new chat
-        if isinstance(message, StartChat):
-            history: tuple[ChatMessage, ...] = (ChatMessage(role="system", content=message.system_prompt),)
-            # Display initial message if provided
-            if message.initial_message:
-                print(f"Assistant: {message.initial_message}")
-                print("-" * 50)
-        else:
-            # Display the assistant's message
-            print(f"\nAssistant: {message.message}")
-            print("-" * 50)
-            history = message.conversation_history
+        history = _setup_chat_history(message)
 
         # Get user input
         try:
@@ -75,13 +100,7 @@ class UserNode(MessageNode[StartChat | AssistantMessageSent, UserMessageReceived
 
             # Check for quit commands
             if user_input.lower() in {"quit", "exit", "bye"}:
-                print("\nGoodbye!")
-                return ChatEnded(
-                    triggered_by_id=message.id,
-                    flow_id=message.flow_id,
-                    final_history=history,
-                    reason="user_quit",
-                )
+                return _create_chat_ended(message, history)
 
             # Add user message to history
             updated_history = (*history, ChatMessage(role="user", content=user_input))
@@ -94,13 +113,7 @@ class UserNode(MessageNode[StartChat | AssistantMessageSent, UserMessageReceived
             )
 
         except (EOFError, KeyboardInterrupt):
-            print("\nGoodbye!")
-            return ChatEnded(
-                triggered_by_id=message.id,
-                flow_id=message.flow_id,
-                final_history=history,
-                reason="user_quit",
-            )
+            return _create_chat_ended(message, history)
 
 
 @dataclass(frozen=True, kw_only=True)

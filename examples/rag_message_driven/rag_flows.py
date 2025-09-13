@@ -39,12 +39,9 @@ def create_indexing_flow() -> MessageFlow[IndexDocumentsCommand, IndexCreatedEve
 
     return (
         message_flow("DocumentIndexing", chunker)
-        .from_node(chunker)
-        .route(DocumentsChunkedEvent, embedder)
-        .from_node(embedder)
-        .route(ChunksEmbeddedEvent, indexer)
-        .from_node(indexer)
-        .end(IndexCreatedEvent)
+        .route(chunker, DocumentsChunkedEvent, embedder)
+        .route(embedder, ChunksEmbeddedEvent, indexer)
+        .end(indexer, IndexCreatedEvent)
     )
 
 
@@ -66,10 +63,7 @@ def create_query_flow() -> MessageFlow[QueryCommand, AnswerGeneratedEvent]:
 
     return (
         message_flow("QueryProcessing", query_embedder)
-        .from_node(query_embedder)
-        .route(QueryEmbeddedEvent, retriever)
-        .from_node(retriever)
-        .route(DocumentsRetrievedEvent, generator)
-        .from_node(generator)
-        .end(AnswerGeneratedEvent)
+        .route(query_embedder, QueryEmbeddedEvent, retriever)
+        .route(retriever, DocumentsRetrievedEvent, generator)
+        .end(generator, AnswerGeneratedEvent)
     )

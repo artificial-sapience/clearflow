@@ -6,7 +6,7 @@ concurrent execution, and decorator-based flow observation.
 """
 
 from dataclasses import FrozenInstanceError, dataclass
-from typing import cast, override
+from typing import override
 
 import pytest
 
@@ -173,7 +173,7 @@ def _create_basic_observable_flow() -> tuple[ObservableFlow[ProcessCommand, Proc
 
     """
     processor = SimpleProcessorNode()
-    core_flow = message_flow("test", processor).end(ProcessedEvent)
+    core_flow = message_flow("test", processor).end(processor, ProcessedEvent)
     logged: list[Message] = []
     logger = LoggingObserver(logged_messages=logged)
     observable = ObservableFlow(name="observable_test", flow=core_flow, observers={}).observe(Message, logger)
@@ -206,7 +206,7 @@ async def test_observable_flow_multiple_observers() -> None:
     """Test flow with multiple observers."""
     # Create flow
     processor = SimpleProcessorNode()
-    core_flow = message_flow("test", processor).end(ProcessedEvent)
+    core_flow = message_flow("test", processor).end(processor, ProcessedEvent)
 
     # Create observers
     logged: list[Message] = []
@@ -236,7 +236,7 @@ async def test_observable_flow_fail_fast() -> None:
     """Test that observer exceptions stop the flow immediately."""
     # Create flow
     processor = SimpleProcessorNode()
-    core_flow = message_flow("test", processor).end(ProcessedEvent)
+    core_flow = message_flow("test", processor).end(processor, ProcessedEvent)
 
     # Add security observer that will throw
     security = SecurityObserver(forbidden_words=("danger",))
@@ -273,15 +273,11 @@ def _build_core_routing_flow(
         MessageFlow with routing configured.
 
     """
-    return cast(
-        "MessageFlow[ProcessCommand, ValidationPassedEvent]",
+    return (
         message_flow("pipeline", processor)
-        .from_node(processor)
-        .route(ProcessedEvent, transformer)
-        .from_node(transformer)
-        .route(ValidateCommand, validator)
-        .from_node(validator)
-        .end(ValidationPassedEvent),
+        .route(processor, ProcessedEvent, transformer)
+        .route(transformer, ValidateCommand, validator)
+        .end(validator, ValidationPassedEvent)
     )
 
 
@@ -322,7 +318,7 @@ async def test_observable_flow_inheritance_matching() -> None:
     """Test that observers match on inheritance hierarchy."""
     # Create flow
     processor = SimpleProcessorNode()
-    core_flow = message_flow("test", processor).end(ProcessedEvent)
+    core_flow = message_flow("test", processor).end(processor, ProcessedEvent)
 
     # Observer for base Event type
     event_count = [0]
@@ -348,12 +344,9 @@ async def test_observable_flow_specific_message_observation() -> None:
 
     core_flow = (
         message_flow("pipeline", processor)
-        .from_node(processor)
-        .route(ProcessedEvent, transformer)
-        .from_node(transformer)
-        .route(ValidateCommand, validator)
-        .from_node(validator)
-        .end(ValidationFailedEvent)
+        .route(processor, ProcessedEvent, transformer)
+        .route(transformer, ValidateCommand, validator)
+        .end(validator, ValidationFailedEvent)
     )
 
     # Observer only for failures
@@ -377,7 +370,7 @@ async def test_observable_flow_specific_message_observation() -> None:
 def test_observable_flow_immutability() -> None:
     """Test that observable flows are immutable."""
     processor = SimpleProcessorNode()
-    core_flow = message_flow("test", processor).end(ProcessedEvent)
+    core_flow = message_flow("test", processor).end(processor, ProcessedEvent)
 
     observable = ObservableFlow(name="immutable", flow=core_flow, observers={})
 
@@ -390,7 +383,7 @@ async def test_observable_flow_composability() -> None:
     """Test that observable flows can be composed."""
     # Create inner observable flow
     processor = SimpleProcessorNode()
-    inner_flow = message_flow("inner", processor).end(ProcessedEvent)
+    inner_flow = message_flow("inner", processor).end(processor, ProcessedEvent)
 
     logged_inner: list[Message] = []
     inner_logger = LoggingObserver(name="inner_log", logged_messages=logged_inner)
@@ -403,8 +396,8 @@ async def test_observable_flow_composability() -> None:
     transformer = TransformerNode()
     outer_flow = (
         message_flow("outer", observable_inner)  # Observable as node!
-        .route(ProcessedEvent, transformer)
-        .end(ValidateCommand)
+        .route(observable_inner, ProcessedEvent, transformer)
+        .end(transformer, ValidateCommand)
     )
 
     logged_outer: list[Message] = []
@@ -432,7 +425,7 @@ async def test_observer_concurrent_execution() -> None:
     """Test that multiple observers execute concurrently."""
     # Create flow
     processor = SimpleProcessorNode()
-    core_flow = message_flow("test", processor).end(ProcessedEvent)
+    core_flow = message_flow("test", processor).end(processor, ProcessedEvent)
 
     # Create multiple observers
     logged1: list[Message] = []

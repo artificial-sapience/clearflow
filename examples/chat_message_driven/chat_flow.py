@@ -1,7 +1,5 @@
 """Chat flow - natural back-and-forth conversation between user and assistant."""
 
-from typing import cast
-
 from clearflow import MessageFlow, message_flow
 from examples.chat_message_driven.messages import (
     AssistantMessageSent,
@@ -38,12 +36,9 @@ def create_chat_flow() -> MessageFlow[StartChat, ChatEnded]:
     return (
         message_flow("Chat", user)
         # User can send a message or end the chat
-        .from_node(user)
-        .route(UserMessageReceived, assistant)  # User message → Assistant processes
+        .route(user, UserMessageReceived, assistant)  # User message → Assistant processes
         # Assistant always sends back a message
-        .from_node(assistant)
-        .route(AssistantMessageSent, user)  # Assistant response → User sees it
+        .route(assistant, AssistantMessageSent, user)  # Assistant response → User sees it
         # Terminal event when user quits
-        .from_node(user)
-        .end(ChatEnded)
+        .end(user, ChatEnded)
     )

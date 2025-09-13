@@ -56,22 +56,17 @@ def create_portfolio_analysis_flow() -> MessageFlow[StartAnalysisCommand, Decisi
     return (
         message_flow("PortfolioAnalysis", quant)
         # Quant analysis outcomes
-        .from_node(quant)
-        .route(MarketAnalyzedEvent, risk)  # Success → Risk assessment
-        .route(AnalysisFailedEvent, decision)  # Failure → Conservative decision
+        .route(quant, MarketAnalyzedEvent, risk)  # Success → Risk assessment
+        .route(quant, AnalysisFailedEvent, decision)  # Failure → Conservative decision
         # Risk analysis outcomes
-        .from_node(risk)
-        .route(RiskAssessedEvent, portfolio)  # Success → Portfolio optimization
-        .route(AnalysisFailedEvent, decision)  # Failure → Conservative decision
+        .route(risk, RiskAssessedEvent, portfolio)  # Success → Portfolio optimization
+        .route(risk, AnalysisFailedEvent, decision)  # Failure → Conservative decision
         # Portfolio management outcomes
-        .from_node(portfolio)
-        .route(RecommendationsGeneratedEvent, compliance)  # Success → Compliance review
-        .route(AnalysisFailedEvent, decision)  # Failure → Conservative decision
+        .route(portfolio, RecommendationsGeneratedEvent, compliance)  # Success → Compliance review
+        .route(portfolio, AnalysisFailedEvent, decision)  # Failure → Conservative decision
         # Compliance review outcomes
-        .from_node(compliance)
-        .route(ComplianceReviewedEvent, decision)  # Success → Final decision
-        .route(AnalysisFailedEvent, decision)  # Failure → Conservative decision
+        .route(compliance, ComplianceReviewedEvent, decision)  # Success → Final decision
+        .route(compliance, AnalysisFailedEvent, decision)  # Failure → Conservative decision
         # Final decision (terminal node)
-        .from_node(decision)
-        .end(DecisionMadeEvent)  # Flow terminates with decision
+        .end(decision, DecisionMadeEvent)  # Flow terminates with decision
     )
