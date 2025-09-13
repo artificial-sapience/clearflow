@@ -44,11 +44,11 @@ class UserMessageReceived(Event):
 
 
 @dataclass(frozen=True, kw_only=True)
-class AssistantMessageSent(Event):
-    """Assistant responded with a message."""
+class AssistantMessageReceived(Event):
+    """Assistant received a message from the LLM."""
 
     message: str
-    conversation_history: tuple[ChatMessage, ...]  # Updated with both user and assistant messages
+    conversation_history: tuple[ChatMessage, ...]
 
 
 @dataclass(frozen=True, kw_only=True)

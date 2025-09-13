@@ -8,7 +8,7 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from clearflow import MessageNode
 from examples.chat_message_driven.messages import (
-    AssistantMessageSent,
+    AssistantMessageReceived,
     ChatEnded,
     ChatMessage,
     StartChat,
@@ -36,7 +36,7 @@ def _to_openai_messages(history: tuple[ChatMessage, ...]) -> tuple[ChatCompletio
     return result
 
 
-def _setup_chat_history(message: StartChat | AssistantMessageSent) -> tuple[ChatMessage, ...]:
+def _setup_chat_history(message: StartChat | AssistantMessageReceived) -> tuple[ChatMessage, ...]:
     """Set up conversation history and display messages.
 
     Returns:
@@ -56,7 +56,7 @@ def _setup_chat_history(message: StartChat | AssistantMessageSent) -> tuple[Chat
     return message.conversation_history
 
 
-def _create_chat_ended(message: StartChat | AssistantMessageSent, history: tuple[ChatMessage, ...]) -> ChatEnded:
+def _create_chat_ended(message: StartChat | AssistantMessageReceived, history: tuple[ChatMessage, ...]) -> ChatEnded:
     """Create ChatEnded event.
 
     Returns:
@@ -73,19 +73,13 @@ def _create_chat_ended(message: StartChat | AssistantMessageSent, history: tuple
 
 
 @dataclass(frozen=True, kw_only=True)
-class UserNode(MessageNode[StartChat | AssistantMessageSent, UserMessageReceived | ChatEnded]):
-    """The human participant in the chat.
-
-    Handles user interaction:
-    - Shows assistant messages (if any)
-    - Gets user input
-    - Detects when user wants to quit
-    """
+class UserNode(MessageNode[StartChat | AssistantMessageReceived, UserMessageReceived | ChatEnded]):
+    """Proxy for the user."""
 
     name: str = "user"
 
     @override
-    async def process(self, message: StartChat | AssistantMessageSent) -> UserMessageReceived | ChatEnded:
+    async def process(self, message: StartChat | AssistantMessageReceived) -> UserMessageReceived | ChatEnded:
         """Handle user interaction.
 
         Returns:
@@ -117,21 +111,18 @@ class UserNode(MessageNode[StartChat | AssistantMessageSent, UserMessageReceived
 
 
 @dataclass(frozen=True, kw_only=True)
-class AssistantNode(MessageNode[UserMessageReceived, AssistantMessageSent]):
-    """The AI assistant participant in the chat.
-
-    Generates responses using OpenAI API.
-    """
+class AssistantNode(MessageNode[UserMessageReceived, AssistantMessageReceived]):
+    """Proxy for the LLM assistant."""
 
     name: str = "assistant"
     model: str = "gpt-5-nano-2025-08-07"
 
     @override
-    async def process(self, message: UserMessageReceived) -> AssistantMessageSent:
+    async def process(self, message: UserMessageReceived) -> AssistantMessageReceived:
         """Generate assistant response.
 
         Returns:
-            AssistantMessageSent with AI-generated response.
+            AssistantMessageReceived from the LLM.
 
         """
         # Convert history to OpenAI format
@@ -154,7 +145,7 @@ class AssistantNode(MessageNode[UserMessageReceived, AssistantMessageSent]):
             ChatMessage(role="assistant", content=ai_response),
         )
 
-        return AssistantMessageSent(
+        return AssistantMessageReceived(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
             message=ai_response,

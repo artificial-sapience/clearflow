@@ -87,7 +87,7 @@ async def _get_ai_response(messages: tuple[ChatMessage, ...], model: str) -> str
 class HumanNode(Node[ChatState]):
     """Human intelligent entity with complete I/O capabilities.
 
-    This node represents a human participant in the conversation, handling:
+    This node represents a user in the conversation, handling:
     - Input: Getting console input from the user
     - Output: Displaying AI responses on the console
     - Cognition: Deciding whether to continue or quit the conversation

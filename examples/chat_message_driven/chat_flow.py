@@ -2,7 +2,7 @@
 
 from clearflow import MessageFlow, message_flow
 from examples.chat_message_driven.messages import (
-    AssistantMessageSent,
+    AssistantMessageReceived,
     ChatEnded,
     StartChat,
     UserMessageReceived,
@@ -21,7 +21,7 @@ def create_chat_flow() -> MessageFlow[StartChat, ChatEnded]:
     Flow sequence:
     1. StartChat → UserNode
     2. UserMessageReceived → AssistantNode
-    3. AssistantMessageSent → UserNode (loop back)
+    3. AssistantMessageReceived → UserNode (loop back)
     4. ChatEnded (when user quits)
 
     Returns:
@@ -35,10 +35,7 @@ def create_chat_flow() -> MessageFlow[StartChat, ChatEnded]:
     # Build the natural alternating flow
     return (
         message_flow("Chat", user)
-        # User can send a message or end the chat
-        .route(user, UserMessageReceived, assistant)  # User message → Assistant processes
-        # Assistant always sends back a message
-        .route(assistant, AssistantMessageSent, user)  # Assistant response → User sees it
-        # Terminal event when user quits
+        .route(user, UserMessageReceived, assistant)
+        .route(assistant, AssistantMessageReceived, user)
         .end(user, ChatEnded)
     )
