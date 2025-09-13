@@ -1,65 +1,49 @@
-"""Message-driven chat flow construction."""
+"""Chat flow - natural back-and-forth conversation between user and assistant."""
+
+from typing import cast
 
 from clearflow import MessageFlow, message_flow
 from examples.chat_message_driven.messages import (
-    ConversationCompleteEvent,
-    DisplayResponseCommand,
-    GenerateResponseCommand,
-    QuitRequestEvent,
-    ResponseGeneratedEvent,
-    UserInputCommand,
-    UserResponseEvent,
+    AssistantMessageSent,
+    ChatEnded,
+    StartChat,
+    UserMessageReceived,
 )
-from examples.chat_message_driven.nodes import (
-    ConversationCompleteNode,
-    DisplayResponseNode,
-    ResponseGeneratorNode,
-    ResponseToDisplayNode,
-    UserInputNode,
-    UserResponseToGenerateNode,
-)
+from examples.chat_message_driven.nodes import AssistantNode, UserNode
 
 
-def create_message_driven_chat_flow() -> MessageFlow[UserInputCommand, ConversationCompleteEvent]:
-    """Create a message-driven conversation flow.
+def create_chat_flow() -> MessageFlow[StartChat, ChatEnded]:
+    """Create a natural chat flow between user and assistant.
 
-    This flow demonstrates the message-driven architecture with explicit
-    message types and routing. The conversation flows through these states:
+    This flow demonstrates a simple, familiar chat pattern:
+    - User initiates with StartChat
+    - User and Assistant alternate messages
+    - Continues until user decides to end
 
-    1. UserInputCommand -> UserInputNode -> UserResponseEvent/QuitRequestEvent
-    2. UserResponseEvent -> UserResponseToGenerateNode -> GenerateResponseCommand
-    3. GenerateResponseCommand -> ResponseGeneratorNode -> ResponseGeneratedEvent
-    4. ResponseGeneratedEvent -> ResponseToDisplayNode -> DisplayResponseCommand
-    5. DisplayResponseCommand -> DisplayResponseNode -> UserInputCommand (loop)
-    6. QuitRequestEvent -> ConversationCompleteNode -> ConversationCompleteEvent
+    Flow sequence:
+    1. StartChat → UserNode
+    2. UserMessageReceived → AssistantNode
+    3. AssistantMessageSent → UserNode (loop back)
+    4. ChatEnded (when user quits)
 
     Returns:
-        MessageFlow configured for message-driven conversation.
+        MessageFlow for natural chat conversation.
 
     """
-    # Create nodes
-    user_input = UserInputNode()
-    user_to_generate = UserResponseToGenerateNode()
-    generator = ResponseGeneratorNode()
-    response_to_display = ResponseToDisplayNode()
-    display = DisplayResponseNode()
-    complete = ConversationCompleteNode()
+    # Just two participants
+    user = UserNode()
+    assistant = AssistantNode()
 
-    # Build the flow with explicit message routing
+    # Build the natural alternating flow
     return (
-        message_flow("MessageDrivenChat", user_input)
-        .from_node(user_input)
-        .route(UserResponseEvent, user_to_generate)
-        .from_node(user_input)
-        .route(QuitRequestEvent, complete)
-        .from_node(user_to_generate)
-        .route(GenerateResponseCommand, generator)
-        .from_node(generator)
-        .route(ResponseGeneratedEvent, response_to_display)
-        .from_node(response_to_display)
-        .route(DisplayResponseCommand, display)
-        .from_node(display)
-        .route(UserInputCommand, user_input)  # Loop back
-        .from_node(complete)
-        .end(ConversationCompleteEvent)
+        message_flow("Chat", user)
+        # User can send a message or end the chat
+        .from_node(user)
+        .route(UserMessageReceived, assistant)  # User message → Assistant processes
+        # Assistant always sends back a message
+        .from_node(assistant)
+        .route(AssistantMessageSent, user)  # Assistant response → User sees it
+        # Terminal event when user quits
+        .from_node(user)
+        .end(ChatEnded)
     )

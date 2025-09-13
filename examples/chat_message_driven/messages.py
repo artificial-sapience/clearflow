@@ -1,4 +1,4 @@
-"""Message definitions for chat application."""
+"""Message definitions for chat application using natural event-driven semantics."""
 
 from dataclasses import dataclass
 from typing import Literal
@@ -14,53 +14,46 @@ class ChatMessage:
     content: str
 
 
-@dataclass(frozen=True, kw_only=True)
-class UserInputCommand(Command):
-    """Command to get user input."""
-
-    messages: tuple[ChatMessage, ...] = ()
+# ============================================================================
+# SINGLE INITIATING COMMAND
+# ============================================================================
 
 
 @dataclass(frozen=True, kw_only=True)
-class UserResponseEvent(Event):
-    """Event when user provides input."""
+class StartChat(Command):
+    """Initiate a chat conversation.
 
-    input_text: str
-    messages: tuple[ChatMessage, ...]
+    This is the only command in the system. All subsequent messages are events.
+    """
 
-
-@dataclass(frozen=True, kw_only=True)
-class QuitRequestEvent(Event):
-    """Event when user wants to quit."""
-
-    messages: tuple[ChatMessage, ...]
+    system_prompt: str = "You are a helpful assistant."
+    initial_message: str | None = None  # Optional initial message to show user
 
 
-@dataclass(frozen=True, kw_only=True)
-class GenerateResponseCommand(Command):
-    """Command to generate AI response."""
-
-    messages: tuple[ChatMessage, ...]
+# ============================================================================
+# EVENTS - Natural chat flow
+# ============================================================================
 
 
 @dataclass(frozen=True, kw_only=True)
-class ResponseGeneratedEvent(Event):
-    """Event when AI response is generated."""
+class UserMessageReceived(Event):
+    """User sent a message."""
 
-    response: str
-    messages: tuple[ChatMessage, ...]
-
-
-@dataclass(frozen=True, kw_only=True)
-class DisplayResponseCommand(Command):
-    """Command to display AI response and get next user input."""
-
-    response: str
-    messages: tuple[ChatMessage, ...]
+    message: str
+    conversation_history: tuple[ChatMessage, ...]
 
 
 @dataclass(frozen=True, kw_only=True)
-class ConversationCompleteEvent(Event):
-    """Event when conversation is complete."""
+class AssistantMessageSent(Event):
+    """Assistant responded with a message."""
 
-    final_messages: tuple[ChatMessage, ...]
+    message: str
+    conversation_history: tuple[ChatMessage, ...]  # Updated with both user and assistant messages
+
+
+@dataclass(frozen=True, kw_only=True)
+class ChatEnded(Event):
+    """Chat conversation ended."""
+
+    final_history: tuple[ChatMessage, ...]
+    reason: Literal["user_quit", "error", "complete"]
