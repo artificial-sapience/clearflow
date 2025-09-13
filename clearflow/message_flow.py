@@ -11,10 +11,12 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import cast, final, override
 
+from clearflow.callbacks import CallbackHandler
 from clearflow.message import Message
 from clearflow.message_node import Node
 
 __all__ = [
+    "MessageFlow",
     "message_flow",
 ]
 
@@ -43,6 +45,7 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessa
     name: str
     start_node: Node[Message, Message]
     routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
+    callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
 
     @override
     async def process(self, message: TStartMessage) -> TEndMessage:
@@ -109,6 +112,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
     _start_node: Node[TStartMessage, TStartOut]
     _routes: MappingProxyType[MessageRouteKey, Node[Message, Message] | None]
     _reachable_nodes: frozenset[str]  # Node names that are reachable from start
+    _callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks
 
     def _validate_and_create_route(
         self, from_node_name: str, outcome: type[Message], *, is_termination: bool = False
@@ -140,6 +144,27 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
             raise ValueError(msg)
 
         return route_key
+
+    def with_callbacks(self, handler: CallbackHandler) -> "_MessageFlowBuilder[TStartMessage, TStartOut]":
+        """Attach callback handler to the flow.
+
+        REQ-009: MessageFlow accepts optional callbacks parameter
+        REQ-016: Zero overhead when callbacks is None
+
+        Args:
+            handler: Callback handler to observe flow execution
+
+        Returns:
+            Builder for continued configuration
+
+        """
+        return _MessageFlowBuilder[TStartMessage, TStartOut](
+            _name=self._name,
+            _start_node=self._start_node,
+            _routes=self._routes,
+            _reachable_nodes=self._reachable_nodes,
+            _callbacks=handler,
+        )
 
     def route[TFromIn: Message, TFromOut: Message, TToIn: Message, TToOut: Message](
         self,
@@ -180,6 +205,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
             _start_node=self._start_node,
             _routes=MappingProxyType(new_routes),
             _reachable_nodes=new_reachable,
+            _callbacks=self._callbacks,
         )
 
     def end[TFromIn: Message, TFromOut: Message, TEndMessage: Message](
@@ -206,6 +232,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
             name=self._name,
             start_node=cast("Node[Message, Message]", self._start_node),
             routes=MappingProxyType(new_routes),
+            callbacks=self._callbacks,  # REQ-009: Pass callbacks to MessageFlow
         )
 
 
@@ -236,4 +263,5 @@ def message_flow[TStartMessage: Message, TStartOut: Message](
         _start_node=start_node,
         _routes=MappingProxyType({}),
         _reachable_nodes=frozenset({start_node.name}),
+        _callbacks=None,  # REQ-016: Zero overhead when no callbacks attached
     )
