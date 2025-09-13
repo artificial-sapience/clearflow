@@ -1,11 +1,10 @@
 """Message-driven RAG node implementations."""
 
-import re
 from dataclasses import dataclass
-from operator import itemgetter
 from typing import override
 
-from openai import AsyncOpenAI
+import faiss
+import numpy as np
 
 from clearflow import MessageNode
 from examples.rag_message_driven.messages import (
@@ -18,220 +17,103 @@ from examples.rag_message_driven.messages import (
     QueryCommand,
     QueryEmbeddedEvent,
 )
-
-# Constants for chunking
-MAX_CHUNK_LENGTH = 200
-
-
-def _should_start_new_chunk(current_chunk: str, sentence: str) -> bool:
-    """Determine if a new chunk should be started.
-
-    Returns:
-        True if new chunk should be started.
-
-    """
-    return len(current_chunk) + len(sentence) > MAX_CHUNK_LENGTH and bool(current_chunk)
-
-
-def _process_document_sentences(sentences: tuple[str, ...]) -> tuple[str, ...]:
-    """Process sentences into chunks for a single document.
-
-    Returns:
-        Tuple of text chunks for the document.
-
-    """
-    current_chunk = ""
-    doc_chunks = ()
-
-    for raw_sentence in sentences:
-        sentence = raw_sentence.strip()
-        if not sentence:
-            continue
-
-        # If adding this sentence would make chunk too long, start a new chunk
-        if _should_start_new_chunk(current_chunk, sentence):
-            doc_chunks = (*doc_chunks, current_chunk.strip())
-            current_chunk = sentence
-        else:
-            current_chunk = (current_chunk + " " + sentence).strip()
-
-    # Add the last chunk if it exists
-    if current_chunk.strip():
-        doc_chunks = (*doc_chunks, current_chunk.strip())
-
-    return doc_chunks
-
-
-def _chunk_documents(documents: tuple[str, ...]) -> tuple[str, ...]:
-    """Split documents into smaller chunks.
-
-    Returns:
-        Tuple of text chunks.
-
-    """
-    all_chunks = ()
-    for doc in documents:
-        # Simple sentence-based chunking
-        sentences = tuple(re.split(r"[.!?]+", doc))
-        doc_chunks = _process_document_sentences(sentences)
-        all_chunks = (*all_chunks, *doc_chunks)
-
-    return all_chunks
-
-
-async def _embed_texts(texts: tuple[str, ...]) -> tuple[tuple[float, ...], ...]:
-    """Embed texts using OpenAI API.
-
-    Returns:
-        Tuple of embedding vectors.
-
-    """
-    client = AsyncOpenAI()
-
-    embeddings = ()
-    for text in texts:
-        response = await client.embeddings.create(model="text-embedding-3-small", input=text)
-        embedding = tuple(response.data[0].embedding)
-        embeddings = (*embeddings, embedding)
-
-    return embeddings
-
-
-def _calculate_vector_magnitude(vector: tuple[float, ...]) -> float:
-    """Calculate the magnitude of a vector.
-
-    Returns:
-        Vector magnitude.
-
-    """
-    return sum(x**2 for x in vector) ** 0.5
-
-
-def _cosine_similarity(a: tuple[float, ...], b: tuple[float, ...]) -> float:
-    """Calculate cosine similarity between two vectors.
-
-    Returns:
-        Cosine similarity score between 0 and 1.
-
-    """
-    dot_product = sum(x * y for x, y in zip(a, b, strict=True))
-    magnitude_a = _calculate_vector_magnitude(a)
-    magnitude_b = _calculate_vector_magnitude(b)
-
-    if magnitude_a == 0 or magnitude_b == 0:
-        return 0.0
-
-    return dot_product / (magnitude_a * magnitude_b)
-
-
-def _retrieve_relevant_chunks(
-    query_embedding: tuple[float, ...], chunks: tuple[str, ...], embeddings: tuple[tuple[float, ...], ...]
-) -> tuple[str, ...]:
-    """Retrieve most relevant chunks for query.
-
-    Returns:
-        Tuple of relevant chunks (top 3).
-
-    """
-    similarities = tuple(
-        (_cosine_similarity(query_embedding, chunk_emb), chunk)
-        for chunk_emb, chunk in zip(embeddings, chunks, strict=True)
-    )
-
-    # Sort by similarity and take top 3
-    sorted_similarities = tuple(sorted(similarities, reverse=True, key=itemgetter(0)))
-    return tuple(chunk for _, chunk in sorted_similarities[:3])
-
-
-async def _generate_answer(query: str, context_chunks: tuple[str, ...]) -> str:
-    """Generate answer using OpenAI API with retrieved context.
-
-    Returns:
-        Generated answer string.
-
-    """
-    client = AsyncOpenAI()
-
-    context = "\\n".join(context_chunks)
-    prompt = f"""Answer the question based on the provided context.
-
-Context:
-{context}
-
-Question: {query}
-
-Answer:"""
-
-    response = await client.chat.completions.create(
-        model="gpt-5-nano-2025-08-07",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
-    )
-
-    return response.choices[0].message.content or ""
+from examples.rag_message_driven.utils import call_llm, fixed_size_chunk, get_embedding
 
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentChunkerNode(MessageNode[IndexDocumentsCommand, DocumentsChunkedEvent]):
-    """Node that chunks documents into smaller pieces."""
+    """Node that chunks documents into smaller pieces using overlap."""
 
     name: str = "document_chunker"
 
     @override
     async def process(self, message: IndexDocumentsCommand) -> DocumentsChunkedEvent:
-        """Chunk documents into smaller pieces.
+        """Chunk documents into smaller pieces with overlap.
 
         Returns:
             DocumentsChunkedEvent with chunked text.
 
         """
-        chunks = _chunk_documents(message.documents)
+        # Use proper chunking with overlap like the working RAG implementation
+        all_chunks = tuple(chunk for doc in message.documents for chunk in fixed_size_chunk(doc))
+
+        print(f"✅ Created {len(all_chunks)} chunks from {len(message.documents)} documents")
 
         return DocumentsChunkedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
-            chunks=chunks,
+            chunks=all_chunks,
         )
 
 
 @dataclass(frozen=True, kw_only=True)
 class ChunkEmbedderNode(MessageNode[DocumentsChunkedEvent, ChunksEmbeddedEvent]):
-    """Node that embeds text chunks using OpenAI API."""
+    """Node that embeds text chunks using OpenAI API with numpy arrays."""
 
     name: str = "chunk_embedder"
 
     @override
     async def process(self, message: DocumentsChunkedEvent) -> ChunksEmbeddedEvent:
-        """Embed text chunks.
+        """Embed text chunks using proper numpy arrays.
 
         Returns:
             ChunksEmbeddedEvent with embeddings.
 
         """
-        embeddings = await _embed_texts(message.chunks)
+        # Create embeddings using numpy arrays like the working implementation
+        embeddings_tuple = tuple(get_embedding(chunk) for chunk in message.chunks)
+
+        # Show progress
+        for i in range(len(embeddings_tuple)):
+            print(f"  Embedded chunk {i + 1}/{len(message.chunks)}", end="\r")
+
+        embeddings = np.array(embeddings_tuple, dtype=np.float32)
+        print(f"✅ Created {len(embeddings)} document embeddings")
+
+        # Convert numpy array to tuple of tuples for message serialization
+        embeddings_tuple = tuple(tuple(row.tolist()) for row in embeddings)
 
         return ChunksEmbeddedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
             chunks=message.chunks,
-            embeddings=embeddings,
+            embeddings=embeddings_tuple,
         )
 
 
 @dataclass(frozen=True, kw_only=True)
 class IndexCreatorNode(MessageNode[ChunksEmbeddedEvent, IndexCreatedEvent]):
-    """Node that creates a vector index from embeddings."""
+    """Node that creates a FAISS index from embeddings."""
 
     name: str = "index_creator"
 
     @override
     async def process(self, message: ChunksEmbeddedEvent) -> IndexCreatedEvent:
-        """Create vector index from embeddings.
+        """Create FAISS index from embeddings.
 
         Returns:
             IndexCreatedEvent indicating index is ready.
 
+        Raises:
+            ValueError: If no embeddings are available to index.
+
         """
+        print("🔍 Creating search index...")
+
+        if not message.embeddings:
+            msg = "No embeddings to index"
+            raise ValueError(msg)
+
+        # Convert tuple of tuples back to numpy array
+        embeddings_array = np.array(message.embeddings, dtype=np.float32)
+        dimension = embeddings_array.shape[1]
+
+        # Create a flat L2 index (same as working RAG)
+        index = faiss.IndexFlatL2(dimension)
+        index.add(embeddings_array)
+
+        print(f"✅ Index created with {index.ntotal} vectors")
+
         return IndexCreatedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
@@ -254,14 +136,17 @@ class QueryEmbedderNode(MessageNode[QueryCommand, QueryEmbeddedEvent]):
             QueryEmbeddedEvent with query embedding.
 
         """
-        query_embeddings = await _embed_texts((message.query,))
-        query_embedding = query_embeddings[0]
+        print(f"🔍 Embedding query: {message.query}")
+
+        query_embedding = get_embedding(message.query)
+        # Convert to tuple for message serialization
+        query_embedding_tuple = tuple(query_embedding.tolist())
 
         return QueryEmbeddedEvent(
             triggered_by_id=message.id,
             flow_id=message.flow_id,
             query=message.query,
-            query_embedding=query_embedding,
+            query_embedding=query_embedding_tuple,
             chunks=message.chunks,
             embeddings=message.embeddings,
         )
@@ -269,23 +154,46 @@ class QueryEmbedderNode(MessageNode[QueryCommand, QueryEmbeddedEvent]):
 
 @dataclass(frozen=True, kw_only=True)
 class DocumentRetrieverNode(MessageNode[QueryEmbeddedEvent, DocumentsRetrievedEvent]):
-    """Node that retrieves relevant documents based on query embedding."""
+    """Node that retrieves relevant documents using FAISS search."""
 
     name: str = "document_retriever"
 
     @override
     async def process(self, message: QueryEmbeddedEvent) -> DocumentsRetrievedEvent:
-        """Retrieve relevant documents for the query.
+        """Retrieve the most relevant document chunk using FAISS.
 
         Returns:
-            DocumentsRetrievedEvent with relevant chunks.
+            DocumentsRetrievedEvent with relevant chunk (single best match).
 
         """
-        relevant_chunks = _retrieve_relevant_chunks(
-            message.query_embedding,
-            message.chunks,
-            message.embeddings,
-        )
+        print("🔎 Searching for relevant documents...")
+
+        # Reconstruct FAISS index and embeddings
+        embeddings_array = np.array(message.embeddings, dtype=np.float32)
+        dimension = embeddings_array.shape[1]
+
+        # Recreate the index
+        index = faiss.IndexFlatL2(dimension)
+        index.add(embeddings_array)
+
+        # Convert query embedding back to numpy array
+        query_embedding_array = np.array([message.query_embedding], dtype=np.float32)
+
+        # Search for the single most similar document (k=1 like working RAG)
+        distances, indices = index.search(query_embedding_array, k=1)
+
+        # Get the index and distance of the most similar document
+        best_idx = int(indices[0][0])
+        distance = float(distances[0][0])
+
+        # Get the corresponding text
+        most_relevant_text = message.chunks[best_idx]
+
+        print(f"📄 Retrieved document (index: {best_idx}, distance: {distance:.4f})")
+        print(f'📄 Most relevant text: "{most_relevant_text[:200]}..."')
+
+        # Return single relevant chunk (not multiple chunks)
+        relevant_chunks = (most_relevant_text,)
 
         return DocumentsRetrievedEvent(
             triggered_by_id=message.id,
@@ -309,7 +217,17 @@ class AnswerGeneratorNode(MessageNode[DocumentsRetrievedEvent, AnswerGeneratedEv
             AnswerGeneratedEvent with generated answer.
 
         """
-        answer = await _generate_answer(message.query, message.relevant_chunks)
+        # Use the same prompt format as working RAG
+        context = "\n".join(message.relevant_chunks)
+        prompt = f"""Briefly answer the following question based on the context provided:
+Question: {message.query}
+Context: {context}
+Answer:"""
+
+        answer = call_llm(prompt)
+
+        print("\n🤖 Generated Answer:")
+        print(answer)
 
         return AnswerGeneratedEvent(
             triggered_by_id=message.id,
