@@ -1,326 +1,328 @@
-"""Message nodes for portfolio analysis specialists."""
+"""Message nodes for portfolio analysis specialists with DSPy LLM intelligence.
 
-import secrets
-from dataclasses import dataclass
-from typing import Literal, override
+Pure business logic implementation without console logging.
+Observability will be handled separately via Observer pattern.
+"""
+
+from dataclasses import dataclass, field
+from typing import override
+
+import dspy
+import openai
+from pydantic import ValidationError
 
 from clearflow import MessageNode
 from examples.portfolio_analysis_message_driven.messages import (
     AnalysisFailedEvent,
-    AnalyzeMarketCommand,
-    AssessRiskCommand,
     ComplianceReviewedEvent,
     DecisionMadeEvent,
-    GenerateRecommendationsCommand,
-    MakeDecisionCommand,
     MarketAnalyzedEvent,
     RecommendationsGeneratedEvent,
-    ReviewComplianceCommand,
     RiskAssessedEvent,
+    StartAnalysisCommand,
 )
-
-# Constants for portfolio analysis
-MAX_BULLISH_OPPORTUNITIES = 3
-MAX_NEUTRAL_OPPORTUNITIES = 2
-MAX_BEARISH_OPPORTUNITIES = 1
-
-RISK_THRESHOLD = 0.7
-RISK_SCORE_MAX = 0.9
-MIN_POSITION_SIZE = 5.0
-MAX_POSITION_SIZE_MULTIPLIER = 30.0
-
-ALLOCATION_ACTION_THRESHOLD = 5.0
-COMPLIANCE_CHANGE_LIMIT = 20.0
-COMPLIANCE_CONCENTRATION_LIMIT = 40.0
-COMPLIANCE_RISK_EXPOSURE_THRESHOLD = 0.8
-
-BASE_ALLOCATION_SIZE = 10.0
-BASE_CURRENT_ALLOCATION = 20.0
+from examples.portfolio_analysis_message_driven.specialists.compliance.signature import ComplianceOfficerSignature
+from examples.portfolio_analysis_message_driven.specialists.decision.models import TradingDecision
+from examples.portfolio_analysis_message_driven.specialists.decision.signature import TradingDecisionSignature
+from examples.portfolio_analysis_message_driven.specialists.portfolio.signature import PortfolioManagerSignature
+from examples.portfolio_analysis_message_driven.specialists.quant.signature import QuantAnalystSignature
+from examples.portfolio_analysis_message_driven.specialists.risk.signature import RiskAnalystSignature
 
 
 @dataclass(frozen=True)
-class QuantAnalystNode(MessageNode[AnalyzeMarketCommand, MarketAnalyzedEvent | AnalysisFailedEvent]):
-    """Quantitative analyst that identifies market opportunities."""
+class QuantAnalystNode(MessageNode[StartAnalysisCommand, MarketAnalyzedEvent | AnalysisFailedEvent]):
+    """Quantitative analyst that identifies market opportunities using DSPy.
+
+    Uses LLM to analyze market data and identify investment opportunities.
+    """
 
     name: str = "quant_analyst"
+    _predictor: dspy.Predict = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Initialize DSPy predictor with quantitative analyst signature."""
+        super().__post_init__()
+        object.__setattr__(self, "_predictor", dspy.Predict(QuantAnalystSignature))
 
     @override
-    async def process(self, message: AnalyzeMarketCommand) -> MarketAnalyzedEvent | AnalysisFailedEvent:
-        """Analyze market data and identify opportunities.
+    async def process(self, message: StartAnalysisCommand) -> MarketAnalyzedEvent | AnalysisFailedEvent:
+        """Analyze market data using LLM to identify opportunities.
+
+        Args:
+            message: Command containing market data and constraints.
 
         Returns:
-            MarketAnalyzedEvent with identified opportunities or AnalysisFailedEvent on error.
+            MarketAnalyzedEvent with LLM-identified opportunities or AnalysisFailedEvent.
+
         """
         try:
-            # Simulate quant analysis based on market sentiment
-            if message.market_sentiment == "bullish":
-                # More opportunities in bullish market
-                max_opps = MAX_BULLISH_OPPORTUNITIES
-                opportunities = message.asset_symbols[:max_opps] if len(message.asset_symbols) > max_opps else message.asset_symbols
-                scores = tuple(0.7 + secrets.SystemRandom().random() * 0.3 for _ in opportunities)
-                trend: Literal["bullish", "bearish", "sideways"] = "bullish"
-                confidence = 0.85
-            elif message.market_sentiment == "bearish":
-                # Fewer opportunities in bearish market
-                max_opps = MAX_BEARISH_OPPORTUNITIES
-                opportunities = message.asset_symbols[:max_opps] if message.asset_symbols else ()
-                scores = tuple(0.4 + secrets.SystemRandom().random() * 0.2 for _ in opportunities)
-                trend = "bearish"
-                confidence = 0.65
-            else:
-                # Moderate opportunities in neutral market
-                max_opps = MAX_NEUTRAL_OPPORTUNITIES
-                opportunities = message.asset_symbols[:max_opps] if len(message.asset_symbols) > max_opps else message.asset_symbols
-                scores = tuple(0.5 + secrets.SystemRandom().random() * 0.3 for _ in opportunities)
-                trend = "sideways"
-                confidence = 0.75
+            # Use DSPy to get structured insights from LLM
+            prediction = self._predictor(market_data=message.market_data)
 
             return MarketAnalyzedEvent(
-                triggered_by_id=message.id,
+                insights=prediction.insights,
+                market_data=message.market_data,
+                constraints=message.portfolio_constraints,
                 flow_id=message.flow_id,
-                identified_opportunities=opportunities,
-                opportunity_scores=scores,
-                market_trend=trend,
-                analysis_confidence=confidence,
+                triggered_by_id=message.id,
             )
-        except ValueError as e:
+
+        except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             return AnalysisFailedEvent(
-                triggered_by_id=message.id,
+                failed_stage="quant_analyst",
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+                partial_results=None,
+                can_retry=isinstance(exc, openai.OpenAIError),
+                fallback_action="hold",
+                market_data=message.market_data,
+                constraints=message.portfolio_constraints,
                 flow_id=message.flow_id,
-                failed_stage="quant_analysis",
-                error_type="AnalysisError",
-                error_message=str(e),
-                can_retry=True,
+                triggered_by_id=message.id,
             )
 
 
 @dataclass(frozen=True)
-class RiskAnalystNode(MessageNode[AssessRiskCommand, RiskAssessedEvent | AnalysisFailedEvent]):
-    """Risk analyst that evaluates risk for opportunities."""
+class RiskAnalystNode(MessageNode[MarketAnalyzedEvent, RiskAssessedEvent | AnalysisFailedEvent]):
+    """Risk analyst that evaluates risk using DSPy.
+
+    Uses LLM to assess risk for identified opportunities.
+    """
 
     name: str = "risk_analyst"
+    _predictor: dspy.Predict = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Initialize DSPy predictor with risk analyst signature."""
+        super().__post_init__()
+        object.__setattr__(self, "_predictor", dspy.Predict(RiskAnalystSignature))
 
     @override
-    async def process(self, message: AssessRiskCommand) -> RiskAssessedEvent | AnalysisFailedEvent:
-        """Assess risk for identified opportunities.
+    async def process(self, message: MarketAnalyzedEvent) -> RiskAssessedEvent | AnalysisFailedEvent:
+        """Assess risk using LLM for identified opportunities.
+
+        Args:
+            message: Event containing market analysis results.
 
         Returns:
-            RiskAssessedEvent with risk scores or AnalysisFailedEvent on error.
+            RiskAssessedEvent with LLM risk assessment or AnalysisFailedEvent.
+
         """
         try:
-            # Simulate risk assessment based on volatility
-            filtered_data = tuple(
-                (symbol, confidence, min(RISK_SCORE_MAX, message.market_volatility + (1 - confidence) * 0.3))
-                for symbol, confidence in zip(message.opportunity_symbols, message.confidence_scores, strict=True)
+            # Use DSPy to get risk assessment from LLM
+            prediction = self._predictor(
+                quant_insights=message.insights,
             )
-
-            # Filter for acceptable risk and build tuples
-            acceptable_data = tuple(
-                (symbol, risk_score, max(MIN_POSITION_SIZE, MAX_POSITION_SIZE_MULTIPLIER * (1 - risk_score)))
-                for symbol, confidence, risk_score in filtered_data
-                if risk_score < RISK_THRESHOLD
-            )
-
-            acceptable_symbols = tuple(d[0] for d in acceptable_data)
-            risk_scores = tuple(d[1] for d in acceptable_data)
-            max_positions = tuple(d[2] for d in acceptable_data)
-
-            # Determine overall risk level
-            avg_risk = sum(risk_scores) / len(risk_scores) if risk_scores else 0.5
-            risk_level: Literal["low", "medium", "high"] = "high" if avg_risk > 0.6 else "medium" if avg_risk > 0.3 else "low"
 
             return RiskAssessedEvent(
-                triggered_by_id=message.id,
+                assessment=prediction.risk_assessment,
+                market_data=message.market_data,
+                constraints=message.constraints,
+                insights=message.insights,
                 flow_id=message.flow_id,
-                acceptable_symbols=tuple(acceptable_symbols),
-                risk_scores=tuple(risk_scores),
-                max_position_sizes=tuple(max_positions),
-                overall_risk_level=risk_level,
+                triggered_by_id=message.id,
             )
-        except (ValueError, ZeroDivisionError) as e:
+
+        except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             return AnalysisFailedEvent(
-                triggered_by_id=message.id,
+                failed_stage="risk_analyst",
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+                partial_results={"opportunities_count": len(message.insights.opportunities)},
+                can_retry=isinstance(exc, openai.OpenAIError),
+                fallback_action="hold",
+                market_data=message.market_data,
+                constraints=message.constraints,
                 flow_id=message.flow_id,
-                failed_stage="risk_assessment",
-                error_type="RiskError",
-                error_message=str(e),
-                can_retry=True,
+                triggered_by_id=message.id,
             )
 
 
 @dataclass(frozen=True)
-class PortfolioManagerNode(MessageNode[GenerateRecommendationsCommand, RecommendationsGeneratedEvent | AnalysisFailedEvent]):
-    """Portfolio manager that generates allocation recommendations."""
+class PortfolioManagerNode(MessageNode[RiskAssessedEvent, RecommendationsGeneratedEvent | AnalysisFailedEvent]):
+    """Portfolio manager that generates recommendations using DSPy.
+
+    Uses LLM to optimize portfolio allocations.
+    """
 
     name: str = "portfolio_manager"
+    _predictor: dspy.Predict = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Initialize DSPy predictor with portfolio manager signature."""
+        super().__post_init__()
+        object.__setattr__(self, "_predictor", dspy.Predict(PortfolioManagerSignature))
 
     @override
-    async def process(self, message: GenerateRecommendationsCommand) -> RecommendationsGeneratedEvent | AnalysisFailedEvent:
-        """Generate portfolio recommendations based on risk assessment.
+    async def process(self, message: RiskAssessedEvent) -> RecommendationsGeneratedEvent | AnalysisFailedEvent:
+        """Generate portfolio recommendations using LLM.
+
+        Args:
+            message: Event containing risk assessment results.
 
         Returns:
-            RecommendationsGeneratedEvent with actions or AnalysisFailedEvent on error.
+            RecommendationsGeneratedEvent with LLM recommendations or AnalysisFailedEvent.
+
         """
         try:
-            # Build all data in single pass using function
-            def process_allocation(data: tuple[str, float, float]) -> tuple[Literal["buy", "sell", "hold"], str, float]:
-                symbol, risk_score, target_alloc = data
-                current_alloc = secrets.SystemRandom().random() * BASE_CURRENT_ALLOCATION
-                change = target_alloc - current_alloc
-                if change > ALLOCATION_ACTION_THRESHOLD:
-                    action: Literal["buy", "sell", "hold"] = "buy"
-                elif change < -ALLOCATION_ACTION_THRESHOLD:
-                    action = "sell"
-                else:
-                    action = "hold"
-                return (action, symbol, change)
-
-            processed_data = tuple(
-                process_allocation((symbol, risk_score, target_alloc))
-                for symbol, risk_score, target_alloc in zip(
-                    message.acceptable_symbols,
-                    message.risk_scores,
-                    message.target_allocations,
-                    strict=True,
-                )
+            # Use DSPy to get portfolio recommendations from LLM
+            prediction = self._predictor(
+                risk_assessment=message.assessment,
+                quant_insights=message.insights,
+                portfolio_constraints=message.constraints,
             )
-
-            actions = tuple(d[0] for d in processed_data)
-            symbols = tuple(d[1] for d in processed_data)
-            changes = tuple(d[2] for d in processed_data)
-
-            # Overall confidence based on risk levels
-            avg_risk = sum(message.risk_scores) / len(message.risk_scores) if message.risk_scores else 0.5
-            confidence = max(0.4, 1.0 - avg_risk)
 
             return RecommendationsGeneratedEvent(
-                triggered_by_id=message.id,
+                recommendations=prediction.recommendations,
+                assessment=message.assessment,
+                constraints=message.constraints,
                 flow_id=message.flow_id,
-                recommended_actions=tuple(actions),
-                action_symbols=tuple(symbols),
-                allocation_changes=tuple(changes),
-                confidence_level=confidence,
+                triggered_by_id=message.id,
             )
-        except (ValueError, ZeroDivisionError) as e:
+
+        except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             return AnalysisFailedEvent(
-                triggered_by_id=message.id,
+                failed_stage="portfolio_manager",
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+                partial_results={"risk_level": message.assessment.risk_level},
+                can_retry=isinstance(exc, openai.OpenAIError),
+                fallback_action="hold",
+                market_data=message.market_data,
+                constraints=message.constraints,
                 flow_id=message.flow_id,
-                failed_stage="portfolio_management",
-                error_type="RecommendationError",
-                error_message=str(e),
-                can_retry=False,
+                triggered_by_id=message.id,
             )
 
 
 @dataclass(frozen=True)
-class ComplianceOfficerNode(MessageNode[ReviewComplianceCommand, ComplianceReviewedEvent | AnalysisFailedEvent]):
-    """Compliance officer that reviews recommendations."""
+class ComplianceOfficerNode(MessageNode[RecommendationsGeneratedEvent, ComplianceReviewedEvent | AnalysisFailedEvent]):
+    """Compliance officer that reviews recommendations using DSPy.
+
+    Uses LLM to ensure regulatory and policy compliance.
+    """
 
     name: str = "compliance_officer"
+    _predictor: dspy.Predict = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Initialize DSPy predictor with compliance signature."""
+        super().__post_init__()
+        object.__setattr__(self, "_predictor", dspy.Predict(ComplianceOfficerSignature))
 
     @override
-    async def process(self, message: ReviewComplianceCommand) -> ComplianceReviewedEvent | AnalysisFailedEvent:
-        """Review recommendations for compliance.
+    async def process(self, message: RecommendationsGeneratedEvent) -> ComplianceReviewedEvent | AnalysisFailedEvent:
+        """Review recommendations for compliance using LLM.
+
+        Args:
+            message: Event containing portfolio recommendations.
 
         Returns:
-            ComplianceReviewedEvent with approval status or AnalysisFailedEvent on error.
+            ComplianceReviewedEvent with compliance review or AnalysisFailedEvent.
+
         """
         try:
-            # Process all compliance checks in single pass
-            def check_compliance(item: tuple[str, float, float]) -> tuple[str, str, str]:
-                symbol, current, recommended = item
-                change = recommended - current
-                if abs(change) > COMPLIANCE_CHANGE_LIMIT:
-                    return (symbol, "rejected", f"{symbol}: Change too large ({change:.1f}%)")
-                if recommended > COMPLIANCE_CONCENTRATION_LIMIT:
-                    return (symbol, "rejected", f"{symbol}: Exceeds concentration limit")
-                return (symbol, "approved", f"{symbol}: Approved")
-
-            compliance_results = tuple(
-                check_compliance(item)
-                for item in message.recommended_changes
+            # Use DSPy to get compliance review from LLM
+            prediction = self._predictor(
+                portfolio_recommendations=message.recommendations,
+                risk_assessment=message.assessment,
+                constraints=message.constraints,
             )
-
-            approved = tuple(r[0] for r in compliance_results if r[1] == "approved")
-            rejected = tuple(r[0] for r in compliance_results if r[1] == "rejected")
-            notes = tuple(r[2] for r in compliance_results)
-
-            # Check if escalation needed
-            requires_escalation = len(rejected) > len(approved) or message.risk_exposure > COMPLIANCE_RISK_EXPOSURE_THRESHOLD
 
             return ComplianceReviewedEvent(
-                triggered_by_id=message.id,
+                review=prediction.report,
+                recommendations=message.recommendations,
+                constraints=message.constraints,
                 flow_id=message.flow_id,
-                approved_symbols=tuple(approved),
-                rejected_symbols=tuple(rejected),
-                compliance_notes=tuple(notes),
-                requires_escalation=requires_escalation,
+                triggered_by_id=message.id,
             )
-        except (ValueError, TypeError) as e:
+
+        except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             return AnalysisFailedEvent(
-                triggered_by_id=message.id,
+                failed_stage="compliance_officer",
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+                partial_results={"recommendations_available": bool(message.recommendations)},
+                can_retry=isinstance(exc, openai.OpenAIError),
+                fallback_action="hold",
+                market_data=None,
+                constraints=message.constraints,
                 flow_id=message.flow_id,
-                failed_stage="compliance_review",
-                error_type="ComplianceError",
-                error_message=str(e),
-                can_retry=False,
+                triggered_by_id=message.id,
             )
 
 
 @dataclass(frozen=True)
-class DecisionMakerNode(MessageNode[MakeDecisionCommand | AnalysisFailedEvent, DecisionMadeEvent]):
-    """Decision maker that produces final trading decision."""
+class DecisionMakerNode(MessageNode[ComplianceReviewedEvent | AnalysisFailedEvent, DecisionMadeEvent]):
+    """Decision maker that makes final trading decisions using DSPy.
+
+    Uses LLM to make the final go/no-go decision.
+    """
 
     name: str = "decision_maker"
+    _predictor: dspy.Predict = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Initialize DSPy predictor with decision maker signature."""
+        super().__post_init__()
+        object.__setattr__(self, "_predictor", dspy.Predict(TradingDecisionSignature))
 
     @override
-    async def process(self, message: MakeDecisionCommand | AnalysisFailedEvent) -> DecisionMadeEvent:
-        """Make final trading decision.
+    async def process(self, message: ComplianceReviewedEvent | AnalysisFailedEvent) -> DecisionMadeEvent:
+        """Make final trading decision using LLM.
+
+        Args:
+            message: Event containing compliance review or analysis failure.
 
         Returns:
-            DecisionMadeEvent with execution plan and approved trades.
+            DecisionMadeEvent with final trading decision.
+
         """
         if isinstance(message, AnalysisFailedEvent):
-            # Handle error case with conservative decision
-            return DecisionMadeEvent(
-                triggered_by_id=message.id,
-                flow_id=message.flow_id,
-                execution_plan="HOLD - Analysis failed",
-                approved_trades=(),
+            # Conservative decision on failure - create minimal TradingDecision
+            conservative_decision = TradingDecision(
+                approved_changes=(),
+                execution_plan=f"Analysis failed at {message.failed_stage}: {message.error_message}. Taking conservative approach - holding all positions.",
+                monitoring_requirements=("Monitor system health", "Retry analysis when stable"),
+                audit_trail=f"System error: {message.error_type}. Defaulting to hold position for safety.",
                 decision_status="hold",
-                monitoring_required=True,
             )
 
-        # Build execution plan based on compliance status
-        if message.compliance_status == "rejected":
-            execution_plan = "HOLD - Compliance rejected"
-            trades = ()
-            status: Literal["execute", "hold", "escalate"] = "hold"
-        elif message.compliance_status == "conditional":
-            execution_plan = "ESCALATE - Requires senior approval"
-            trades = ()
-            status = "escalate"
-        else:
-            # Build trades from approved symbols
-            trades_list = [
-                (symbol, "BUY" if alloc > 0 else "SELL", abs(alloc))
-                for symbol, alloc in zip(message.approved_symbols, message.approved_allocations, strict=True)
-                if alloc != 0
-            ]
-            trades = tuple(trades_list)
+            return DecisionMadeEvent(
+                decision=conservative_decision,
+                review=None,  # No compliance review available
+                flow_id=message.flow_id,
+                triggered_by_id=message.id,
+            )
 
-            if trades:
-                execution_plan = f"EXECUTE - {len(trades)} trades approved"
-                status = "execute"
-            else:
-                execution_plan = "HOLD - No actionable trades"
-                status = "hold"
+        try:
+            # Use DSPy to get final decision from LLM
+            prediction = self._predictor(
+                compliance_review=message.review,
+                portfolio_recommendations=message.recommendations,
+                constraints=message.constraints,
+            )
 
-        return DecisionMadeEvent(
-            triggered_by_id=message.id,
-            flow_id=message.flow_id,
-            execution_plan=execution_plan,
-            approved_trades=tuple(trades),
-            decision_status=status,
-            monitoring_required=len(trades) > 0,
-        )
+            return DecisionMadeEvent(
+                decision=prediction.decision,
+                review=message.review,
+                flow_id=message.flow_id,
+                triggered_by_id=message.id,
+            )
+
+        except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
+            # Fallback to conservative decision on error
+            conservative_decision = TradingDecision(
+                approved_changes=(),
+                execution_plan=f"Decision process error: {exc!s}. Taking conservative approach - holding all positions.",
+                monitoring_requirements=("Monitor decision system health", "Review error logs"),
+                audit_trail=f"Decision error: {type(exc).__name__}. Defaulting to hold position for safety.",
+                decision_status="hold",
+            )
+
+            return DecisionMadeEvent(
+                decision=conservative_decision,
+                review=None,  # No review available on error path
+                flow_id=message.flow_id,
+                triggered_by_id=message.id,
+            )

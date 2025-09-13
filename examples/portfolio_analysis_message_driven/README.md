@@ -1,113 +1,107 @@
-# Message-Driven Portfolio Analysis Example
+# Portfolio Analysis Example (Message-Driven)
 
-Multi-specialist financial analysis using focused messages without god-objects.
+Multi-specialist workflow for portfolio allocation decisions using event-driven architecture with real LLM intelligence.
 
-## Key Design: Avoiding God-Objects
+## Flow
 
-This example demonstrates how to avoid god-objects in events by using focused, single-responsibility messages:
-
-### ❌ BAD: God-Object Pattern (Not Used)
-```python
-# DON'T DO THIS - Too much data in one event
-@dataclass
-class AnalysisCompleteEvent(Event):
-    market_data: MarketData           # Full input data
-    quant_insights: QuantInsights     # Full quant analysis
-    risk_assessment: RiskAssessment   # Full risk analysis
-    recommendations: Recommendations  # Full recommendations
-    compliance: ComplianceReport      # Full compliance review
-    # This event knows too much!
+```mermaid
+graph LR
+    Start([Market Data]) --> Q[QuantAnalyst]
+    Q -->|MarketAnalyzedEvent| R[RiskAnalyst]
+    Q -->|AnalysisFailedEvent| D[DecisionMaker]
+    R -->|RiskAssessedEvent| P[PortfolioManager]
+    R -->|AnalysisFailedEvent| D
+    P -->|RecommendationsGeneratedEvent| C[ComplianceOfficer]
+    P -->|AnalysisFailedEvent| D
+    C -->|ComplianceReviewedEvent| D
+    C -->|AnalysisFailedEvent| D
+    D -->|DecisionMadeEvent| End([Final Decision])
 ```
 
-### ✅ GOOD: Focused Messages (Used Here)
-```python
-# Each message has single responsibility
-@dataclass
-class MarketAnalyzedEvent(Event):
-    identified_opportunities: tuple[str, ...]  # Just symbols
-    opportunity_scores: tuple[float, ...]      # Just scores
-    market_trend: Literal["bullish", "bearish", "sideways"]
-    analysis_confidence: float
-    # Focused on market analysis outcome only
-
-@dataclass
-class RiskAssessedEvent(Event):
-    acceptable_symbols: tuple[str, ...]  # Just approved symbols
-    risk_scores: tuple[float, ...]       # Just risk scores
-    max_position_sizes: tuple[float, ...]
-    overall_risk_level: Literal["low", "medium", "high"]
-    # Focused on risk assessment outcome only
-```
-
-## Architecture Overview
-
-```
-AnalyzeMarketCommand → [QuantAnalyst] → MarketAnalyzedEvent
-                                              ↓
-                        [Orchestrator] → AssessRiskCommand
-                                              ↓
-                          [RiskAnalyst] → RiskAssessedEvent
-                                              ↓
-                        [Orchestrator] → GenerateRecommendationsCommand
-                                              ↓
-                      [PortfolioManager] → RecommendationsGeneratedEvent
-                                              ↓
-                        [Orchestrator] → ReviewComplianceCommand
-                                              ↓
-                     [ComplianceOfficer] → ComplianceReviewedEvent
-                                              ↓
-                        [Orchestrator] → MakeDecisionCommand
-                                              ↓
-                       [DecisionMaker] → DecisionMadeEvent
-```
-
-## Key Components
-
-### Messages (Single Responsibility)
-- **Commands**: Initiate specific work with minimal data
-- **Events**: Report specific outcomes without excess context
-
-### Specialist Nodes
-- **QuantAnalystNode**: Identifies market opportunities
-- **RiskAnalystNode**: Assesses risk for opportunities
-- **PortfolioManagerNode**: Generates allocation recommendations
-- **ComplianceOfficerNode**: Reviews for compliance
-- **DecisionMakerNode**: Makes final trading decision
-
-### Orchestrator Nodes
-Transform events into commands for next specialist:
-- **PrepareRiskAssessment**: MarketAnalyzedEvent → AssessRiskCommand
-- **PrepareRecommendations**: RiskAssessedEvent → GenerateRecommendationsCommand
-- **PrepareComplianceReview**: RecommendationsGeneratedEvent → ReviewComplianceCommand
-- **PrepareDecision**: ComplianceReviewedEvent → MakeDecisionCommand
-
-## Running the Example
+## Quick Start
 
 ```bash
-# From clearflow directory
-python -m examples.portfolio_analysis_message_driven.main
+# From project root directory
 
-# Or run directly
+# 1. Set up your OpenAI API key
+cp .env.example .env
+# Edit .env and add your API key
+
+# 2. Install dependencies
+uv sync --all-extras
+
+# 3. Run the example
 cd examples/portfolio_analysis_message_driven
-python main.py
+python main.py  # If venv is activated
+# Or: uv run python main.py
 ```
 
-## Benefits of This Approach
+## How It Works
 
-1. **Single Responsibility**: Each message does one thing well
-2. **Loose Coupling**: Specialists don't need to know about each other's internals
-3. **Testability**: Each node can be tested with focused inputs
-4. **Maintainability**: Changes to one specialist don't ripple through system
-5. **Event Sourcing**: Natural audit trail of decisions
+This example demonstrates a pure event-driven workflow where each specialist node analyzes data and publishes events describing outcomes:
+
+1. **QuantAnalyst** - Analyzes market data using LLM, publishes opportunities found
+2. **RiskAnalyst** - Assesses risk using LLM, publishes acceptable positions
+3. **PortfolioManager** - Optimizes portfolio using LLM, publishes recommendations
+4. **ComplianceOfficer** - Reviews compliance using LLM, publishes approved allocations
+5. **DecisionMaker** - Makes final decision using LLM, publishes executable orders
+
+Each node uses DSPy for structured LLM outputs with comprehensive error handling.
+
+## Key Features
+
+- **Pure event-driven** - Single command starts flow, all subsequent messages are events
+- **LLM intelligence** - Real OpenAI/DSPy integration, not simulated logic
+- **Type-safe messages** - Immutable dataclasses with Mapping types
+- **Error recovery** - AnalysisFailedEvent routes to DecisionMaker for conservative handling
+- **No orchestrators** - Direct event routing, flow definition is the sole orchestrator
+- **Observable** - Compatible with ClearFlow's Observer pattern (no console logging in nodes)
+
+## Architecture Principles
+
+### Event-Driven Design
+- **Single initiating command**: `StartAnalysisCommand` contains all initial context
+- **Events describe outcomes**: Past-tense naming (MarketAnalyzedEvent, not AnalyzeMarketEvent)
+- **No intermediate commands**: Events flow directly between nodes
+- **Explicit routing**: Flow definition specifies all event routes
+
+### Message Design (No God-Objects)
+```python
+# ✅ GOOD: Focused events with single responsibility
+@dataclass(frozen=True)
+class MarketAnalyzedEvent(Event):
+    opportunities: tuple[str, ...]  # Just symbols identified
+    opportunity_scores: tuple[float, ...]  # Confidence scores
+    market_trend: Literal["bullish", "bearish", "sideways"]
+    # Context for next stage
+    market_data: MarketData
+    constraints: PortfolioConstraints
+
+# ❌ BAD: God-object with too much data
+class AnalysisCompleteEvent(Event):
+    all_analysis_data: dict  # Everything in one place
+    full_market_data: MarketData
+    complete_insights: QuantInsights
+    # Too much responsibility!
+```
+
+## Files
+
+- `main.py` - Entry point with DSPy configuration and scenario selection
+- `portfolio_flow.py` - Pure event-driven flow definition (no orchestrators)
+- `messages.py` - Focused event types with immutable Mapping fields
+- `nodes.py` - Specialist nodes with DSPy predictors (no console logging)
+- `market_data.py` - Market data generation for different scenarios
+- `specialists/` - DSPy signatures and models for each specialist
 
 ## Comparison with Legacy Approach
 
 ### Legacy (Node-Flow-State)
-- Passes entire state objects between nodes
-- State accumulates data as it flows
-- Nodes see more than they need
+- Accumulates state as it flows
+- Nodes mutate shared state
+- Implicit data dependencies
 
 ### Message-Driven (This Example)
-- Passes focused messages between nodes
-- Each message contains only essential data
-- Nodes see only what they need to know
+- Events carry only essential data
+- Nodes produce new events without mutation
+- Explicit data flow via messages

@@ -1,13 +1,9 @@
 """Message base classes for message-driven architecture."""
 
 import uuid
-from abc import ABC, ABCMeta
+from abc import ABC
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import (  # clearflow: ignore[ARCH010]  # Metaclass protocol requires Any (see typeshed type.__call__)
-    Any,
-    override,
-)
 
 __all__ = [
     "Command",
@@ -16,34 +12,6 @@ __all__ = [
 ]
 
 
-class AbstractMessageMeta(ABCMeta):
-    """Metaclass that prevents direct instantiation of Event and Command base classes."""
-
-    @override
-    def __call__(
-        cls, *args: Any, **kwargs: Any
-    ) -> Any:  # clearflow: ignore[ARCH010]  # Standard metaclass signature per typeshed
-        """Prevent direct instantiation of abstract Event and Command classes.
-
-        Returns:
-            Instance of the class if not Event or Command.
-
-        Raises:
-            TypeError: If trying to instantiate Event or Command directly.
-
-        """
-        # Prevent direct instantiation of abstract base classes
-        if cls.__module__ == "clearflow.message" and cls.__name__ in {"Event", "Command"}:
-            examples = {
-                "Event": "ProcessedEvent, ValidationFailedEvent",
-                "Command": "ProcessCommand, ValidateCommand",
-            }
-            msg = (
-                f"Cannot instantiate abstract {cls.__name__} directly. "
-                f"Create a concrete {cls.__name__.lower()} class (e.g., {examples[cls.__name__]})."
-            )
-            raise TypeError(msg)
-        return super().__call__(*args, **kwargs)
 
 
 def _utc_now() -> datetime:
@@ -76,7 +44,7 @@ class Message(ABC):
 
 
 @dataclass(frozen=True, kw_only=True)
-class Event(Message, metaclass=AbstractMessageMeta):
+class Event(Message):
     """Abstract base Event extending Message for causality tracking.
 
     Events capture facts - things that have happened in the system.
@@ -93,19 +61,29 @@ class Event(Message, metaclass=AbstractMessageMeta):
     """
 
     def __post_init__(self) -> None:
-        """Validate that triggered_by_id is set for events.
+        """Validate Event constraints.
 
         Raises:
+            TypeError: If trying to instantiate Event directly.
             ValueError: If triggered_by_id is None for an Event.
 
         """
+        # Prevent direct instantiation of abstract base class
+        if type(self) is Event:
+            msg = (
+                "Cannot instantiate abstract Event directly. "
+                "Create a concrete event class (e.g., ProcessedEvent, ValidationFailedEvent)."
+            )
+            raise TypeError(msg)
+
+        # Validate that triggered_by_id is set for events
         if self.triggered_by_id is None:
             msg = "Events must have a triggered_by_id"
             raise ValueError(msg)
 
 
 @dataclass(frozen=True, kw_only=True)
-class Command(Message, metaclass=AbstractMessageMeta):
+class Command(Message):
     """Abstract base Command extending Message for causality tracking.
 
     Commands capture intent - requests for something to happen.
@@ -120,5 +98,20 @@ class Command(Message, metaclass=AbstractMessageMeta):
         timestamp: Timezone-aware datetime for unambiguous command ordering
         flow_id: UUID identifying the flow session
     """
+
+    def __post_init__(self) -> None:
+        """Validate Command constraints.
+
+        Raises:
+            TypeError: If trying to instantiate Command directly.
+
+        """
+        # Prevent direct instantiation of abstract base class
+        if type(self) is Command:
+            msg = (
+                "Cannot instantiate abstract Command directly. "
+                "Create a concrete command class (e.g., ProcessCommand, ValidateCommand)."
+            )
+            raise TypeError(msg)
 
     # Uses default triggered_by_id: uuid.UUID | None from Message

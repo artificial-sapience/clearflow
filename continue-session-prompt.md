@@ -1,48 +1,40 @@
-# Continue Session: Fix Portfolio Example LLM Integration
+# Continue Session: Test and Polish Portfolio Example
 
-## Critical Issue
-**The message-driven portfolio example has LOST all LLM intelligence** - it's using hardcoded random logic instead of DSPy/OpenAI like the original.
+## Your Task
+
+Continue implementing the portfolio_analysis_message_driven example by completing Phase 3 (Integration and Polish) and beginning Phase 4 (Testing and Validation).
 
 ## Context
 - **Session context**: See session-context.md for what was accomplished
-- **Tasks**: See plan.md for complete task list
+- **Remaining tasks**: See plan.md for Phase 3 and Phase 4 tasks
 - **Branch**: message-driven
 
-## Your Immediate Priority
+## Current State
+- ✅ Phase 1 complete: Pure event-driven architecture
+- ✅ Phase 2 complete: All 5 nodes implemented with DSPy/LLM integration
+- Ready to test with real OpenAI API
 
-**Task 1**: Restore LLM intelligence to `examples/portfolio_analysis_message_driven/`
+## Immediate Next Steps
 
-The original `examples/portfolio_analysis/` uses:
-- DSPy with OpenAI GPT-5-nano
-- Real LLM calls via `dspy.Predict()`
-- Structured outputs with Pydantic
+### 1. Test the Current Implementation
+First, verify the example works end-to-end:
+```bash
+cd examples/portfolio_analysis_message_driven
+cp .env.example .env
+# Add OpenAI API key to .env
+python main.py
+```
 
-The message-driven version currently uses:
-- `secrets.SystemRandom()` for fake randomness
-- Hardcoded if/else logic
-- No AI whatsoever
+### 2. Begin Phase 3: Integration and Polish
+- Task 3.1: Create integration test script
+- Task 3.2: Create README.md documentation
+- Task 3.3: Final quality verification
 
-**Required Actions**:
-1. Copy DSPy integration files from original example
-2. Rewrite all nodes to use DSPy signatures
-3. Ensure real LLM calls are made
-4. Test with actual OpenAI API
+## Important Notes
+1. **NO console logging in nodes** - observability is handled separately
+2. Run `./quality-check.sh` after every change
+3. Maintain pure event-driven architecture
+4. Test with real OpenAI API, not mocks
 
-## Next Session Prompt
-
----
-
-**Claude, continue the ClearFlow migration to message-driven architecture.**
-
-**CRITICAL**: The portfolio_analysis_message_driven example has lost all LLM intelligence. It's using hardcoded random logic instead of DSPy/OpenAI.
-
-**Your task**: Fix the portfolio example by restoring full LLM integration from the original example while keeping the message-driven architecture.
-
-**Context**: See session-context.md and plan.md in the working directory.
-
-Please start by:
-1. Comparing the original portfolio example's LLM usage with the current message-driven version
-2. Planning the integration of DSPy into the message-driven nodes
-3. Beginning the implementation
-
----
+## Start Command
+Please begin by testing the current implementation with a real OpenAI API key to verify all nodes work correctly with LLM intelligence, then proceed with Phase 3 tasks from plan.md.

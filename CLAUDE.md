@@ -172,6 +172,14 @@ from clearflow import MessageNode, message_flow
 - Example: `# noqa: C901  # Display function complexity acceptable for UI`
 - Always fix the root cause instead of suppressing when possible
 
+**TC001 RULE ENFORCEMENT**:
+
+- **TC001 violations indicate real code issues** - unnecessary type-annotated intermediate variables
+- Pattern to eliminate: `result: SomeType = some_expression` followed by immediate usage
+- Solution: Use `some_expression` directly instead of creating intermediate variable
+- These violations correctly identify code ceremony that serves no purpose
+- Eliminating them also removes unnecessary runtime imports
+
 #### Custom Linters
 
 ClearFlow uses three custom linters to enforce mission-critical standards:

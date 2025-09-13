@@ -4,19 +4,24 @@ Pure event-driven architecture with single initiating command.
 Events describe outcomes, not instructions.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
 from clearflow import Command, Event
 from examples.portfolio_analysis.shared.models import MarketData
-
+from examples.portfolio_analysis_message_driven.specialists.compliance.models import ComplianceReview
+from examples.portfolio_analysis_message_driven.specialists.decision.models import TradingDecision
+from examples.portfolio_analysis_message_driven.specialists.portfolio.models import PortfolioRecommendations
+from examples.portfolio_analysis_message_driven.specialists.quant.models import QuantInsights
+from examples.portfolio_analysis_message_driven.specialists.risk.models import RiskAssessment
 
 # ============================================================================
 # PORTFOLIO CONSTRAINTS
 # ============================================================================
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class PortfolioConstraints:
     """Constraints for portfolio optimization."""
 
@@ -53,22 +58,15 @@ class MarketAnalyzedEvent(Event):
     """Event when quantitative market analysis is complete.
 
     Published by: QuantAnalystNode
-    Contains: Market opportunities identified through LLM analysis
+    Contains: Complete LLM-generated quantitative insights
     """
 
-    # Core analysis results
-    market_trend: Literal["bullish", "bearish", "sideways"]
-    opportunities: tuple[str, ...]  # Asset symbols identified as opportunities
-    opportunity_scores: tuple[float, ...]  # Confidence scores (0-1) for each
-    sector_momentum: dict[str, float]  # Sector momentum scores (-1 to 1)
+    # Complete LLM response - no manual extraction
+    insights: QuantInsights
 
     # Context for next stage
     market_data: MarketData  # Original data for downstream nodes
     constraints: PortfolioConstraints  # Constraints to propagate
-
-    # Analysis metadata
-    analysis_confidence: float  # Overall confidence in analysis (0-1)
-    analysis_summary: str  # Brief LLM-generated summary
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -76,26 +74,16 @@ class RiskAssessedEvent(Event):
     """Event when risk assessment is complete.
 
     Published by: RiskAnalystNode
-    Contains: Risk-adjusted opportunities with position limits
+    Contains: Complete LLM-generated risk assessment
     """
 
-    # Risk-adjusted opportunities
-    acceptable_symbols: tuple[str, ...]  # Symbols passing risk thresholds
-    risk_scores: tuple[float, ...]  # Risk score (0-1) for each symbol
-    max_position_sizes: tuple[float, ...]  # Max % allocation per symbol
-
-    # Portfolio risk metrics
-    portfolio_var: float  # Value at Risk estimate
-    max_drawdown_estimate: float  # Estimated maximum drawdown
-    overall_risk_level: Literal["low", "medium", "high"]
+    # Complete LLM response - no manual extraction
+    assessment: RiskAssessment
 
     # Context for next stage
     market_data: MarketData
     constraints: PortfolioConstraints
-    sector_momentum: dict[str, float]  # From market analysis
-
-    # Risk metadata
-    risk_summary: str  # LLM-generated risk assessment
+    insights: QuantInsights  # Pass through for downstream access
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -103,27 +91,15 @@ class RecommendationsGeneratedEvent(Event):
     """Event when portfolio recommendations are ready.
 
     Published by: PortfolioManagerNode
-    Contains: Specific allocation recommendations
+    Contains: Complete LLM-generated portfolio recommendations
     """
 
-    # Allocation recommendations
-    allocations: dict[str, float]  # Symbol -> % allocation
-    actions: dict[str, Literal["buy", "sell", "hold"]]  # Symbol -> action
-
-    # Portfolio metrics
-    expected_return: float  # Annualized expected return
-    expected_volatility: float  # Annualized expected volatility
-    sharpe_ratio: float  # Risk-adjusted return metric
-
-    # Reasoning
-    allocation_rationale: dict[str, str]  # Symbol -> reasoning
+    # Complete LLM response - no manual extraction
+    recommendations: PortfolioRecommendations
 
     # Context for compliance
-    risk_metrics: dict[str, float]  # Risk scores per symbol
+    assessment: RiskAssessment  # Pass through from previous stage
     constraints: PortfolioConstraints
-
-    # Confidence
-    confidence_level: float  # Overall confidence (0-1)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -131,24 +107,14 @@ class ComplianceReviewedEvent(Event):
     """Event when compliance review is complete.
 
     Published by: ComplianceOfficerNode
-    Contains: Approved allocations with any required adjustments
+    Contains: Complete LLM-generated compliance review
     """
 
-    # Compliance results
-    approved_allocations: dict[str, float]  # Compliant allocations
-    rejected_symbols: tuple[str, ...]  # Symbols rejected for compliance
-    compliance_adjustments: dict[str, str]  # Symbol -> adjustment reason
-
-    # Compliance status
-    compliance_status: Literal["approved", "conditional", "rejected"]
-    violations_found: tuple[str, ...]  # List of violations if any
-
-    # Final portfolio metrics
-    final_allocations: dict[str, float]  # Ready for execution
-    sector_allocations: dict[str, float]  # Sector exposure check
+    # Complete LLM response - no manual extraction
+    review: ComplianceReview
 
     # Context for decision
-    original_recommendations: dict[str, float]  # Before adjustments
+    recommendations: PortfolioRecommendations  # Pass through from previous stage
     constraints: PortfolioConstraints
 
 
@@ -157,24 +123,14 @@ class DecisionMadeEvent(Event):
     """Event when final trading decision is made.
 
     Published by: DecisionMakerNode
-    Contains: Final executable trading decision
+    Contains: Complete LLM-generated trading decision
     """
 
-    # Final decision
-    decision: Literal["execute", "hold", "escalate"]
-    final_allocations: dict[str, float]  # Symbol -> % allocation
+    # Complete LLM response - no manual extraction
+    decision: TradingDecision
 
-    # Execution details
-    trade_orders: tuple[tuple[str, Literal["buy", "sell"], float], ...]  # (symbol, action, amount)
-    estimated_impact: float  # Estimated portfolio impact %
-
-    # Decision rationale
-    decision_reasoning: str  # LLM-generated explanation
-    risk_acknowledgments: tuple[str, ...]  # Acknowledged risks
-
-    # Metadata
-    confidence: float  # Decision confidence (0-1)
-    requires_human_review: bool  # Flag for manual review
+    # Context for execution (failure cases may not have these)
+    review: ComplianceReview | None = None  # May be None for failure cases
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -190,7 +146,7 @@ class AnalysisFailedEvent(Event):
     error_message: str  # Detailed error message
 
     # Recovery context
-    partial_results: dict[str, any] | None  # Any partial results available
+    partial_results: Mapping[str, float | str | int] | None  # Any partial results available
     can_retry: bool  # Whether retry might succeed
     fallback_action: Literal["hold", "escalate"]  # Suggested fallback
 

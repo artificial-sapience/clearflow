@@ -43,6 +43,7 @@ def create_portfolio_analysis_flow() -> MessageFlow[StartAnalysisCommand, Decisi
 
     Returns:
         MessageFlow that processes market analysis into trading decisions.
+
     """
     # Create specialist nodes (no orchestrators needed)
     quant = QuantAnalystNode()
