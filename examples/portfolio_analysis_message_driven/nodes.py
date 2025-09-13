@@ -224,13 +224,11 @@ class ComplianceOfficerNode(MessageNode[RecommendationsGeneratedEvent, Complianc
         try:
             # Use DSPy to get compliance review from LLM
             prediction = self._predictor(
-                portfolio_recommendations=message.recommendations,
-                risk_assessment=message.assessment,
-                constraints=message.constraints,
+                recommendations=message.recommendations,
             )
 
             return ComplianceReviewedEvent(
-                review=prediction.report,
+                review=prediction.compliance_review,
                 recommendations=message.recommendations,
                 constraints=message.constraints,
                 flow_id=message.flow_id,
@@ -299,12 +297,10 @@ class DecisionMakerNode(MessageNode[ComplianceReviewedEvent | AnalysisFailedEven
             # Use DSPy to get final decision from LLM
             prediction = self._predictor(
                 compliance_review=message.review,
-                portfolio_recommendations=message.recommendations,
-                constraints=message.constraints,
             )
 
             return DecisionMadeEvent(
-                decision=prediction.decision,
+                decision=prediction.trading_decision,
                 review=message.review,
                 flow_id=message.flow_id,
                 triggered_by_id=message.id,
