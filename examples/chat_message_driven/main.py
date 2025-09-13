@@ -33,7 +33,7 @@ async def main() -> None:
     # Start the chat
     start_command = StartChat(
         triggered_by_id=None,
-        flow_id=create_flow_id(),
+        run_id=create_flow_id(),
         system_prompt="You are a helpful, friendly assistant.",
     )
 

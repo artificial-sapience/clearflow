@@ -87,7 +87,7 @@ class SecurityAlertEvent(Event):
 def create_test_command(
     *,
     triggered_by_id: uuid.UUID | None = None,
-    flow_id: uuid.UUID | None = None,
+    run_id: uuid.UUID | None = None,
 ) -> ProcessCommand:
     """Create a test command with valid fields.
 
@@ -98,14 +98,14 @@ def create_test_command(
     return ProcessCommand(
         data="test data",
         triggered_by_id=triggered_by_id,
-        flow_id=flow_id or uuid.uuid4(),
+        run_id=run_id or uuid.uuid4(),
     )
 
 
 def create_test_event(
     *,
     triggered_by_id: uuid.UUID | None = None,
-    flow_id: uuid.UUID | None = None,
+    run_id: uuid.UUID | None = None,
 ) -> ProcessedEvent:
     """Create a test event with valid fields.
 
@@ -120,7 +120,7 @@ def create_test_event(
         result="processed",
         processing_time_ms=123.45,
         triggered_by_id=triggered_by_id,
-        flow_id=flow_id or uuid.uuid4(),
+        run_id=run_id or uuid.uuid4(),
     )
 
 

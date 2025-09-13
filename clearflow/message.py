@@ -33,7 +33,7 @@ class Message(ABC):
     id: uuid.UUID = field(default_factory=uuid.uuid4)
     triggered_by_id: uuid.UUID | None = None  # None for initial commands, UUID for derived messages
     timestamp: datetime = field(default_factory=_utc_now)
-    flow_id: uuid.UUID  # Required - identifies the flow session
+    run_id: uuid.UUID  # Required - identifies the flow session
 
     @property
     def message_type(self) -> type["Message"]:
@@ -55,7 +55,7 @@ class Event(Message):
         id: Unique identifier for this message
         triggered_by_id: UUID of the message that triggered this event (required for events)
         timestamp: Timezone-aware datetime for unambiguous event ordering
-        flow_id: UUID identifying the flow session
+        run_id: UUID identifying the flow session
     """
 
     def __post_init__(self) -> None:
@@ -94,7 +94,7 @@ class Command(Message):
         id: Unique identifier for this message
         triggered_by_id: UUID of the message that triggered this command (optional)
         timestamp: Timezone-aware datetime for unambiguous command ordering
-        flow_id: UUID identifying the flow session
+        run_id: UUID identifying the flow session
     """
 
     def __post_init__(self) -> None:

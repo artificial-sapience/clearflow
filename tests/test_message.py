@@ -35,11 +35,11 @@ def test_message_type_property() -> None:
 
 def test_message_auto_generated_fields() -> None:
     """Test that id and timestamp are auto-generated."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
     cmd = ProcessCommand(
         data="test",
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
 
     # Verify auto-generated fields
@@ -51,7 +51,7 @@ def test_message_auto_generated_fields() -> None:
     cmd2 = ProcessCommand(
         data="test2",
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     assert cmd.id != cmd2.id
 
@@ -70,13 +70,13 @@ def test_message_immutability() -> None:
 
 def test_message_causality_tracking() -> None:
     """Test message causality chain tracking."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     # Initial command has no trigger
     cmd = ProcessCommand(
         data="start",
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     assert cmd.triggered_by_id is None
 
@@ -85,7 +85,7 @@ def test_message_causality_tracking() -> None:
         result="done",
         processing_time_ms=100.0,
         triggered_by_id=cmd.id,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     assert evt.triggered_by_id == cmd.id
 
@@ -93,7 +93,7 @@ def test_message_causality_tracking() -> None:
     next_evt = ValidationFailedEvent(
         reason="invalid",
         triggered_by_id=evt.id,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     assert next_evt.triggered_by_id == evt.id
 
@@ -103,23 +103,23 @@ def test_message_flow_tracking() -> None:
     flow1 = create_flow_id()
     flow2 = create_flow_id()
 
-    cmd1 = ProcessCommand(data="flow1", triggered_by_id=None, flow_id=flow1)
-    cmd2 = ProcessCommand(data="flow2", triggered_by_id=None, flow_id=flow2)
+    cmd1 = ProcessCommand(data="flow1", triggered_by_id=None, run_id=flow1)
+    cmd2 = ProcessCommand(data="flow2", triggered_by_id=None, run_id=flow2)
 
-    assert cmd1.flow_id == flow1
-    assert cmd2.flow_id == flow2
-    assert cmd1.flow_id != cmd2.flow_id
+    assert cmd1.run_id == flow1
+    assert cmd2.run_id == flow2
+    assert cmd1.run_id != cmd2.run_id
 
 
 def test_command_optional_trigger() -> None:
     """Test that commands can have optional triggered_by_id."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     # Command without trigger (initial command)
     cmd1 = ProcessCommand(
         data="initial",
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     assert cmd1.triggered_by_id is None
 
@@ -127,7 +127,7 @@ def test_command_optional_trigger() -> None:
     cmd2 = ProcessCommand(
         data="chained",
         triggered_by_id=cmd1.id,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     assert cmd2.triggered_by_id == cmd1.id
 
@@ -136,7 +136,7 @@ def _assert_has_message_fields(obj: Message) -> None:
     """Assert object has all required Message fields."""
     assert hasattr(obj, "id")
     assert hasattr(obj, "timestamp")
-    assert hasattr(obj, "flow_id")
+    assert hasattr(obj, "run_id")
     assert hasattr(obj, "triggered_by_id")
 
 
@@ -150,22 +150,22 @@ def test_command_inheritance() -> None:
 
 def test_command_concrete_implementation() -> None:
     """Test concrete command implementation with custom fields."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
     cmd = ProcessCommand(
         data="important data",
         priority=5,
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
 
     assert cmd.data == "important data"
     assert cmd.priority == 5
-    assert cmd.flow_id == flow_id
+    assert cmd.run_id == run_id
 
 
 def test_event_required_trigger() -> None:
     """Test that events MUST have triggered_by_id."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
     trigger_id = uuid.uuid4()
 
     # Event with trigger works
@@ -173,7 +173,7 @@ def test_event_required_trigger() -> None:
         result="success",
         processing_time_ms=50.0,
         triggered_by_id=trigger_id,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     assert evt.triggered_by_id == trigger_id
 
@@ -183,7 +183,7 @@ def test_event_required_trigger() -> None:
             result="success",
             processing_time_ms=50.0,
             triggered_by_id=None,
-            flow_id=flow_id,
+            run_id=run_id,
         )
     assert "Events must have a triggered_by_id" in str(exc_info.value)
 
@@ -198,20 +198,20 @@ def test_event_inheritance() -> None:
 
 def test_event_concrete_implementation() -> None:
     """Test concrete event implementation with custom fields."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
     trigger_id = uuid.uuid4()
 
     evt = ValidationFailedEvent(
         reason="Invalid format",
         errors=("Missing field X", "Invalid type for Y"),
         triggered_by_id=trigger_id,
-        flow_id=flow_id,
+        run_id=run_id,
     )
 
     assert evt.reason == "Invalid format"
     assert evt.errors == ("Missing field X", "Invalid type for Y")
     assert evt.triggered_by_id == trigger_id
-    assert evt.flow_id == flow_id
+    assert evt.run_id == run_id
 
 
 def test_event_immutable_collections() -> None:
@@ -220,7 +220,7 @@ def test_event_immutable_collections() -> None:
         reason="test",
         errors=("error1", "error2"),
         triggered_by_id=uuid.uuid4(),
-        flow_id=create_flow_id(),
+        run_id=create_flow_id(),
     )
 
     # Tuple is immutable
@@ -231,12 +231,12 @@ def test_event_immutable_collections() -> None:
 
 def test_message_equality() -> None:
     """Test that messages with same fields are equal."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
     trigger_id = uuid.uuid4()
 
     # Commands should not be equal even with same data (different IDs)
-    cmd1 = ProcessCommand(data="same", triggered_by_id=None, flow_id=flow_id)
-    cmd2 = ProcessCommand(data="same", triggered_by_id=None, flow_id=flow_id)
+    cmd1 = ProcessCommand(data="same", triggered_by_id=None, run_id=run_id)
+    cmd2 = ProcessCommand(data="same", triggered_by_id=None, run_id=run_id)
     assert cmd1 != cmd2  # Different auto-generated IDs
 
     # Events should not be equal even with same data
@@ -244,13 +244,13 @@ def test_message_equality() -> None:
         result="same",
         processing_time_ms=100.0,
         triggered_by_id=trigger_id,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     evt2 = ProcessedEvent(
         result="same",
         processing_time_ms=100.0,
         triggered_by_id=trigger_id,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     assert evt1 != evt2  # Different auto-generated IDs
 
@@ -279,7 +279,7 @@ def _assert_polymorphic_message_properties(msg: Message) -> None:
     assert isinstance(msg, Message)
     assert hasattr(msg, "id")
     assert hasattr(msg, "timestamp")
-    assert hasattr(msg, "flow_id")
+    assert hasattr(msg, "run_id")
 
 
 def test_message_polymorphism() -> None:
@@ -320,21 +320,21 @@ def test_command_event_distinction() -> None:
 
 def test_cannot_instantiate_event_directly() -> None:
     """Test that Event cannot be instantiated directly."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     with pytest.raises(TypeError, match="Cannot instantiate abstract Event directly"):
         Event(
             triggered_by_id=uuid.uuid4(),
-            flow_id=flow_id,
+            run_id=run_id,
         )
 
 
 def test_cannot_instantiate_command_directly() -> None:
     """Test that Command cannot be instantiated directly."""
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     with pytest.raises(TypeError, match="Cannot instantiate abstract Command directly"):
         Command(
             triggered_by_id=None,
-            flow_id=flow_id,
+            run_id=run_id,
         )

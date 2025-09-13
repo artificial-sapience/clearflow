@@ -81,7 +81,7 @@ class ProcessorNode(MessageNode[ProcessCommand, ProcessedEvent]):
     async def process(self, message: ProcessCommand) -> ProcessedEvent:
         return ProcessedEvent(
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
             result=f"processed: {message.data}"
         )
 
@@ -99,7 +99,7 @@ flow_instance = (
 3. **Observable Flows**: Add observers for logging, monitoring, security
 4. **Type Safety**: Full generic type checking for message transformations
 5. **Immutable Messages**: All messages are frozen dataclasses
-6. **Causality Tracking**: Built-in `triggered_by_id` and `flow_id` fields
+6. **Causality Tracking**: Built-in `triggered_by_id` and `run_id` fields
 
 ## Prerequisites
 

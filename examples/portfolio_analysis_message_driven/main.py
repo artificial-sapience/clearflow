@@ -57,7 +57,7 @@ def create_market_scenario(scenario: str = "normal") -> StartAnalysisCommand:
     return StartAnalysisCommand(
         market_data=market_data,
         portfolio_constraints=constraints,
-        flow_id=uuid.uuid4(),  # Generate flow ID for this analysis session
+        run_id=uuid.uuid4(),  # Generate flow ID for this analysis session
     )
 
 

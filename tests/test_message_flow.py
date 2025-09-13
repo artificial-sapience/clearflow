@@ -38,13 +38,13 @@ class StartNode(Node[ProcessCommand, ProcessedEvent | ErrorEvent]):
             return ErrorEvent(
                 error_message="Start failed",
                 triggered_by_id=message.id,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
             )
         return ProcessedEvent(
             result=f"started: {message.data}",
             processing_time_ms=50.0,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -60,7 +60,7 @@ class TransformNode(Node[ProcessedEvent, ValidateCommand]):
             content=message.result,
             strict=True,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -77,12 +77,12 @@ class ValidateNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFaile
             return ValidationFailedEvent(
                 reason="Too short",
                 triggered_by_id=message.id,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
             )
         return ValidationPassedEvent(
             validated_content=message.content,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -98,7 +98,7 @@ class FinalizeNode(Node[ValidationPassedEvent, AnalysisCompleteEvent]):
             findings=f"Final: {message.validated_content}",
             confidence=0.99,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -109,8 +109,8 @@ async def test_simple_flow() -> None:
     flow = message_flow("simple", start).end(start, ProcessedEvent)
 
     # Execute flow
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
     result = await flow.process(input_msg)
 
@@ -134,8 +134,8 @@ async def test_flow_with_routing() -> None:
     )
 
     # Execute successful path
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="valid data", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="valid data", triggered_by_id=None, run_id=run_id)
 
     result = await flow.process(input_msg)
 
@@ -150,8 +150,8 @@ async def test_flow_with_error_handling() -> None:
 
     flow = message_flow("error_handling", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
 
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
     result = await flow.process(input_msg)
 
@@ -172,10 +172,10 @@ async def test_flow_with_branching() -> None:
         .end(validate, ValidationFailedEvent)  # Only test failure path
     )
 
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     # Test failure branch - make input that results in short content after "started: "
-    short_input = ProcessCommand(data="", triggered_by_id=None, flow_id=flow_id)  # "started: " = 9 chars < 10
+    short_input = ProcessCommand(data="", triggered_by_id=None, run_id=run_id)  # "started: " = 9 chars < 10
     result = await flow.process(short_input)
     assert isinstance(result, ValidationFailedEvent)
 
@@ -189,8 +189,8 @@ async def test_flow_missing_route_error() -> None:
     # Only route ProcessedEvent to transform, but don't handle ValidateCommand output
     flow = message_flow("incomplete", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
 
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
     # Should raise ValueError for missing route
     with pytest.raises(ValueError, match="No route defined") as exc_info:
@@ -223,8 +223,8 @@ async def test_flow_composability() -> None:
         .end(inner_flow, AnalysisCompleteEvent)
     )
 
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="composite test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="composite test", triggered_by_id=None, run_id=run_id)
 
     result = await outer_flow.process(input_msg)
 

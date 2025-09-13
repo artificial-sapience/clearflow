@@ -63,7 +63,7 @@ class QuantAnalystNode(MessageNode[StartAnalysisCommand, MarketAnalyzedEvent | A
                 insights=prediction.insights,
                 market_data=message.market_data,
                 constraints=message.portfolio_constraints,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -77,7 +77,7 @@ class QuantAnalystNode(MessageNode[StartAnalysisCommand, MarketAnalyzedEvent | A
                 fallback_action="hold",
                 market_data=message.market_data,
                 constraints=message.portfolio_constraints,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -119,7 +119,7 @@ class RiskAnalystNode(MessageNode[MarketAnalyzedEvent, RiskAssessedEvent | Analy
                 market_data=message.market_data,
                 constraints=message.constraints,
                 insights=message.insights,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -133,7 +133,7 @@ class RiskAnalystNode(MessageNode[MarketAnalyzedEvent, RiskAssessedEvent | Analy
                 fallback_action="hold",
                 market_data=message.market_data,
                 constraints=message.constraints,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -176,7 +176,7 @@ class PortfolioManagerNode(MessageNode[RiskAssessedEvent, RecommendationsGenerat
                 recommendations=prediction.recommendations,
                 assessment=message.assessment,
                 constraints=message.constraints,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -190,7 +190,7 @@ class PortfolioManagerNode(MessageNode[RiskAssessedEvent, RecommendationsGenerat
                 fallback_action="hold",
                 market_data=message.market_data,
                 constraints=message.constraints,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -231,7 +231,7 @@ class ComplianceOfficerNode(MessageNode[RecommendationsGeneratedEvent, Complianc
                 review=prediction.compliance_review,
                 recommendations=message.recommendations,
                 constraints=message.constraints,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -245,7 +245,7 @@ class ComplianceOfficerNode(MessageNode[RecommendationsGeneratedEvent, Complianc
                 fallback_action="hold",
                 market_data=None,
                 constraints=message.constraints,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -289,7 +289,7 @@ class DecisionMakerNode(MessageNode[ComplianceReviewedEvent | AnalysisFailedEven
             return DecisionMadeEvent(
                 decision=conservative_decision,
                 review=None,  # No compliance review available
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -302,7 +302,7 @@ class DecisionMakerNode(MessageNode[ComplianceReviewedEvent | AnalysisFailedEven
             return DecisionMadeEvent(
                 decision=prediction.trading_decision,
                 review=message.review,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )
 
@@ -319,6 +319,6 @@ class DecisionMakerNode(MessageNode[ComplianceReviewedEvent | AnalysisFailedEven
             return DecisionMadeEvent(
                 decision=conservative_decision,
                 review=None,  # No review available on error path
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 triggered_by_id=message.id,
             )

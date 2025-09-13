@@ -41,7 +41,7 @@ class DocumentChunkerNode(MessageNode[IndexDocumentsCommand, DocumentsChunkedEve
 
         return DocumentsChunkedEvent(
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
             chunks=all_chunks,
         )
 
@@ -75,7 +75,7 @@ class ChunkEmbedderNode(MessageNode[DocumentsChunkedEvent, ChunksEmbeddedEvent])
 
         return ChunksEmbeddedEvent(
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
             chunks=message.chunks,
             embeddings=embeddings_tuple,
         )
@@ -116,7 +116,7 @@ class IndexCreatorNode(MessageNode[ChunksEmbeddedEvent, IndexCreatedEvent]):
 
         return IndexCreatedEvent(
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
             chunks=message.chunks,
             embeddings=message.embeddings,
         )
@@ -144,7 +144,7 @@ class QueryEmbedderNode(MessageNode[QueryCommand, QueryEmbeddedEvent]):
 
         return QueryEmbeddedEvent(
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
             query=message.query,
             query_embedding=query_embedding_tuple,
             chunks=message.chunks,
@@ -197,7 +197,7 @@ class DocumentRetrieverNode(MessageNode[QueryEmbeddedEvent, DocumentsRetrievedEv
 
         return DocumentsRetrievedEvent(
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
             query=message.query,
             relevant_chunks=relevant_chunks,
         )
@@ -231,7 +231,7 @@ Answer:"""
 
         return AnswerGeneratedEvent(
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
             query=message.query,
             answer=answer,
             relevant_chunks=message.relevant_chunks,

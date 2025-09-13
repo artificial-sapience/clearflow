@@ -69,7 +69,7 @@ async def run_indexing_phase() -> tuple[tuple[str, ...], tuple[tuple[float, ...]
     documents = get_sample_documents()
     index_command = IndexDocumentsCommand(
         triggered_by_id=None,
-        flow_id=create_flow_id(),
+        run_id=create_flow_id(),
         documents=documents,
     )
 
@@ -108,7 +108,7 @@ async def run_query_phase(chunks: tuple[str, ...], embeddings: tuple[tuple[float
             # Create query command
             query_command = QueryCommand(
                 triggered_by_id=None,
-                flow_id=create_flow_id(),
+                run_id=create_flow_id(),
                 query=query_text,
                 chunks=chunks,
                 embeddings=embeddings,

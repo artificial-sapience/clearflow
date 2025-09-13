@@ -39,7 +39,7 @@ class ProcessorNode(Node[ProcessCommand, ProcessedEvent]):
             result=result,
             processing_time_ms=100.0,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -56,14 +56,14 @@ class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFail
                 reason="Content too short",
                 errors=("Length < 5",),
                 triggered_by_id=message.id,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
             )
 
         return ValidationPassedEvent(
             validated_content=message.content.upper(),
             validation_score=0.95,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -81,7 +81,7 @@ class AnalyzerNode(Node[AnalyzeCommand, AnalysisCompleteEvent | ErrorEvent]):
                 error_message="Empty input data",
                 error_type="validation",
                 triggered_by_id=message.id,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
             )
 
         findings = f"Analysis of {message.input_data}: {message.analysis_type}"
@@ -89,7 +89,7 @@ class AnalyzerNode(Node[AnalyzeCommand, AnalysisCompleteEvent | ErrorEvent]):
             findings=findings,
             confidence=0.85,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -105,18 +105,18 @@ class ChainNode(Node[ProcessedEvent, AnalyzeCommand]):
             input_data=message.result,
             analysis_type="detailed",
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
 def _create_test_command(data: str = "test data") -> ProcessCommand:
-    """Create a test command with default flow_id.
+    """Create a test command with default run_id.
 
     Returns:
         ProcessCommand with the specified data.
 
     """
-    return ProcessCommand(data=data, triggered_by_id=None, flow_id=create_flow_id())
+    return ProcessCommand(data=data, triggered_by_id=None, run_id=create_flow_id())
 
 
 def _assert_processed_event_correct(output: ProcessedEvent, input_msg: ProcessCommand, expected_result: str) -> None:
@@ -130,7 +130,7 @@ def _assert_event_metadata_correct(output: ProcessedEvent, input_msg: ProcessCom
     """Assert event metadata matches input message."""
     assert output.processing_time_ms == 100.0
     assert output.triggered_by_id == input_msg.id
-    assert output.flow_id == input_msg.flow_id
+    assert output.run_id == input_msg.run_id
 
 
 async def test_node_basic_processing() -> None:
@@ -153,14 +153,14 @@ def test_node_immutability() -> None:
 async def test_node_union_return_types() -> None:
     """Test nodes that return union types."""
     node = ValidatorNode()
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     # Test validation success
     valid_cmd = ValidateCommand(
         content="valid content",
         strict=True,
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     result = await node.process(valid_cmd)
     assert isinstance(result, ValidationPassedEvent)
@@ -171,7 +171,7 @@ async def test_node_union_return_types() -> None:
         content="bad",
         strict=True,
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
     result = await node.process(invalid_cmd)
     assert isinstance(result, ValidationFailedEvent)
@@ -231,13 +231,13 @@ async def test_node_message_chaining() -> None:
 async def test_node_error_handling() -> None:
     """Test node error event generation."""
     analyzer = AnalyzerNode(fail_on_empty=True)
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     # Empty input should trigger error
     cmd = AnalyzeCommand(
         input_data="",
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
 
     result = await analyzer.process(cmd)
@@ -249,19 +249,19 @@ async def test_node_error_handling() -> None:
 async def test_node_causality_preservation() -> None:
     """Test that nodes preserve message causality."""
     node = ProcessorNode()
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     cmd = ProcessCommand(
         data="test",
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
 
     output = await node.process(cmd)
 
     # Output should be triggered by input
     assert output.triggered_by_id == cmd.id
-    assert output.flow_id == cmd.flow_id
+    assert output.run_id == cmd.run_id
 
 
 def test_node_name_property() -> None:
@@ -280,12 +280,12 @@ async def test_node_with_configuration() -> None:
     # Configurable analyzer
     strict_analyzer = AnalyzerNode(name="strict", fail_on_empty=True)
     lenient_analyzer = AnalyzerNode(name="lenient", fail_on_empty=False)
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     empty_cmd = AnalyzeCommand(
         input_data="",
         triggered_by_id=None,
-        flow_id=flow_id,
+        run_id=run_id,
     )
 
     # Strict fails on empty
@@ -301,15 +301,15 @@ async def test_node_type_safety() -> None:
     """Test that nodes maintain type safety."""
     processor = ProcessorNode()
     validator = ValidatorNode()
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     # Processor expects ProcessCommand
-    process_cmd = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    process_cmd = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
     process_result = await processor.process(process_cmd)
     assert isinstance(process_result, ProcessedEvent)
 
     # Validator expects ValidateCommand (different type)
-    validate_cmd = ValidateCommand(content="test", triggered_by_id=None, flow_id=flow_id)
+    validate_cmd = ValidateCommand(content="test", triggered_by_id=None, run_id=run_id)
     validate_result = await validator.process(validate_cmd)
     assert isinstance(validate_result, (ValidationPassedEvent, ValidationFailedEvent))
 

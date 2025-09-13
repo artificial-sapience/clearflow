@@ -422,7 +422,7 @@ def _assert_processed_event_correct(output: ProcessedEvent, input_msg: ProcessCo
 def _assert_event_metadata_correct(output: ProcessedEvent, input_msg: ProcessCommand) -> None:
     assert output.processing_time_ms == 100.0
     assert output.triggered_by_id == input_msg.id
-    assert output.flow_id == input_msg.flow_id
+    assert output.run_id == input_msg.run_id
 ```
 
 ### Architecture Linter Enhancement
@@ -534,7 +534,7 @@ class MyCommand(Command):
     
     # Required causality (inherited from Message base)
     # triggered_by_id: MessageId | None
-    # flow_id: FlowId
+    # run_id: FlowId
 ```
 
 **Message Lifecycle**: Commands trigger work, Events represent outcomes

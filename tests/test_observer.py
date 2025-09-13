@@ -93,7 +93,7 @@ class SimpleProcessorNode(Node[ProcessCommand, ProcessedEvent]):
             result=f"processed: {message.data}",
             processing_time_ms=10.0,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -108,7 +108,7 @@ class TransformerNode(Node[ProcessedEvent, ValidateCommand]):
         return ValidateCommand(
             content=message.result,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -124,12 +124,12 @@ class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFail
             return ValidationFailedEvent(
                 reason="Contains 'fail'",
                 triggered_by_id=message.id,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
             )
         return ValidationPassedEvent(
             validated_content=message.content,
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
         )
 
 
@@ -138,8 +138,8 @@ async def test_observer_basic_functionality() -> None:
     logged: list[Message] = []
     observer = LoggingObserver(logged_messages=logged)
 
-    flow_id = create_flow_id()
-    msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
     await observer.observe(msg)
 
@@ -152,14 +152,14 @@ async def test_observer_type_filtering() -> None:
     event_count = [0]
     event_observer = EventCountObserver(event_count=event_count)
 
-    flow_id = create_flow_id()
+    run_id = create_flow_id()
 
     # Observer handles Event
     event = ProcessedEvent(
         result="test",
         processing_time_ms=1.0,
         triggered_by_id=create_flow_id(),
-        flow_id=flow_id,
+        run_id=run_id,
     )
     await event_observer.observe(event)
     assert event_count[0] == 1
@@ -192,8 +192,8 @@ async def test_observable_flow_basic() -> None:
     observable, logged = _create_basic_observable_flow()
 
     # Execute flow
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
     result = await observable.process(input_msg)
 
     # Check result
@@ -223,8 +223,8 @@ async def test_observable_flow_multiple_observers() -> None:
     )
 
     # Execute
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
     await observable.process(input_msg)
 
     # Both observers should have been called
@@ -243,8 +243,8 @@ async def test_observable_flow_fail_fast() -> None:
     observable = ObservableFlow(name="security_test", flow=core_flow, observers={}).observe(ProcessedEvent, security)
 
     # Execute with forbidden word
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="danger", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="danger", triggered_by_id=None, run_id=run_id)
 
     # Should raise SecurityError
     with pytest.raises(SecurityError) as exc_info:
@@ -306,8 +306,8 @@ async def test_observable_flow_with_routing() -> None:
     observable = ObservableFlow(name="observable_pipeline", flow=core_flow, observers={}).observe(Message, logger)
 
     # Execute
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="valid", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="valid", triggered_by_id=None, run_id=run_id)
     result = await observable.process(input_msg)
 
     assert isinstance(result, ValidationPassedEvent)
@@ -327,8 +327,8 @@ async def test_observable_flow_inheritance_matching() -> None:
     observable = ObservableFlow(name="inheritance_test", flow=core_flow, observers={}).observe(Event, event_observer)
 
     # Execute
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
     await observable.process(input_msg)
 
     # Should match ProcessedEvent as it's an Event
@@ -358,8 +358,8 @@ async def test_observable_flow_specific_message_observation() -> None:
     )
 
     # Execute with failure input
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="fail", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="fail", triggered_by_id=None, run_id=run_id)
     result = await observable.process(input_msg)
 
     assert isinstance(result, ValidationFailedEvent)
@@ -408,8 +408,8 @@ async def test_observable_flow_composability() -> None:
     )
 
     # Execute
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="nested", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="nested", triggered_by_id=None, run_id=run_id)
     result = await observable_outer.process(input_msg)
 
     assert isinstance(result, ValidateCommand)
@@ -446,8 +446,8 @@ async def test_observer_concurrent_execution() -> None:
     )
 
     # Execute
-    flow_id = create_flow_id()
-    input_msg = ProcessCommand(data="test", triggered_by_id=None, flow_id=flow_id)
+    run_id = create_flow_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
     await observable.process(input_msg)
 
     # All observers should have been called

@@ -66,7 +66,7 @@ def _create_chat_ended(message: StartChat | AssistantMessageReceived, history: t
     print("\nGoodbye!")
     return ChatEnded(
         triggered_by_id=message.id,
-        flow_id=message.flow_id,
+        run_id=message.run_id,
         final_history=history,
         reason="user_quit",
     )
@@ -101,7 +101,7 @@ class UserNode(MessageNode[StartChat | AssistantMessageReceived, UserMessageRece
 
             return UserMessageReceived(
                 triggered_by_id=message.id,
-                flow_id=message.flow_id,
+                run_id=message.run_id,
                 message=user_input,
                 conversation_history=updated_history,
             )
@@ -147,7 +147,7 @@ class AssistantNode(MessageNode[UserMessageReceived, AssistantMessageReceived]):
 
         return AssistantMessageReceived(
             triggered_by_id=message.id,
-            flow_id=message.flow_id,
+            run_id=message.run_id,
             message=ai_response,
             conversation_history=updated_history,
         )
