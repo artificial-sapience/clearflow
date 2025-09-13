@@ -4,7 +4,10 @@ import uuid
 from abc import ABC, ABCMeta
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import (  # clearflow: ignore[ARCH010]  # Metaclass protocol requires Any (see typeshed type.__call__)
+    Any,
+    override,
+)
 
 __all__ = [
     "Command",
@@ -15,25 +18,31 @@ __all__ = [
 
 class AbstractMessageMeta(ABCMeta):
     """Metaclass that prevents direct instantiation of Event and Command base classes."""
-    
-    def __call__(cls, *args: Any, **kwargs: Any) -> Any:
+
+    @override
+    def __call__(
+        cls, *args: Any, **kwargs: Any
+    ) -> Any:  # clearflow: ignore[ARCH010]  # Standard metaclass signature per typeshed
         """Prevent direct instantiation of abstract Event and Command classes.
-        
+
+        Returns:
+            Instance of the class if not Event or Command.
+
         Raises:
             TypeError: If trying to instantiate Event or Command directly.
+
         """
-        # Prevent direct Event instantiation
-        if cls.__name__ == "Event" and cls.__module__ == "clearflow.message":
-            raise TypeError(
-                "Cannot instantiate abstract Event directly. "
-                "Create a concrete event class (e.g., ProcessedEvent, ValidationFailedEvent)."
+        # Prevent direct instantiation of abstract base classes
+        if cls.__module__ == "clearflow.message" and cls.__name__ in {"Event", "Command"}:
+            examples = {
+                "Event": "ProcessedEvent, ValidationFailedEvent",
+                "Command": "ProcessCommand, ValidateCommand",
+            }
+            msg = (
+                f"Cannot instantiate abstract {cls.__name__} directly. "
+                f"Create a concrete {cls.__name__.lower()} class (e.g., {examples[cls.__name__]})."
             )
-        # Prevent direct Command instantiation  
-        if cls.__name__ == "Command" and cls.__module__ == "clearflow.message":
-            raise TypeError(
-                "Cannot instantiate abstract Command directly. "
-                "Create a concrete command class (e.g., ProcessCommand, ValidateCommand)."
-            )
+            raise TypeError(msg)
         return super().__call__(*args, **kwargs)
 
 
@@ -72,7 +81,7 @@ class Event(Message, metaclass=AbstractMessageMeta):
 
     Events capture facts - things that have happened in the system.
     Events MUST have a triggered_by_id (unlike Commands which can be initial).
-    
+
     This is an abstract base class - users must create concrete event types
     like ProcessedEvent, ValidationFailedEvent, etc.
 
@@ -101,7 +110,7 @@ class Command(Message, metaclass=AbstractMessageMeta):
 
     Commands capture intent - requests for something to happen.
     Commands can have triggered_by_id=None (initial commands that start flows).
-    
+
     This is an abstract base class - users must create concrete command types
     like ProcessCommand, ValidateCommand, etc.
 

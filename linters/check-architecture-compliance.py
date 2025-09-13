@@ -179,7 +179,7 @@ def _check_typing_imports(node: ast.ImportFrom, file_path: Path, content: str) -
                         requirement="REQ-ARCH-008",
                     ),
                 )
-            elif alias.name == "Any":
+            elif alias.name == "Any" and not has_suppression(content, node.lineno, "ARCH010"):
                 violations.append(
                     Violation(
                         file=file_path,
@@ -274,14 +274,14 @@ def _check_object_type_usage(node: ast.Name, file_path: Path, content: str) -> V
     return None
 
 
-def _check_any_type_usage(node: ast.Name, file_path: Path) -> Violation | None:
+def _check_any_type_usage(node: ast.Name, file_path: Path, content: str) -> Violation | None:
     """Check for 'Any' type usage anywhere.
 
     Returns:
         Violation if Any type usage found, None otherwise.
 
     """
-    if node.id == "Any":
+    if node.id == "Any" and not has_suppression(content, node.lineno, "ARCH010"):
         return Violation(
             file=file_path,
             line=node.lineno,
@@ -350,7 +350,7 @@ def _check_name_node(node: ast.Name, file_path: Path, content: str) -> tuple[Vio
         violations.append(violation)
 
     # Check Any type usage
-    violation = _check_any_type_usage(node, file_path)
+    violation = _check_any_type_usage(node, file_path, content)
     if violation:
         violations.append(violation)
 

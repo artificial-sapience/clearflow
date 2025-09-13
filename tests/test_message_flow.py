@@ -159,7 +159,7 @@ async def test_flow_with_error_handling() -> None:
         message_flow("error_handling", start)
         .from_node(start)
         .route(ProcessedEvent, transform)
-        .end(ErrorEvent)  # Error also from start - branching
+        .end(ErrorEvent)  # End with error from start
     )
 
     flow_id = create_flow_id()
@@ -201,12 +201,12 @@ async def test_flow_missing_route_error() -> None:
     transform = TransformNode()
 
     # Build flow missing route for ValidateCommand
+    # Only route ProcessedEvent to transform, but don't handle ValidateCommand output
     flow = (
         message_flow("incomplete", start)
+        .from_node(start)
         .route(ProcessedEvent, transform)
-        .end(
-            ValidationFailedEvent  # Wrong termination
-        )
+        .end(ErrorEvent)  # End ErrorEvent from start, ValidateCommand from transform has no route
     )
 
     flow_id = create_flow_id()
@@ -266,7 +266,7 @@ def test_flow_reachability_validation() -> None:
 
     # Try to route from unreachable node
     with pytest.raises(ValueError, match="not reachable from start") as exc_info:
-        builder.from_node(unreachable).route(ValidationPassedEvent, start)
+        builder.from_node(unreachable).route(ValidationPassedEvent, start)  # type: ignore[arg-type]  # Testing error condition
 
     assert "not reachable from start" in str(exc_info.value)
 

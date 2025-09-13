@@ -309,3 +309,25 @@ def test_command_event_distinction() -> None:
     # Both are Messages
     assert isinstance(cmd, Message)
     assert isinstance(evt, Message)
+
+
+def test_cannot_instantiate_event_directly() -> None:
+    """Test that Event cannot be instantiated directly."""
+    flow_id = create_flow_id()
+
+    with pytest.raises(TypeError, match="Cannot instantiate abstract Event directly"):
+        Event(
+            triggered_by_id=uuid.uuid4(),
+            flow_id=flow_id,
+        )
+
+
+def test_cannot_instantiate_command_directly() -> None:
+    """Test that Command cannot be instantiated directly."""
+    flow_id = create_flow_id()
+
+    with pytest.raises(TypeError, match="Cannot instantiate abstract Command directly"):
+        Command(
+            triggered_by_id=None,
+            flow_id=flow_id,
+        )

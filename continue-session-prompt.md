@@ -1,44 +1,32 @@
-# Continue Session: Fix Architecture Violations
+# Continue Session: Final Type Safety Polish
 
 Please continue working on the ClearFlow quality improvements.
 
 ## Context
-See `session-context.md` for complete background. We successfully completed PLR6301 test method conversion and implemented abstract Command/Event classes with a custom metaclass.
+See `session-context.md` for complete background. We've successfully fixed major type safety issues and design problems in the message-driven architecture, reducing pyright errors from 78 to just 2.
 
-## Current Blocker: Architecture Violations
-
-The quality check is failing with 4 ARCH010 violations in the metaclass implementation:
-
-```
-clearflow/message.py:7:0
-  ARCH010: Importing 'Any' type defeats type safety
-clearflow/message.py:19:29, 19:44, 19:52  
-  ARCH010: Using 'Any' type defeats type safety
-```
-
-The issue is in our `AbstractMessageMeta.__call__` method that uses `Any` for args/kwargs.
+## Current State
+- **88/88 tests passing** ✅
+- **100% coverage** ✅  
+- **Architecture compliance** ✅
+- **2 pyright errors remain** in test files
 
 ## Immediate Task
 
-**Fix the Any type usage in AbstractMessageMeta** while maintaining functionality.
+Fix the last 2 pyright errors in `tests/test_message_flow.py`:
+- Line 162: `end(ErrorEvent)` type mismatch
+- Line 209: `end(ErrorEvent)` type mismatch
 
-### Options to Consider:
-1. Replace `Any` with specific types (though metaclass signatures traditionally use Any)
-2. Use `*args: object, **kwargs: object` instead
-3. Define a Protocol for the expected signature
-4. Request architectural exception for metaclass patterns
+These occur where we intentionally create invalid flows for testing error conditions. The type ignores need to be placed correctly to suppress these specific errors.
 
 ## Expected Outcome
 
-After fixing the architecture violations:
-- Run `./quality-check.sh` - should pass architecture compliance
-- All 86 tests should still pass
-- Command/Event instantiation prevention should still work
+After fixing these:
+- Run `uv run pyright tests/` - should show 0 errors
+- All 88 tests should still pass
+- Coverage should remain at 100%
 
-## Next Steps
+## Note
+These are low priority since the tests work correctly. The errors are in test code where we're intentionally testing invalid configurations. However, cleaning them up would achieve perfect type safety across the entire codebase.
 
-Once architecture violations are resolved:
-1. Address remaining ~76 pyright type errors in flow routing
-2. Restore test coverage to 100%
-
-See `plan.md` for complete task list and priorities.
+See `plan.md` for any additional tasks.
