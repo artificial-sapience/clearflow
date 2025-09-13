@@ -109,24 +109,36 @@ class ChainNode(Node[ProcessedEvent, AnalyzeCommand]):
         )
 
 
+def _create_test_command(data: str = "test data") -> ProcessCommand:
+    """Create a test command with default flow_id.
+
+    Returns:
+        ProcessCommand with the specified data.
+
+    """
+    return ProcessCommand(data=data, triggered_by_id=None, flow_id=create_flow_id())
+
+
+def _assert_processed_event_correct(output: ProcessedEvent, input_msg: ProcessCommand, expected_result: str) -> None:
+    """Assert that processed event has expected properties."""
+    assert isinstance(output, ProcessedEvent)
+    assert output.result == expected_result
+    _assert_event_metadata_correct(output, input_msg)
+
+
+def _assert_event_metadata_correct(output: ProcessedEvent, input_msg: ProcessCommand) -> None:
+    """Assert event metadata matches input message."""
+    assert output.processing_time_ms == 100.0
+    assert output.triggered_by_id == input_msg.id
+    assert output.flow_id == input_msg.flow_id
+
+
 async def test_node_basic_processing() -> None:
     """Test basic node message processing."""
     node = ProcessorNode()
-    flow_id = create_flow_id()
-
-    input_msg = ProcessCommand(
-        data="test data",
-        triggered_by_id=None,
-        flow_id=flow_id,
-    )
-
+    input_msg = _create_test_command()
     output = await node.process(input_msg)
-
-    assert isinstance(output, ProcessedEvent)
-    assert output.result == "processed: test data"
-    assert output.processing_time_ms == 100.0
-    assert output.triggered_by_id == input_msg.id
-    assert output.flow_id == flow_id
+    _assert_processed_event_correct(output, input_msg, "processed: test data")
 
 
 def test_node_immutability() -> None:
@@ -166,31 +178,54 @@ async def test_node_union_return_types() -> None:
     assert result.reason == "Content too short"
 
 
+async def _process_chain_step1(processor: ProcessorNode, cmd: ProcessCommand) -> ProcessedEvent:
+    """Process first step in chain and validate result.
+
+    Returns:
+        ProcessedEvent from the processor.
+
+    """
+    event1 = await processor.process(cmd)
+    assert isinstance(event1, ProcessedEvent)
+    return event1
+
+
+async def _process_chain_step2(chainer: ChainNode, event1: ProcessedEvent) -> AnalyzeCommand:
+    """Process second step in chain and validate result.
+
+    Returns:
+        AnalyzeCommand from the chainer.
+
+    """
+    cmd2 = await chainer.process(event1)
+    assert isinstance(cmd2, AnalyzeCommand)
+    assert cmd2.input_data == event1.result
+    return cmd2
+
+
+async def _process_chain_step3(analyzer: AnalyzerNode, cmd2: AnalyzeCommand) -> AnalysisCompleteEvent:
+    """Process final step in chain and validate result.
+
+    Returns:
+        AnalysisCompleteEvent from the analyzer.
+
+    """
+    event2 = await analyzer.process(cmd2)
+    assert isinstance(event2, AnalysisCompleteEvent)
+    assert "processed: important" in event2.findings
+    return event2
+
+
 async def test_node_message_chaining() -> None:
     """Test chaining messages through multiple nodes."""
     processor = ProcessorNode()
     chainer = ChainNode()
     analyzer = AnalyzerNode(fail_on_empty=False)
-    flow_id = create_flow_id()
 
-    # Start with command
-    cmd = ProcessCommand(
-        data="important",
-        triggered_by_id=None,
-        flow_id=flow_id,
-    )
-
-    # Process through chain
-    event1 = await processor.process(cmd)
-    assert isinstance(event1, ProcessedEvent)
-
-    cmd2 = await chainer.process(event1)
-    assert isinstance(cmd2, AnalyzeCommand)
-    assert cmd2.input_data == event1.result
-
-    event2 = await analyzer.process(cmd2)
-    assert isinstance(event2, AnalysisCompleteEvent)
-    assert "processed: important" in event2.findings
+    cmd = _create_test_command("important")
+    event1 = await _process_chain_step1(processor, cmd)
+    cmd2 = await _process_chain_step2(chainer, event1)
+    await _process_chain_step3(analyzer, cmd2)
 
 
 async def test_node_error_handling() -> None:

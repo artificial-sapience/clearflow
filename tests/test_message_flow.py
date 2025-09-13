@@ -156,10 +156,7 @@ async def test_flow_with_error_handling() -> None:
     transform = TransformNode()
 
     flow = (
-        message_flow("error_handling", start)
-        .from_node(start)
-        .route(ProcessedEvent, transform)
-        .end(ErrorEvent)  # End with error from start
+        message_flow("error_handling", start).from_node(start).route(ProcessedEvent, transform).end(ErrorEvent)  # type: ignore[arg-type]  # Testing error path: ending on partial union type
     )
 
     flow_id = create_flow_id()
@@ -203,10 +200,7 @@ async def test_flow_missing_route_error() -> None:
     # Build flow missing route for ValidateCommand
     # Only route ProcessedEvent to transform, but don't handle ValidateCommand output
     flow = (
-        message_flow("incomplete", start)
-        .from_node(start)
-        .route(ProcessedEvent, transform)
-        .end(ErrorEvent)  # End ErrorEvent from start, ValidateCommand from transform has no route
+        message_flow("incomplete", start).from_node(start).route(ProcessedEvent, transform).end(ErrorEvent)  # type: ignore[arg-type]  # Testing incomplete flow: ending on partial union type
     )
 
     flow_id = create_flow_id()

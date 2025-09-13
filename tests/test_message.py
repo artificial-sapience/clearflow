@@ -132,17 +132,18 @@ def test_command_optional_trigger() -> None:
     assert cmd2.triggered_by_id == cmd1.id
 
 
+def _assert_has_message_fields(obj: Message) -> None:
+    """Assert object has all required Message fields."""
+    assert hasattr(obj, "id")
+    assert hasattr(obj, "timestamp")
+    assert hasattr(obj, "flow_id")
+    assert hasattr(obj, "triggered_by_id")
+
+
 def test_command_inheritance() -> None:
     """Test that Command properly inherits from Message."""
     cmd = create_test_command()
-
-    # Should have all Message fields
-    assert hasattr(cmd, "id")
-    assert hasattr(cmd, "timestamp")
-    assert hasattr(cmd, "flow_id")
-    assert hasattr(cmd, "triggered_by_id")
-
-    # Should be a Message
+    _assert_has_message_fields(cmd)
     assert isinstance(cmd, Message)
     assert isinstance(cmd, Command)
 
@@ -190,14 +191,7 @@ def test_event_required_trigger() -> None:
 def test_event_inheritance() -> None:
     """Test that Event properly inherits from Message."""
     evt = create_test_event()
-
-    # Should have all Message fields
-    assert hasattr(evt, "id")
-    assert hasattr(evt, "timestamp")
-    assert hasattr(evt, "flow_id")
-    assert hasattr(evt, "triggered_by_id")
-
-    # Should be a Message
+    _assert_has_message_fields(evt)
     assert isinstance(evt, Message)
     assert isinstance(evt, Event)
 
@@ -280,6 +274,14 @@ def test_message_hashability() -> None:
     assert message_dict[evt] == "event"
 
 
+def _assert_polymorphic_message_properties(msg: Message) -> None:
+    """Assert message has polymorphic properties."""
+    assert isinstance(msg, Message)
+    assert hasattr(msg, "id")
+    assert hasattr(msg, "timestamp")
+    assert hasattr(msg, "flow_id")
+
+
 def test_message_polymorphism() -> None:
     """Test that messages can be used polymorphically."""
     messages: tuple[Message, ...] = (
@@ -288,10 +290,19 @@ def test_message_polymorphism() -> None:
     )
 
     for msg in messages:
-        assert isinstance(msg, Message)
-        assert hasattr(msg, "id")
-        assert hasattr(msg, "timestamp")
-        assert hasattr(msg, "flow_id")
+        _assert_polymorphic_message_properties(msg)
+
+
+def _assert_command_type_checks(cmd: Message) -> None:
+    """Assert command is Command but not Event."""
+    assert isinstance(cmd, Command)
+    assert not isinstance(cmd, Event)
+
+
+def _assert_event_type_checks(evt: Message) -> None:
+    """Assert event is Event but not Command."""
+    assert isinstance(evt, Event)
+    assert not isinstance(evt, Command)
 
 
 def test_command_event_distinction() -> None:
@@ -299,12 +310,8 @@ def test_command_event_distinction() -> None:
     cmd = create_test_command()
     evt = create_test_event()
 
-    # Type checks
-    assert isinstance(cmd, Command)
-    assert not isinstance(cmd, Event)
-
-    assert isinstance(evt, Event)
-    assert not isinstance(evt, Command)
+    _assert_command_type_checks(cmd)
+    _assert_event_type_checks(evt)
 
     # Both are Messages
     assert isinstance(cmd, Message)

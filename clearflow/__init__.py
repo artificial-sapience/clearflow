@@ -8,7 +8,7 @@ from typing import Protocol, cast, final, override
 
 # Import message API components
 from clearflow.message import Command, Event, Message
-from clearflow.message_flow import message_flow
+from clearflow.message_flow import MessageFlow, message_flow
 from clearflow.message_node import Node as MessageNode
 from clearflow.observer import ObservableFlow, Observer
 
@@ -16,6 +16,7 @@ __all__ = [
     "Command",
     "Event",
     "Message",
+    "MessageFlow",
     "MessageNode",
     "Node",
     "NodeResult",

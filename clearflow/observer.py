@@ -15,10 +15,9 @@ __all__ = [
 ]
 
 # Import internal flow implementation for decorator pattern
-# This is intentionally using a private class within the same package
 from clearflow.message_flow import (
+    MessageFlow,
     MessageRouteKey,
-    _MessageFlow,  # pyright: ignore[reportPrivateUsage]  # Internal package use
 )
 from clearflow.message_node import Node
 
@@ -63,7 +62,7 @@ class ObservableFlow[TStart: Message, TEnd: Message](Node[TStart, TEnd]):
     """
 
     name: str
-    flow: _MessageFlow[TStart, TEnd]  # Explicitly requires a flow, not any node
+    flow: MessageFlow[TStart, TEnd]  # Explicitly requires a flow, not any node
     observers: Mapping[type[Message], tuple[Observer[Message], ...]] = field(
         default_factory=lambda: MappingProxyType({})
     )

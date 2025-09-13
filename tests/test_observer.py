@@ -6,11 +6,11 @@ concurrent execution, and decorator-based flow observation.
 """
 
 from dataclasses import FrozenInstanceError, dataclass
-from typing import override
+from typing import cast, override
 
 import pytest
 
-from clearflow import Event, Message, ObservableFlow, Observer, message_flow
+from clearflow import Event, Message, MessageFlow, ObservableFlow, Observer, message_flow
 from clearflow import MessageNode as Node
 from tests.conftest_message import (
     ProcessCommand,
@@ -165,21 +165,31 @@ async def test_observer_type_filtering() -> None:
     assert event_count[0] == 1
 
 
-async def test_observable_flow_basic() -> None:
-    """Test basic observable flow functionality."""
-    # Create a simple flow
+def _create_basic_observable_flow() -> tuple[ObservableFlow[ProcessCommand, ProcessedEvent], list[Message]]:
+    """Create a basic observable flow with logger.
+
+    Returns:
+        Tuple of observable flow and logged messages list.
+
+    """
     processor = SimpleProcessorNode()
     core_flow = message_flow("test", processor).end(ProcessedEvent)
-
-    # Make it observable
     logged: list[Message] = []
     logger = LoggingObserver(logged_messages=logged)
+    observable = ObservableFlow(name="observable_test", flow=core_flow, observers={}).observe(Message, logger)
+    return observable, logged
 
-    observable = ObservableFlow(
-        name="observable_test",
-        flow=core_flow,
-        observers={},
-    ).observe(Message, logger)
+
+def _assert_basic_observations(logged: list[Message]) -> None:
+    """Assert basic observations are correct."""
+    assert len(logged) == 2  # Input and output
+    assert isinstance(logged[0], ProcessCommand)
+    assert isinstance(logged[1], ProcessedEvent)
+
+
+async def test_observable_flow_basic() -> None:
+    """Test basic observable flow functionality."""
+    observable, logged = _create_basic_observable_flow()
 
     # Execute flow
     flow_id = create_flow_id()
@@ -189,11 +199,7 @@ async def test_observable_flow_basic() -> None:
     # Check result
     assert isinstance(result, ProcessedEvent)
     assert result.result == "processed: test"
-
-    # Check observations
-    assert len(logged) == 2  # Input and output
-    assert isinstance(logged[0], ProcessCommand)
-    assert isinstance(logged[1], ProcessedEvent)
+    _assert_basic_observations(logged)
 
 
 async def test_observable_flow_multiple_observers() -> None:
@@ -248,27 +254,59 @@ async def test_observable_flow_fail_fast() -> None:
     assert "danger" in str(exc_info.value)
 
 
-async def test_observable_flow_with_routing() -> None:
-    """Test observable flow with multiple nodes and routing."""
-    # Create multi-node flow
-    processor = SimpleProcessorNode()
-    transformer = TransformerNode()
-    validator = ValidatorNode()
+def _create_routing_pipeline() -> tuple[SimpleProcessorNode, TransformerNode, ValidatorNode]:
+    """Create the nodes for the routing pipeline.
 
-    core_flow = (
+    Returns:
+        Tuple of processor, transformer, and validator nodes.
+
+    """
+    return SimpleProcessorNode(), TransformerNode(), ValidatorNode()
+
+
+def _build_core_routing_flow(
+    processor: SimpleProcessorNode, transformer: TransformerNode, validator: ValidatorNode
+) -> MessageFlow[ProcessCommand, ValidationPassedEvent]:
+    """Build the core flow with routing between nodes.
+
+    Returns:
+        MessageFlow with routing configured.
+
+    """
+    return cast(
+        "MessageFlow[ProcessCommand, ValidationPassedEvent]",
         message_flow("pipeline", processor)
         .from_node(processor)
         .route(ProcessedEvent, transformer)
         .from_node(transformer)
         .route(ValidateCommand, validator)
         .from_node(validator)
-        .end(ValidationPassedEvent)
+        .end(ValidationPassedEvent),
     )
+
+
+def _assert_routing_messages_logged(logged: list[Message]) -> None:
+    """Assert correct messages were logged in routing test."""
+    assert len(logged) == 4  # Input + 3 intermediate outputs
+    _assert_message_types_correct(logged)
+
+
+def _assert_message_types_correct(logged: list[Message]) -> None:
+    """Assert message types in logged sequence are correct."""
+    assert isinstance(logged[0], ProcessCommand)
+    assert isinstance(logged[1], ProcessedEvent)
+    assert isinstance(logged[2], ValidateCommand)
+    assert isinstance(logged[3], ValidationPassedEvent)
+
+
+async def test_observable_flow_with_routing() -> None:
+    """Test observable flow with multiple nodes and routing."""
+    processor, transformer, validator = _create_routing_pipeline()
+    core_flow = _build_core_routing_flow(processor, transformer, validator)
 
     # Add observer for all messages
     logged: list[Message] = []
     logger = LoggingObserver(logged_messages=logged)
-
     observable = ObservableFlow(name="observable_pipeline", flow=core_flow, observers={}).observe(Message, logger)
 
     # Execute
@@ -277,13 +315,7 @@ async def test_observable_flow_with_routing() -> None:
     result = await observable.process(input_msg)
 
     assert isinstance(result, ValidationPassedEvent)
-
-    # Should have observed all intermediate messages
-    assert len(logged) == 4  # Input + 3 intermediate outputs
-    assert isinstance(logged[0], ProcessCommand)
-    assert isinstance(logged[1], ProcessedEvent)
-    assert isinstance(logged[2], ValidateCommand)
-    assert isinstance(logged[3], ValidationPassedEvent)
+    _assert_routing_messages_logged(logged)
 
 
 async def test_observable_flow_inheritance_matching() -> None:
