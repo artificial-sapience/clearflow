@@ -99,16 +99,38 @@ The ONLY changes are:
 
 ### Phase 2: Testing and Validation
 
-#### Task 2.1: Update Core Framework Tests
+#### Task 2.1: Update test_message_flow.py
 
-- [ ] Update all MessageFlow tests in tests/test_message_flow.py
+- [ ] Update all MessageFlow tests to use explicit source node routing
+- [ ] Replace all `from_node()` usage with new `.route(from_node, message_type, to_node)` syntax
 - [ ] Add tests for single termination enforcement
 - [ ] Add tests for loops with termination
 - [ ] Add tests for orphan node detection
 - [ ] Ensure 100% test coverage maintained
 - [ ] **Run `./quality-check.sh tests/test_message_flow.py` - MUST PASS 100%**
 
-#### Task 2.2: Full Codebase Quality Compliance
+#### Task 2.2: Update test_message.py
+
+- [ ] Check for any message_flow usage that needs updating
+- [ ] Update any flow construction to use new API
+- [ ] Ensure all message type tests still pass
+- [ ] **Run `./quality-check.sh tests/test_message.py` - MUST PASS 100%**
+
+#### Task 2.3: Update test_message_node.py
+
+- [ ] Check for any message_flow usage that needs updating
+- [ ] Update any flow construction examples in tests
+- [ ] Ensure all node tests still pass
+- [ ] **Run `./quality-check.sh tests/test_message_node.py` - MUST PASS 100%**
+
+#### Task 2.4: Update test_observer.py
+
+- [ ] Update any MessageFlow usage to new API syntax
+- [ ] Replace `from_node()` patterns with explicit routing
+- [ ] Ensure observer tests work with new flow construction
+- [ ] **Run `./quality-check.sh tests/test_observer.py` - MUST PASS 100%**
+
+#### Task 2.5: Full Codebase Quality Compliance
 
 - [ ] **Run `./quality-check.sh` on entire codebase - MUST PASS 100%**
 - [ ] Fix any architecture compliance violations (NO suppressions)
@@ -120,7 +142,7 @@ The ONLY changes are:
 - [ ] Ensure 100% test coverage maintained
 - [ ] **Final run: `./quality-check.sh` - MUST PASS with ZERO violations**
 
-#### Task 2.3: Integration Testing
+#### Task 2.6: Integration Testing
 
 - [ ] Test chat example with real OpenAI API
 - [ ] Test portfolio example with DSPy integration
