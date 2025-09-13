@@ -405,6 +405,99 @@ if node.module in non_public_modules and is_test_file:
 3. Only proceed if approved
 4. Always include justification comment in suppression
 
+## Message-Driven Architecture Migration
+
+### Creating Parallel Examples Strategy
+
+**Pattern**: Always create message-driven versions alongside legacy examples before removal
+**Benefits**: Validates new architecture, provides migration reference, maintains working code
+
+**Directory Structure**:
+```
+examples/
+├── chat/                    # Legacy Node-Flow-State
+├── chat_message_driven/     # New message-driven version  
+├── rag/                     # Legacy
+├── rag_message_driven/      # New
+└── README_message_driven.md # Architecture comparison guide
+```
+
+**Critical Design Rule**: Avoid god-objects in events
+**Implementation**: Each message should have single responsibility, focused data
+```python
+# Bad: God-object event
+@dataclass(frozen=True, kw_only=True)
+class AnalysisCompleteEvent(Event):
+    full_market_data: MarketData      # Too much data
+    all_analysis_results: dict       # Multiple concerns
+    trading_recommendations: list    # Different responsibility
+
+# Good: Focused events  
+@dataclass(frozen=True, kw_only=True)
+class MarketDataAnalyzedEvent(Event):
+    asset_symbol: str
+    analysis_score: float
+    
+@dataclass(frozen=True, kw_only=True)
+class RecommendationGeneratedEvent(Event):
+    asset_symbol: str
+    recommendation: str
+    confidence: float
+```
+
+### Message-Driven Flow Construction Patterns
+
+**Standard Pattern**: Chain message transformations with explicit routing
+```python
+flow = (
+    message_flow("ProcessName", start_node)
+    .from_node(start_node)
+    .route(OutputEvent, transform_node)
+    .from_node(transform_node)
+    .route(TransformedEvent, end_node)
+    .from_node(end_node)
+    .end(FinalEvent)
+)
+```
+
+**Two-Phase Pattern**: Separate flows for different lifecycle phases
+```python
+# Phase 1: Setup/Indexing
+indexing_flow = create_indexing_flow()
+index_result = await indexing_flow.process(setup_command)
+
+# Phase 2: Runtime/Query  
+query_flow = create_query_flow()
+query_result = await query_flow.process(QueryCommand(
+    data=index_result.prepared_data,
+    query=user_input
+))
+```
+
+### Message Design Principles
+
+**Causality Tracking**: All messages must include flow tracking
+```python
+@dataclass(frozen=True, kw_only=True)
+class MyCommand(Command):
+    # Business data
+    data: str
+    
+    # Required causality (inherited from Message base)
+    # triggered_by_id: MessageId | None
+    # flow_id: FlowId
+```
+
+**Message Lifecycle**: Commands trigger work, Events represent outcomes
+- **Commands**: Imperative requests ("ProcessDocument", "GenerateResponse")
+- **Events**: Past-tense facts ("DocumentProcessed", "ResponseGenerated")
+
+### Alpha Release Classification
+
+**Strategy**: Use Alpha status to justify breaking changes in minor releases
+**Justification**: Low adoption (no GitHub stars/issues) allows architectural shifts
+**pyproject.toml**: `"Development Status :: 3 - Alpha"` enables minor version breaking changes
+
 ## Messaging Principles
 
 - **Avoid vague claims** - "Full transparency" misleads about features we don't have
