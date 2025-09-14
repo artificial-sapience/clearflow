@@ -3,11 +3,10 @@
 import uuid
 from abc import ABC
 from datetime import UTC, datetime
-from typing import Self
 
 from pydantic import AwareDatetime, Field, model_validator
 
-from clearflow.strict_dataclass import strict_dataclass
+from clearflow.strict_base_model import StrictBaseModel
 
 __all__ = [
     "Command",
@@ -26,11 +25,10 @@ def _utc_now() -> AwareDatetime:
     return datetime.now(UTC)
 
 
-@strict_dataclass
-class Message(ABC):
+class Message(StrictBaseModel, ABC):
     """Base message class for all messages in the system.
 
-    All messages are immutable frozen dataclasses with causality tracking.
+    All messages are immutable via StrictBaseModel with causality tracking.
     Messages form the foundation of type-safe routing and orchestration.
     """
 
@@ -42,12 +40,9 @@ class Message(ABC):
     @property
     def message_type(self) -> type["Message"]:
         """Return the concrete message type for routing."""
-        # Type mismatch is expected: Pydantic dataclass has additional attributes
-        # but we only care about the Message type for routing purposes
-        return type(self)  # pyright: ignore[reportReturnType]
+        return type(self)
 
 
-@strict_dataclass
 class Event(Message):
     """Abstract base Event extending Message for causality tracking.
 
@@ -65,7 +60,7 @@ class Event(Message):
     """
 
     @model_validator(mode="after")
-    def _validate_event(self) -> Self:
+    def _validate_event(self) -> "Event":
         """Validate Event constraints.
 
         Returns:
@@ -85,15 +80,13 @@ class Event(Message):
             raise TypeError(msg)
 
         # Validate that triggered_by_id is set for events
-        # Use getattr because Pyright can't see inherited Pydantic fields
-        if getattr(self, "triggered_by_id", None) is None:
+        if self.triggered_by_id is None:
             msg = "Events must have a triggered_by_id"
             raise ValueError(msg)
 
         return self
 
 
-@strict_dataclass
 class Command(Message):
     """Abstract base Command extending Message for causality tracking.
 
@@ -111,7 +104,7 @@ class Command(Message):
     """
 
     @model_validator(mode="after")
-    def _validate_command(self) -> Self:
+    def _validate_command(self) -> "Command":
         """Validate Command constraints.
 
         Returns:
@@ -130,5 +123,3 @@ class Command(Message):
             raise TypeError(msg)
 
         return self
-
-    # Uses default triggered_by_id: uuid.UUID | None from Message

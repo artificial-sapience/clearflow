@@ -8,23 +8,14 @@ flow input/output boundaries.
 
 import sys
 from collections.abc import Mapping
-from dataclasses import dataclass
-from types import MappingProxyType
-from typing import Protocol, cast, final
+from typing import cast, final
+
+from pydantic import ConfigDict, Field
 
 from clearflow.callbacks import CallbackHandler
 from clearflow.message import Message
-
-
-class NodeProtocol(Protocol):
-    """Protocol for message nodes with type erasure for runtime compatibility."""
-
-    name: str
-
-    async def process(self, message: Message) -> Message:
-        """Process a message."""
-        ...
-
+from clearflow.message_node import Node
+from clearflow.strict_base_model import StrictBaseModel
 
 __all__ = [
     "MessageFlow",
@@ -35,8 +26,7 @@ MessageRouteKey = tuple[type[Message], str]  # (outcome, node_name)
 
 
 @final
-@dataclass(frozen=True, kw_only=True)
-class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
+class MessageFlow[TStartMessage: Message, TEndMessage: Message](StrictBaseModel):
     """Message flow that routes messages based on their types.
 
     Executes flows by routing messages through nodes based on their runtime types.
@@ -53,8 +43,8 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
     """
 
     name: str
-    start_node: NodeProtocol
-    routes: Mapping[MessageRouteKey, NodeProtocol | None]
+    start_node: Node[Message, Message]
+    routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
 
     async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
@@ -79,7 +69,7 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
             # REQ-006: Log but don't propagate
             sys.stderr.write(f"Callback {method} failed: {e}\n")
 
-    async def _execute_node(self, node: NodeProtocol, message: Message) -> Message:
+    async def _execute_node(self, node: Node[Message, Message], message: Message) -> Message:
         """Execute a single node with callback notifications.
 
         Args:
@@ -104,7 +94,7 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
             await self._safe_callback("on_node_end", node.name, output, None)
             return output
 
-    def _get_next_node(self, message: Message, current_node: NodeProtocol) -> NodeProtocol | None:
+    def _get_next_node(self, message: Message, current_node: Node[Message, Message]) -> Node[Message, Message] | None:
         """Get the next node for routing based on message type.
 
         Args:
@@ -163,8 +153,7 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
 
 
 @final
-@dataclass(frozen=True, kw_only=True)
-class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
+class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBaseModel):
     """Builder for composing message routes with explicit source nodes.
 
     Uses the pattern from the original flow API where each route explicitly
@@ -181,11 +170,13 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
     Call end() to specify where the flow terminates and get the completed flow.
     """
 
-    _name: str
-    _start_node: NodeProtocol  # At runtime, this is type-erased
-    _routes: MappingProxyType[MessageRouteKey, NodeProtocol | None]
-    _reachable_nodes: frozenset[str]  # Node names that are reachable from start
-    _callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks
+    model_config = ConfigDict(frozen=True, strict=True, arbitrary_types_allowed=True)
+
+    _name: str = Field(alias="name")
+    _start_node: Node[Message, Message] = Field(alias="start_node")  # At runtime, this is type-erased
+    _routes: MappingProxyType[MessageRouteKey, Node[Message, Message] | None] = Field(alias="routes")
+    _reachable_nodes: frozenset[str] = Field(alias="reachable_nodes")  # Node names that are reachable from start
+    _callbacks: CallbackHandler | None = Field(default=None, alias="callbacks")  # REQ-009: Optional callbacks
 
     def _validate_and_create_route(
         self, from_node_name: str, outcome: type[Message], *, is_termination: bool = False
@@ -232,18 +223,18 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
 
         """
         return _MessageFlowBuilder[TStartMessage, TStartOut](
-            _name=self._name,
-            _start_node=self._start_node,
-            _routes=self._routes,
-            _reachable_nodes=self._reachable_nodes,
-            _callbacks=handler,
+            name=self._name,
+            start_node=self._start_node,
+            routes=self._routes,
+            reachable_nodes=self._reachable_nodes,
+            callbacks=handler,
         )
 
     def route(
         self,
-        from_node: NodeProtocol,
+        from_node: Node[Message, Message],
         outcome: type[Message],
-        to_node: NodeProtocol,
+        to_node: Node[Message, Message],
     ) -> "_MessageFlowBuilder[TStartMessage, TStartOut]":
         """Route specific message type from source node to destination.
 
@@ -274,16 +265,16 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
         new_reachable = self._reachable_nodes | {to_node.name}
 
         return _MessageFlowBuilder[TStartMessage, TStartOut](
-            _name=self._name,
-            _start_node=self._start_node,
-            _routes=MappingProxyType(new_routes),
-            _reachable_nodes=new_reachable,
-            _callbacks=self._callbacks,
+            name=self._name,
+            start_node=self._start_node,
+            routes=MappingProxyType(new_routes),
+            reachable_nodes=new_reachable,
+            callbacks=self._callbacks,
         )
 
     def end[TEndMessage: Message](
         self,
-        from_node: NodeProtocol,
+        from_node: Node[Message, Message],
         outcome: type[TEndMessage],
     ) -> MessageFlow[TStartMessage, TEndMessage]:
         """Mark message type as terminal from source node.
@@ -311,7 +302,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
 
 def message_flow(
     name: str,
-    start_node: NodeProtocol,  # At runtime, accepts any node
+    start_node: Node[Message, Message],  # At runtime, accepts any node
 ) -> _MessageFlowBuilder[Message, Message]:
     """Create a message flow with explicit routing.
 
@@ -332,9 +323,9 @@ def message_flow(
 
     """
     return _MessageFlowBuilder[Message, Message](
-        _name=name,
-        _start_node=start_node,
-        _routes=MappingProxyType({}),
-        _reachable_nodes=frozenset({start_node.name}),
-        _callbacks=None,  # REQ-016: Zero overhead when no callbacks attached
+        name=name,
+        start_node=start_node,
+        routes=MappingProxyType({}),
+        reachable_nodes=frozenset({start_node.name}),
+        callbacks=None,  # REQ-016: Zero overhead when no callbacks attached
     )

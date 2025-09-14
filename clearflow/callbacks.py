@@ -9,9 +9,10 @@ import sys
 from typing import override
 
 from clearflow.message import Message
+from clearflow.strict_base_model import StrictBaseModel
 
 
-class CallbackHandler:
+class CallbackHandler(StrictBaseModel):
     """Base class for handling flow lifecycle callbacks.
 
     REQ-001: Defines CallbackHandler base class with lifecycle methods.
@@ -96,14 +97,7 @@ class CompositeHandler(CallbackHandler):
     so one handler's failure doesn't affect others.
     """
 
-    def __init__(self, *handlers: CallbackHandler) -> None:
-        """Initialize with multiple handlers.
-
-        Args:
-            *handlers: Callback handlers to execute in order
-
-        """
-        self.handlers = handlers
+    handlers: tuple[CallbackHandler, ...]  # Immutable tuple for Pydantic
 
     @override
     async def on_flow_start(self, flow_name: str, message: Message) -> None:

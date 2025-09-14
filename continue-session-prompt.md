@@ -1,38 +1,36 @@
-# Continue Pydantic Migration Session
+# Continue Pydantic BaseModel Migration Session
 
 Please read the following context files to understand the current state:
 
-1. @session-context.md - Full context from previous session
+1. @session-context.md - Full context from previous session including completed work
 2. @plan.md - Remaining tasks and current progress
 
 ## Current Task
 
-We're migrating ClearFlow from vanilla dataclasses to Pydantic dataclasses for maximum type safety and validation. We've completed Phases 1-3 but hit a blocker in Phase 4.
+We're migrating ClearFlow's message-driven architecture from Pydantic dataclasses to Pydantic BaseModel for maximum type safety, correctness, and proper generic support.
 
-## Immediate Priority
+## Immediate Next Step
 
-**Resolve MessageFlow inheritance issue**: MessageFlow inherits from Node (now a Pydantic dataclass) but itself uses vanilla `@dataclass`, causing ~76 type errors.
+**Phase 2: Node Infrastructure to BaseModel**
 
-**Your task**:
+Start by converting the `Node` class in `clearflow/message_node.py`:
+1. Change from `@strict_dataclass` to inherit from `StrictBaseModel`
+2. Ensure generic type parameters work with PEP 695 syntax
+3. Update validators as needed
+4. Run `./quality-check.sh clearflow/message_node.py`
 
-1. Analyze why MessageFlow can't simply use `@strict_dataclass`
-2. Propose and implement a solution that uses `@strict_dataclass`
-3. Ensure both MessageFlow and _MessageFlowBuilder are properly migrated
-4. Run `./quality-check.sh clearflow/message_flow.py` to verify
+## Key Context
 
-## Constraints
-
-- Prefer maximum strictness (use `@strict_dataclass` wherever possible)
-- Maintain 100% quality check compliance
-- Don't use suppressions without explicit approval
-- Follow patterns established in session-context.md
+- We created `StrictBaseModel` as our base class with strictest validation
+- Message, Event, and Command classes already migrated successfully
+- No backwards compatibility needed (feature branch)
+- NodeProtocol workaround can be removed once MessageFlow uses BaseModel
 
 ## Success Criteria
 
-- MessageFlow properly inherits from Pydantic Node
-- Zero type errors in message_flow.py
-- Quality check passes 100%
+- All quality checks must pass 100%
+- Maintain Grade A complexity
+- Preserve all validation rules
+- Generic types must work properly
 
-After resolving MessageFlow, we'll tackle the test suite updates (Phase 6) where ~300+ test message classes need migration to `@strict_dataclass`.
-
-Let's continue where we left off!
+Continue with Phase 2 as outlined in the plan!

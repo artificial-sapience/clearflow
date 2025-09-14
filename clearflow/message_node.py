@@ -1,20 +1,18 @@
 """Node implementation for message-driven architecture."""
 
 from abc import ABC, abstractmethod
-from typing import Self
 
 from pydantic import model_validator
 
 from clearflow.message import Message
-from clearflow.strict_dataclass import strict_dataclass
+from clearflow.strict_base_model import StrictBaseModel
 
 __all__ = [
     "Node",
 ]
 
 
-@strict_dataclass
-class Node[TMessageIn: Message, TMessageOut: Message](ABC):
+class Node[TMessageIn: Message, TMessageOut: Message](StrictBaseModel, ABC):
     """Orchestration node that can embody AI intelligence.
 
     Accepts: Commands or Events (triggers for processing)
@@ -34,7 +32,7 @@ class Node[TMessageIn: Message, TMessageOut: Message](ABC):
     name: str
 
     @model_validator(mode="after")
-    def _validate_node(self) -> Self:
+    def _validate_node(self) -> "Node[TMessageIn, TMessageOut]":
         """Validate node configuration after initialization.
 
         Returns:
