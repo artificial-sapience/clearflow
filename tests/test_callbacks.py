@@ -276,7 +276,7 @@ async def test_composite_handler() -> None:
     # Create multiple tracking handlers
     handler1 = TrackingHandler()
     handler2 = TrackingHandler()
-    composite = CompositeHandler(handler1, handler2)
+    composite = CompositeHandler(handlers=(handler1, handler2))
 
     # Create flow with composite handler
     processor = ProcessorNode(name="processor")
@@ -307,7 +307,7 @@ async def test_composite_handler_error_isolation() -> None:
     # Create handler that raises error and tracking handler
     error_handler = ErrorHandler()
     tracking_handler = TrackingHandler()
-    composite = CompositeHandler(error_handler, tracking_handler)
+    composite = CompositeHandler(handlers=(error_handler, tracking_handler))
 
     # Create flow
     processor = ProcessorNode(name="processor")
@@ -673,7 +673,7 @@ async def test_composite_handler_error_logging() -> None:
     Tests coverage of error handling paths in CompositeHandler.
     """
     # Create composite with failing and tracking handlers
-    composite = CompositeHandler(FailingHandler(), TrackingHandler())
+    composite = CompositeHandler(handlers=(FailingHandler(), TrackingHandler()))
 
     # Capture stderr to verify logging
     captured_stderr = StringIO()

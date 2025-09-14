@@ -5,10 +5,10 @@ process method and message transformation patterns.
 
 """
 
-from dataclasses import FrozenInstanceError
 from typing import override
 
 import pytest
+from pydantic import ValidationError
 
 from clearflow import MessageNode as Node
 from tests.conftest_message import (
@@ -142,7 +142,7 @@ def test_node_immutability() -> None:
     node = ProcessorNode(name="immutable_processor")
 
     # Should not be able to modify node
-    with pytest.raises((FrozenInstanceError, AttributeError)):
+    with pytest.raises(ValidationError, match="frozen"):
         node.name = "modified"
 
 
