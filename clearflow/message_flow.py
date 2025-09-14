@@ -6,6 +6,7 @@ routing boundaries to handle union types while maintaining type safety at
 flow input/output boundaries.
 """
 
+import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -47,6 +48,73 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessa
     routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
 
+    async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
+        """Execute callback safely without affecting flow.
+
+        REQ-005: Wrap callback execution in try-except
+        REQ-006: Log errors to stderr but don't propagate
+        REQ-017: Async execution (non-blocking)
+
+        Args:
+            method: Name of callback method to invoke
+            *args: Arguments to pass to the callback method (flow_name, node_name, message, error)
+
+        """
+        if not self.callbacks:  # REQ-016: Zero overhead when no callbacks
+            return
+
+        try:
+            callback_method = getattr(self.callbacks, method)
+            await callback_method(*args)
+        except Exception as e:  # noqa: BLE001  # REQ-005: Must catch all exceptions to prevent flow disruption
+            # REQ-006: Log but don't propagate
+            sys.stderr.write(f"Callback {method} failed: {e}\n")
+
+    async def _execute_node(self, node: Node[Message, Message], message: Message) -> Message:
+        """Execute a single node with callback notifications.
+
+        Args:
+            node: The node to execute
+            message: The message to process
+
+        Returns:
+            The output message from the node
+
+        """
+        # REQ-010: Invoke on_node_start before node execution
+        await self._safe_callback("on_node_start", node.name, message)
+
+        try:
+            output = await node.process(message)
+        except Exception as error:
+            # REQ-010: Invoke on_node_end with error
+            await self._safe_callback("on_node_end", node.name, message, error)
+            raise
+        else:
+            # REQ-010: Invoke on_node_end after successful node execution
+            await self._safe_callback("on_node_end", node.name, output, None)
+            return output
+
+    def _get_next_node(self, message: Message, current_node: Node[Message, Message]) -> Node[Message, Message] | None:
+        """Get the next node for routing based on message type.
+
+        Args:
+            message: The message to route
+            current_node: The current node
+
+        Returns:
+            The next node or None if terminal
+
+        Raises:
+            ValueError: If no route is defined for the message type
+
+        """
+        route_key = (type(message), current_node.name)
+        if route_key not in self.routes:
+            msg = f"No route defined for message type '{message.__class__.__name__}' from node '{current_node.name}'"
+            raise ValueError(msg)
+        return self.routes[route_key]
+
     @override
     async def process(self, message: TStartMessage) -> TEndMessage:
         """Process message by routing through the flow.
@@ -57,36 +125,33 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessa
         Returns:
             Final message when flow reaches termination
 
-        Raises:
-            ValueError: If no route is defined for a message type from a node.
-
         """
+        # REQ-010: Invoke on_flow_start at beginning
+        await self._safe_callback("on_flow_start", self.name, message)
+
         current_node = self.start_node
         current_message: Message = message
 
-        while True:
-            # Execute node
-            output_message = await current_node.process(current_message)
+        try:
+            while True:
+                # Execute node with callbacks
+                output_message = await self._execute_node(current_node, current_message)
 
-            # Create route key
-            route_key = (type(output_message), current_node.name)
+                # Get next node
+                next_node = self._get_next_node(output_message, current_node)
 
-            # Raise error if no route defined - all message types must be explicitly handled
-            if route_key not in self.routes:
-                msg = (
-                    f"No route defined for message type '{output_message.__class__.__name__}' "
-                    f"from node '{current_node.name}'"
-                )
-                raise ValueError(msg)
+                if next_node is None:
+                    # REQ-010: Invoke on_flow_end at termination
+                    await self._safe_callback("on_flow_end", self.name, output_message, None)
+                    return cast("TEndMessage", output_message)
 
-            # Check next node
-            next_node = self.routes[route_key]
-            if next_node is None:
-                return cast("TEndMessage", output_message)
-
-            # Continue
-            current_node = next_node
-            current_message = output_message
+                # Continue
+                current_node = next_node
+                current_message = output_message
+        except Exception as error:
+            # REQ-010: Invoke on_flow_end with error
+            await self._safe_callback("on_flow_end", self.name, current_message, error)
+            raise
 
 
 @final
