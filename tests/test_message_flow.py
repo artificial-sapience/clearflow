@@ -28,7 +28,6 @@ from tests.conftest_message import (
 class StartNode(Node[ProcessCommand, ProcessedEvent | ErrorEvent]):
     """Initial processing node."""
 
-    name: str = "start"
     should_fail: bool = False
 
     @override
@@ -50,8 +49,6 @@ class StartNode(Node[ProcessCommand, ProcessedEvent | ErrorEvent]):
 class TransformNode(Node[ProcessedEvent, ValidateCommand]):
     """Transform event to command."""
 
-    name: str = "transform"
-
     @override
     async def process(self, message: ProcessedEvent) -> ValidateCommand:
         return ValidateCommand(
@@ -65,7 +62,6 @@ class TransformNode(Node[ProcessedEvent, ValidateCommand]):
 class ValidateNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFailedEvent]):
     """Validation node."""
 
-    name: str = "validate"
     min_length: int = 5
 
     @override
@@ -84,9 +80,7 @@ class ValidateNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFaile
 
 
 class FinalizeNode(Node[ValidationPassedEvent, AnalysisCompleteEvent]):
-    """Final processing node."""
-
-    name: str = "finalize"
+    """Final processing node.""
 
     @override
     async def process(self, message: ValidationPassedEvent) -> AnalysisCompleteEvent:
@@ -141,7 +135,7 @@ async def test_flow_with_routing() -> None:
 
 async def test_flow_with_error_handling() -> None:
     """Test flow with error route."""
-    start = StartNode(should_fail=True)
+    start = StartNode(name="start", should_fail=True)
     transform = TransformNode(name="transform")
 
     flow = message_flow("error_handling", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)

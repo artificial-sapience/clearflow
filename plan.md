@@ -10,156 +10,40 @@ Complete migration from dataclasses to Pydantic BaseModel for ALL message-driven
 
 ## Current Status
 
-✅ **Phase 3A & 4 COMPLETE - Core Migration Done!**
-- Maximum type safety achieved - NO arbitrary_types_allowed=True
+✅ **Core Migration Complete - Working on Test Infrastructure**
+- Maximum type safety achieved in core - NO arbitrary_types_allowed=True
 - All core classes inherit from StrictBaseModel
-- Mapping type annotations for immutability compliance
 - strict_dataclass module successfully removed
-- Quality checks pass 100% on clearflow/ directory
-- Ready to proceed to Phase 5: Test Infrastructure Updates
+- Fixed _MessageFlowBuilder field naming (no underscore prefixes allowed)
+- MessageFlow now inherits from Node for composability
+- Currently fixing test nodes that incorrectly redefine parent fields
 
-## Remaining Migration Phases
+## Remaining Migration Tasks
 
-### Phase 3A: Achieve Maximum Type Safety ✅ COMPLETE
+### Phase 5: Test Infrastructure Updates (IN PROGRESS)
 
-**Goal**: Eliminate `arbitrary_types_allowed=True` by making ALL types validated Pydantic types.
+#### 5.2 Update Test Node Classes (IN PROGRESS)
 
-#### All Tasks Completed:
-- ✅ CallbackHandler now inherits from StrictBaseModel
-- ✅ CompositeHandler now inherits from StrictBaseModel with tuple[CallbackHandler, ...] field
-- ✅ Replaced MappingProxyType with Mapping type annotations
-- ✅ Removed MappingProxyType(...) wrappers, using plain dict values
-- ✅ Removed arbitrary_types_allowed from _MessageFlowBuilder
-- ✅ Restored generic type parameters to message_flow function
-- ✅ Fixed _MessageFlowBuilder.route and .end methods with proper generics
-- ✅ Ran `./quality-check.sh clearflow/` - 100% PASS
-- ✅ Verified NO `arbitrary_types_allowed=True` anywhere in clearflow/
-- ✅ All quality checks pass with Grade A complexity
-
-### Phase 4: Remove strict_dataclass Module ✅ COMPLETE
-
-#### 4.1 Delete Obsolete Module ✅ COMPLETE
-
-- ✅ Remove `clearflow/strict_dataclass.py`
-- ✅ Remove `strict_dataclass` from `clearflow/__init__.py` exports
-- ✅ Update all imports throughout codebase (none found outside of removed files)
-- ✅ Run `./quality-check.sh clearflow/` - 100% PASS
-
-### Phase 5: Test Infrastructure Updates
-
-#### 5.1 Update Test Message Classes ✅ COMPLETE
-
-- ✅ Remove `@strict_dataclass` decorators from all classes in `tests/conftest_message.py`
-- ✅ Ensure all Command/Event subclasses properly inherit from their BaseModel parents
-- ✅ Update test utility functions if needed (no changes needed)
-- ✅ Run `./quality-check.sh tests/conftest_message.py`
-- ✅ Quality checks pass (coverage exempt for fixture files)
-
-#### 5.2 Update Test Node Classes
-
-- [ ] Convert Node subclasses in `tests/test_message_node.py` to inherit from BaseModel Node
-- [ ] Convert Node subclasses in `tests/test_message_flow.py` to inherit from BaseModel Node
-- [ ] Convert Node subclasses in `tests/test_callbacks.py` to inherit from BaseModel Node
-- [ ] Run `./quality-check.sh tests/test_message_node.py tests/test_message_flow.py tests/test_callbacks.py`
-- [ ] Ensure 100% quality checks pass
-
-#### 5.3 Fix Test Failures and Coverage
-
-- [ ] Address any validation errors from stricter BaseModel validation
-- [ ] Update test assertions for BaseModel behavior
-- [ ] Run `./quality-check.sh tests/`
-- [ ] Ensure 100% test coverage maintained
-- [ ] Ensure 100% quality checks pass
+- ✅ Convert Node subclasses to inherit from BaseModel Node
+- ✅ Fix FrozenInstanceError expectations (now ValidationError)
+- ✅ Fix CompositeHandler instantiation (use handlers tuple)
+- 🔧 Fix test nodes that redefine parent fields (don't redefine `name` field)
+- [ ] Run all tests and fix remaining issues
+- [ ] Run `./quality-check.sh tests/` - must pass 100%
 
 ### Phase 6: Example Updates
 
-#### 6.1 Portfolio Example
+- [ ] Update portfolio_analysis_message_driven example
+- [ ] Update chat_message_driven example
+- [ ] Update rag_message_driven example
+- [ ] Ensure all examples pass quality checks
 
-- [ ] Remove `@strict_dataclass` decorators from portfolio messages
-- [ ] Ensure MarketCommand, AnalysisEvent, etc. inherit from BaseModel parents
-- [ ] Test portfolio example execution
-- [ ] Run `./quality-check.sh examples/portfolio_analysis_message_driven/`
-- [ ] Ensure 100% quality checks pass
+### Phase 7: Final Verification
 
-#### 6.2 Chat Example
-
-- [ ] Remove `@strict_dataclass` decorators from chat messages
-- [ ] Ensure UserMessage, SystemMessage, etc. inherit from BaseModel parents
-- [ ] Test chat example execution
-- [ ] Run `./quality-check.sh examples/chat_message_driven/`
-- [ ] Ensure 100% quality checks pass
-
-#### 6.3 RAG Example
-
-- [ ] Remove `@strict_dataclass` decorators from RAG messages
-- [ ] Ensure QueryCommand, RetrievalEvent, etc. inherit from BaseModel parents
-- [ ] Test RAG example execution
-- [ ] Run `./quality-check.sh examples/rag_message_driven/`
-- [ ] Ensure 100% quality checks pass
-
-### Phase 7: ConsoleHandler JSON Serialization
-
-#### 7.1 Update ConsoleHandler
-
-- [ ] Use BaseModel's `.model_dump_json()` for serialization
-- [ ] Configure field exclusion patterns
-- [ ] Add JSON syntax colorization
-- [ ] Test with all examples
-- [ ] Run `./quality-check.sh examples/shared/`
-- [ ] Ensure 100% quality checks pass
-
-### Phase 8: Add BaseModel-Specific Tests
-
-#### 8.1 Validation Tests
-
-- [ ] Test strict mode (no type coercion)
-- [ ] Test extra='forbid' (reject unknown fields)
-- [ ] Test frozen=True (immutability)
-- [ ] Test Field constraints (min_length, ge, le, etc.)
-- [ ] Run `./quality-check.sh tests/`
-- [ ] Ensure 100% quality checks pass
-
-#### 8.2 Serialization Tests
-
-- [ ] Test `.model_dump()` method
-- [ ] Test `.model_dump_json()` method
-- [ ] Test field exclusion in serialization
-- [ ] Test deserialization with `.model_validate()`
-- [ ] Run `./quality-check.sh tests/`
-- [ ] Ensure 100% quality checks pass
-
-### Phase 9: Documentation Updates
-
-#### 9.1 Update CLAUDE.md
-
-- [ ] Document BaseModel patterns for message API
-- [ ] Add examples of BaseModel usage
-- [ ] Update architectural principles section
-- [ ] Document validation benefits
-
-#### 9.2 Update README if needed
-
-- [ ] Update any API examples
-- [ ] Document BaseModel advantages
-- [ ] Add migration notes from dataclass approach
-
-### Phase 10: Final Verification
-
-#### 10.1 Full Quality Check
-
-- [ ] Run `./quality-check.sh` (entire codebase)
+- [ ] Run `./quality-check.sh` on entire codebase
 - [ ] Ensure 100% test coverage maintained
 - [ ] Verify all examples work correctly
-- [ ] Check performance metrics
-- [ ] Ensure 100% quality checks pass
-
-#### 10.2 Architectural Validation
-
-- [ ] Verify all classes use BaseModel consistently
-- [ ] Check that immutability is enforced everywhere
-- [ ] Validate type safety improvements
-- [ ] Confirm strict validation is working
-- [ ] Confirm NO `arbitrary_types_allowed` anywhere in codebase
+- [ ] Confirm NO `arbitrary_types_allowed` anywhere
 - [ ] Confirm ALL types are validated Pydantic types
 
 ## Technical Specifications

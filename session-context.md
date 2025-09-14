@@ -1,87 +1,98 @@
-# Session Context: Pydantic BaseModel Migration - Maximum Type Safety
+# Session Context: Pydantic BaseModel Migration - Test Infrastructure Fix
 
-## Session Summary
+## Session Overview
 
-Successfully migrated core message-driven infrastructure to achieve maximum type safety by:
-1. Converting all callback handlers to inherit from StrictBaseModel
-2. Replacing MappingProxyType with Mapping type annotations for immutability compliance
-3. Removing arbitrary_types_allowed from all classes
+This session focused on completing the core Pydantic BaseModel migration and beginning the test infrastructure updates. We achieved maximum type safety in the core and discovered critical issues with how test nodes were defined.
 
-## Key Technical Decisions Made
+## Major Accomplishments
 
-### 1. Immutability Compliance Discovery
-- **Issue**: Cannot use `dict` in type annotations - fails immutability linter (IMM001)
-- **Solution**: Use `Mapping` from collections.abc for type annotations
-- **Implementation**: `routes: Mapping[MessageRouteKey, Node[Message, Message] | None]`
-- **Benefit**: Pydantic accepts Mapping without arbitrary_types_allowed
+### 1. Phase 3A Complete - Maximum Type Safety Achieved ✅
+- NO `arbitrary_types_allowed=True` anywhere in clearflow/
+- All callback handlers inherit from StrictBaseModel
+- Replaced MappingProxyType with Mapping type annotations
+- Quality checks pass 100% on clearflow/ directory
 
-### 2. CallbackHandler Architecture
-- **Converted**: CallbackHandler and CompositeHandler now inherit from StrictBaseModel
-- **CompositeHandler**: Uses `handlers: tuple[CallbackHandler, ...]` for immutability
-- **Result**: All callback types are now validated Pydantic models
+### 2. Phase 4 Complete - Removed strict_dataclass Module ✅
+- Deleted `clearflow/strict_dataclass.py`
+- Removed all imports and exports
+- Core is now fully BaseModel-based
 
-### 3. MappingProxyType Removal
-- **Before**: Used MappingProxyType(...) wrappers requiring arbitrary_types_allowed
-- **After**: Use plain dict values with Mapping type annotations
-- **Validation**: Quality checks pass 100% on modified files
+### 3. Critical Field Naming Fix
+- **Discovery**: Pydantic BaseModel doesn't allow field names with leading underscores
+- **Issue**: `_MessageFlowBuilder` had fields like `_name`, `_start_node`, etc.
+- **Solution**: Renamed all fields to remove underscores (e.g., `name`, `start_node`)
+- **Impact**: This was blocking test imports
 
-## Files Modified in This Session
+### 4. MessageFlow Architecture Update
+- User updated MessageFlow to inherit from Node
+- This enables MessageFlow to be composed as a Node
+- MessageFlow uses underscore-prefixed private fields
+- _MessageFlowBuilder uses regular field names
 
-### ✅ Completed Modifications
-1. **clearflow/callbacks.py**
-   - CallbackHandler inherits from StrictBaseModel
-   - CompositeHandler inherits from CallbackHandler
-   - handlers field is tuple[CallbackHandler, ...]
-   - Quality check: PASSED
+## Critical Technical Discovery
 
-2. **clearflow/message_flow.py**
-   - Removed MappingProxyType import
-   - Changed all MappingProxyType type annotations to Mapping
-   - Removed MappingProxyType(...) wrappers in code
-   - Removed arbitrary_types_allowed from _MessageFlowBuilder
-   - Quality check: PASSED
+### The Root Cause of Test Failures
 
-3. **clearflow/message_node.py** (from earlier)
-   - Node class inherits from StrictBaseModel
-   - Quality check: PASSED
+**Problem**: Test nodes were redefining parent class fields with defaults
+```python
+# WRONG - redefining parent's required field with default
+class StartNode(Node[...]):
+    name: str = "start"  # ❌ Parent Node already has name: str
+    should_fail: bool = False
+```
 
-4. **plan.md**
-   - Updated to reflect correct approach (Mapping not dict)
-   - Added immutability linter compliance notes
-   - Updated task statuses
+**Why This Fails**:
+- In Pydantic BaseModel, you cannot redefine parent fields
+- The parent `Node` has `name: str` as a required field
+- Child classes trying to give it a default value causes field resolution issues
+- This leads to Pydantic treating other fields as "extra" and rejecting them
 
-## Critical Insights
+**Solution**:
+```python
+# CORRECT - only define new fields
+class StartNode(Node[...]):
+    should_fail: bool = False  # ✅ Only add new fields
 
-### Pydantic Type Validation
-- `Mapping` from collections.abc is a validated Pydantic type
-- `MappingProxyType` requires arbitrary_types_allowed
-- `dict` in type annotations fails immutability linter
-- Solution: Use Mapping for annotations, dict for values
+# Instantiate with all fields
+start = StartNode(name="start", should_fail=False)
+```
 
-### Immutability Strategy
-- Type annotations must use immutable types (Mapping, tuple, frozenset)
-- Runtime values can be mutable (dict, list) if model is frozen
-- Pydantic's frozen=True prevents reassignment
-- Linter enforces immutable type annotations
+## Key Technical Learnings
 
-## Next Immediate Steps
+1. **Mapping vs MappingProxyType**: Use `Mapping` from collections.abc for type annotations - it's a validated Pydantic type that doesn't require `arbitrary_types_allowed`
 
-See plan.md Phase 3A.7 - Need to:
-1. Run `./quality-check.sh clearflow/` on entire directory
-2. Verify no arbitrary_types_allowed remains anywhere
-3. Run full test suite to ensure functionality
+2. **Field Naming**: Pydantic BaseModel fields cannot start with underscores
 
-## Migration Status
+3. **Inheritance**: Cannot redefine parent BaseModel fields with different defaults
 
-- **Phase 1**: ✅ Complete (StrictBaseModel created, Message/Event/Command migrated)
-- **Phase 2**: ✅ Complete (Node migrated to BaseModel)
-- **Phase 3A**: 95% Complete (Just need final validation)
-- **Phase 4-10**: Pending (See plan.md for details)
+4. **Immutability**: Tests expecting `FrozenInstanceError` need to expect `ValidationError` with BaseModel
 
-## Technical Context for Next Session
+5. **Tuple Fields**: CompositeHandler expects `handlers=(handler1, handler2)` not positional args
 
-All core infrastructure now uses StrictBaseModel with NO arbitrary_types_allowed. The key pattern is:
-- Type annotations: Use immutable types (Mapping, tuple, frozenset)
-- Field values: Can use mutable types (dict, list) - Pydantic freezes them
-- All handlers and nodes are now Pydantic models
-- Maximum type safety achieved in core modules
+## Files Modified
+
+### Core Files (All Pass Quality Checks)
+- `clearflow/message_flow.py` - Fixed field names, updated by user for Node inheritance
+- `clearflow/callbacks.py` - Inherits from StrictBaseModel
+- `clearflow/message_node.py` - Already BaseModel compliant
+- `clearflow/__init__.py` - Removed strict_dataclass export
+
+### Test Files (In Progress)
+- `tests/conftest_message.py` - Removed @strict_dataclass decorators ✅
+- `tests/test_message_flow.py` - Removing redefined name fields 🔧
+- `tests/test_message_node.py` - Fixed ValidationError expectations ✅
+- `tests/test_callbacks.py` - Fixed CompositeHandler instantiation ✅
+
+## Next Immediate Tasks
+
+See plan.md for details, but the immediate focus is:
+1. Complete fixing test nodes that redefine parent fields
+2. Run all tests and fix remaining issues
+3. Update examples to work with BaseModel
+
+## Environment State
+
+- Working directory: `/Users/richard/Developer/github/artificial-sapience/clearflow`
+- Git branch: `message-driven`
+- Quality checks: clearflow/ passes 100%, tests/ in progress
+- Python: 3.13.3 with uv package manager
