@@ -5,7 +5,7 @@ with colored output and structured formatting for better visibility.
 """
 
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from types import TracebackType
 from typing import override
 
@@ -19,11 +19,10 @@ class ConsoleHandler(CallbackHandler):
     - Flow lifecycle (start/end)
     - Node execution progress
     - Message types and content
-    - Timing information
     - Error states
     """
 
-    def __init__(self, verbose: bool = False) -> None:
+    def __init__(self, *, verbose: bool = False) -> None:
         """Initialize console handler.
 
         Args:
@@ -31,8 +30,6 @@ class ConsoleHandler(CallbackHandler):
 
         """
         self.verbose = verbose
-        # Internal mutable state for tracking timing
-        self._start_times: dict[str, datetime] = {}
 
     @override
     async def on_flow_start(self, flow_name: str, message: Message) -> None:
@@ -43,9 +40,9 @@ class ConsoleHandler(CallbackHandler):
             message: Initial message being processed
 
         """
-        self._start_times[flow_name] = datetime.now(timezone.utc)
-        self._print_header(f"🚀 Flow Started: {flow_name}")
+        ConsoleHandler.print_header(f"🚀 Flow Started: {flow_name}")
         self._print_message("Input", message)
+        ConsoleHandler.print_timestamp(message.timestamp)
 
     @override
     async def on_flow_end(self, flow_name: str, message: Message, error: Exception | None) -> None:
@@ -57,16 +54,14 @@ class ConsoleHandler(CallbackHandler):
             error: Exception if flow failed
 
         """
-        elapsed = self._get_elapsed(flow_name)
-
         if error:
-            self._print_header(f"❌ Flow Failed: {flow_name}", color="red")
-            self._print_error(error)
+            ConsoleHandler.print_header(f"❌ Flow Failed: {flow_name}", color="red")
+            ConsoleHandler.print_error(error)
         else:
-            self._print_header(f"✅ Flow Completed: {flow_name}", color="green")
+            ConsoleHandler.print_header(f"✅ Flow Completed: {flow_name}", color="green")
             self._print_message("Output", message)
+            ConsoleHandler.print_timestamp(message.timestamp)
 
-        self._print_timing(elapsed)
         sys.stderr.write("\n")
 
     @override
@@ -78,8 +73,7 @@ class ConsoleHandler(CallbackHandler):
             message: Message being passed to node
 
         """
-        self._start_times[node_name] = datetime.now(timezone.utc)
-        self._print_node_status(f"⚙️  {node_name}", "processing", color="yellow")
+        ConsoleHandler.print_node_status(f"⚙️  {node_name}", "processing", color="yellow")
         if self.verbose:
             self._print_message("Input", message, indent=2)
 
@@ -93,72 +87,84 @@ class ConsoleHandler(CallbackHandler):
             error: Exception if node failed
 
         """
-        elapsed = self._get_elapsed(node_name)
-
         if error:
-            self._print_node_status(f"❌ {node_name}", f"failed ({elapsed:.2f}s)", color="red")
-            self._print_error(error, indent=2)
+            ConsoleHandler.print_node_status(f"❌ {node_name}", "failed", color="red")
+            ConsoleHandler.print_error(error, indent=2)
         else:
-            self._print_node_status(f"✓  {node_name}", f"completed ({elapsed:.2f}s)", color="green")
+            ConsoleHandler.print_node_status(f"✓  {node_name}", "completed", color="green")
             if self.verbose:
                 self._print_message("Output", message, indent=2)
 
-    def _print_header(self, text: str, color: str = "blue") -> None:
+    @staticmethod
+    def print_header(text: str, color: str = "blue") -> None:
         """Print a section header."""
         border = "=" * 60
-        colored_text = self._colorize(text, color)
+        colored_text = ConsoleHandler.colorize(text, color)
         sys.stderr.write(f"\n{border}\n{colored_text}\n{border}\n")
 
-    def _print_node_status(self, node: str, status: str, color: str = "white") -> None:
+    @staticmethod
+    def print_node_status(node: str, status: str, color: str = "white") -> None:
         """Print node execution status."""
-        colored_status = self._colorize(status, color)
+        colored_status = ConsoleHandler.colorize(status, color)
         sys.stderr.write(f"  {node}: {colored_status}\n")
+
+    @staticmethod
+    def get_message_style(message: Message) -> tuple[str, str]:
+        """Get color and symbol for message type.
+
+        Args:
+            message: Message to style
+
+        Returns:
+            Tuple of (color_name, symbol)
+
+        """
+        if isinstance(message, Command):
+            return "cyan", "→"
+        if isinstance(message, Event):
+            return "magenta", "←"
+        return "white", "•"
 
     def _print_message(self, label: str, message: Message, indent: int = 1) -> None:
         """Print message details."""
         spaces = "  " * indent
         msg_type = message.__class__.__name__
 
-        # Determine message category
-        if isinstance(message, Command):
-            type_color = "cyan"
-            type_symbol = "→"
-        elif isinstance(message, Event):
-            type_color = "magenta"
-            type_symbol = "←"
-        else:
-            type_color = "white"
-            type_symbol = "•"
-
-        colored_type = self._colorize(f"{type_symbol} {msg_type}", type_color)
+        type_color, type_symbol = ConsoleHandler.get_message_style(message)
+        colored_type = ConsoleHandler.colorize(f"{type_symbol} {msg_type}", type_color)
         sys.stderr.write(f"{spaces}{label}: {colored_type}\n")
 
         if self.verbose:
             # Show key fields (excluding internal metadata)
             for key, value in message.__dict__.items():
-                if not key.startswith("_") and key not in ("id", "timestamp", "triggered_by_id", "run_id"):
+                if not key.startswith("_") and key not in {"id", "timestamp", "triggered_by_id", "run_id"}:
                     sys.stderr.write(f"{spaces}  {key}: {value}\n")
 
-    def _print_error(self, error: Exception, indent: int = 1) -> None:
+    @staticmethod
+    def print_error(error: Exception, indent: int = 1) -> None:
         """Print error details."""
         spaces = "  " * indent
-        error_text = self._colorize(f"Error: {error.__class__.__name__}: {error}", "red")
+        error_text = ConsoleHandler.colorize(f"Error: {error.__class__.__name__}: {error}", "red")
         sys.stderr.write(f"{spaces}{error_text}\n")
 
-    def _print_timing(self, elapsed: float) -> None:
-        """Print timing information."""
-        timing_text = self._colorize(f"⏱️  Time: {elapsed:.3f}s", "dim")
-        sys.stderr.write(f"  {timing_text}\n")
+    @staticmethod
+    def print_timestamp(timestamp: datetime) -> None:
+        """Print timestamp information."""
+        timestamp_text = ConsoleHandler.colorize(f"⏰ {timestamp.strftime('%H:%M:%S.%f')[:-3]} UTC", "dim")
+        sys.stderr.write(f"  {timestamp_text}\n")
 
-    def _get_elapsed(self, key: str) -> float:
-        """Get elapsed time for a flow or node."""
-        if key in self._start_times:
-            start = self._start_times.pop(key)
-            return (datetime.now(timezone.utc) - start).total_seconds()
-        return 0.0
+    @staticmethod
+    def colorize(text: str, color: str) -> str:
+        """Add ANSI color codes to text.
 
-    def _colorize(self, text: str, color: str) -> str:
-        """Add ANSI color codes to text."""
+        Args:
+            text: Text to colorize
+            color: Color name
+
+        Returns:
+            Text with ANSI color codes
+
+        """
         colors = {
             "red": "\033[91m",
             "green": "\033[92m",
@@ -190,14 +196,19 @@ class LoadingIndicator:
         self.running = False
 
     async def __aenter__(self) -> "LoadingIndicator":
-        """Start showing loading indicator."""
+        """Start showing loading indicator.
+
+        Returns:
+            Self for context manager protocol
+
+        """
         self.running = True
         sys.stderr.write(f"\r{self.message}... ")
         sys.stderr.flush()
         return self
 
     async def __aexit__(
-        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None
+        self, _exc_type: type[BaseException] | None, exc_val: BaseException | None, _exc_tb: TracebackType | None
     ) -> None:
         """Stop showing loading indicator."""
         self.running = False
