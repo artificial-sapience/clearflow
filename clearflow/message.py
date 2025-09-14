@@ -2,8 +2,12 @@
 
 import uuid
 from abc import ABC
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Self
+
+from pydantic import AwareDatetime, Field, model_validator
+
+from clearflow.strict_dataclass import strict_dataclass
 
 __all__ = [
     "Command",
@@ -12,17 +16,17 @@ __all__ = [
 ]
 
 
-def _utc_now() -> datetime:
+def _utc_now() -> AwareDatetime:
     """Create a timezone-aware datetime in UTC.
 
     Returns:
-        Current UTC time as datetime.
+        Current UTC time as AwareDatetime.
 
     """
     return datetime.now(UTC)
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class Message(ABC):
     """Base message class for all messages in the system.
 
@@ -30,18 +34,20 @@ class Message(ABC):
     Messages form the foundation of type-safe routing and orchestration.
     """
 
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
     triggered_by_id: uuid.UUID | None = None  # None for initial commands, UUID for derived messages
-    timestamp: datetime = field(default_factory=_utc_now)
+    timestamp: AwareDatetime = Field(default_factory=_utc_now)
     run_id: uuid.UUID  # Required - identifies the flow session
 
     @property
     def message_type(self) -> type["Message"]:
         """Return the concrete message type for routing."""
-        return type(self)
+        # Type mismatch is expected: Pydantic dataclass has additional attributes
+        # but we only care about the Message type for routing purposes
+        return type(self)  # pyright: ignore[reportReturnType]
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class Event(Message):
     """Abstract base Event extending Message for causality tracking.
 
@@ -58,8 +64,12 @@ class Event(Message):
         run_id: UUID identifying the flow session
     """
 
-    def __post_init__(self) -> None:
+    @model_validator(mode="after")
+    def _validate_event(self) -> Self:
         """Validate Event constraints.
+
+        Returns:
+            Self after validation.
 
         Raises:
             TypeError: If trying to instantiate Event directly.
@@ -75,12 +85,15 @@ class Event(Message):
             raise TypeError(msg)
 
         # Validate that triggered_by_id is set for events
-        if self.triggered_by_id is None:
+        # Use getattr because Pyright can't see inherited Pydantic fields
+        if getattr(self, "triggered_by_id", None) is None:
             msg = "Events must have a triggered_by_id"
             raise ValueError(msg)
 
+        return self
 
-@dataclass(frozen=True, kw_only=True)
+
+@strict_dataclass
 class Command(Message):
     """Abstract base Command extending Message for causality tracking.
 
@@ -97,8 +110,12 @@ class Command(Message):
         run_id: UUID identifying the flow session
     """
 
-    def __post_init__(self) -> None:
+    @model_validator(mode="after")
+    def _validate_command(self) -> Self:
         """Validate Command constraints.
+
+        Returns:
+            Self after validation.
 
         Raises:
             TypeError: If trying to instantiate Command directly.
@@ -111,5 +128,7 @@ class Command(Message):
                 "Create a concrete command class (e.g., ProcessCommand, ValidateCommand)."
             )
             raise TypeError(msg)
+
+        return self
 
     # Uses default triggered_by_id: uuid.UUID | None from Message

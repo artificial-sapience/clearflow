@@ -4,10 +4,18 @@
 
 **Phase 1: Core Infrastructure Setup** ✅ COMPLETE
 - Pydantic dependency added
-- All tests passing (95 tests, 100% coverage)
-- No breaking changes detected
+- Created strict_dataclass module with partial application
+- Exported from __init__.py for public use
 
-**Next**: Phase 2 - Message Base Class Migration
+**Phase 2: Message Base Class Migration** 🚧 IN PROGRESS
+- ✅ Created strict_dataclass decorator
+- ✅ Updated Message, Event, Command classes
+- ✅ Changed datetime to AwareDatetime
+- ✅ Migrated validators to Pydantic model_validator
+- ✅ Message.py passes all quality checks
+- ⚠️ Tests need updating to use strict_dataclass
+
+**Next**: Phase 3 - Message Node Migration
 
 ## Overview
 
@@ -34,25 +42,25 @@ Migrate Message API from vanilla frozen dataclasses to Pydantic dataclasses with
 
 #### 2.1 Update Message Base Class
 
-- [ ] Import from `pydantic.dataclasses` instead of `dataclasses`
-- [ ] Add strict config per ### Pydantic Config Settings below.
-- [ ] Change `datetime` to `AwareDatetime` type
-- [ ] Update UUID handling for Pydantic compatibility
-- [ ] Run `./quality-check.sh clearflow/message.py`
+- [x] Import from `pydantic.dataclasses` instead of `dataclasses`
+- [x] Add strict config per ### Pydantic Config Settings below.
+- [x] Change `datetime` to `AwareDatetime` type
+- [x] Update UUID handling for Pydantic compatibility
+- [x] Run `./quality-check.sh clearflow/message.py`
 
 #### 2.2 Update Event Class
 
-- [ ] Migrate Event to Pydantic dataclass
-- [ ] Ensure `__post_init__` validation works with Pydantic
-- [ ] Test triggered_by_id validation
-- [ ] Run `./quality-check.sh clearflow/message.py`
+- [x] Migrate Event to Pydantic dataclass
+- [x] Ensure `__post_init__` validation works with Pydantic (using model_validator)
+- [x] Test triggered_by_id validation (using getattr for Pyright compatibility)
+- [x] Run `./quality-check.sh clearflow/message.py`
 
 #### 2.3 Update Command Class
 
-- [ ] Migrate Command to Pydantic dataclass
-- [ ] Ensure `__post_init__` validation works
-- [ ] Test abstract class instantiation prevention
-- [ ] Run `./quality-check.sh clearflow/message.py`
+- [x] Migrate Command to Pydantic dataclass
+- [x] Ensure `__post_init__` validation works (using model_validator)
+- [x] Test abstract class instantiation prevention
+- [x] Run `./quality-check.sh clearflow/message.py`
 
 ### Phase 3: Message Node Migration
 

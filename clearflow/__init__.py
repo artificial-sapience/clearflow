@@ -11,6 +11,7 @@ from clearflow.callbacks import CallbackHandler, CompositeHandler
 from clearflow.message import Command, Event, Message
 from clearflow.message_flow import MessageFlow, message_flow
 from clearflow.message_node import Node as MessageNode
+from clearflow.strict_dataclass import strict_dataclass
 
 __all__ = [
     "CallbackHandler",
@@ -24,6 +25,7 @@ __all__ = [
     "NodeResult",
     "flow",
     "message_flow",
+    "strict_dataclass",
 ]
 
 RouteKey = tuple[str, str]  # (node_name, outcome)
