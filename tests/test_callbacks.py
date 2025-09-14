@@ -39,8 +39,6 @@ class ProcessedEvent(Event):
 class ProcessorNode(MessageNode[StartCommand, ProcessedEvent]):
     """Node that processes commands."""
 
-    name: str = "processor"
-
     @override
     async def process(self, message: StartCommand) -> ProcessedEvent:
         """Process the command.

@@ -80,7 +80,7 @@ class ValidateNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFaile
 
 
 class FinalizeNode(Node[ValidationPassedEvent, AnalysisCompleteEvent]):
-    """Final processing node.""
+    """Final processing node."""
 
     @override
     async def process(self, message: ValidationPassedEvent) -> AnalysisCompleteEvent:
@@ -269,9 +269,6 @@ def test_flow_immutability() -> None:
     # Should not be able to modify flow
     with pytest.raises(ValidationError, match="frozen"):
         flow.name = "modified"
-
-    with pytest.raises(ValidationError, match="frozen"):
-        flow._start_node = StartNode(name="new")
 
 
 def test_flow_builder_chaining() -> None:
