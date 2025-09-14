@@ -121,15 +121,18 @@ All Phase 1 tasks completed. CallbackHandler base class implemented with proper 
    - `examples/shared/console_handler.py`
    - Pretty-print message events to console
 
-2. Update portfolio example:
+2. `./quality-check.sh examples/shared/console_handler.py` - passes 100%
+
+3. Update portfolio example:
+   - Remove all logging from the example code. All logging MUST be handled via callbacks only.
    - Add ConsoleHandler for visibility
    - Show progress through specialist nodes
 
-3. Update chat example:
-   - Add simple logging handler
-   - Demonstrate callback integration
+4. `./quality-check.sh examples/portfolio_analysis_message_driven` - passes 100%
 
-4. Run `./quality-check.sh examples` - must pass 100%
+5. Update all examples so that a spinner (or the most appropriate loading indicator per best console UX practices) is shown during async operations
+
+6. Run `./quality-check.sh examples` - must pass 100%
 
 ## Phase 5: Documentation
 
