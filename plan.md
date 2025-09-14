@@ -10,73 +10,33 @@ Complete migration from dataclasses to Pydantic BaseModel for ALL message-driven
 
 ## Current Status
 
-✅ **Phase 1 Complete**:
-- Created `StrictBaseModel` class with strictest validation settings
-- Migrated `Message`, `Event`, `Command` to inherit from StrictBaseModel
-- All quality checks passing
-
-✅ **Phase 2 Complete**:
-- Converted `Node` class to inherit from StrictBaseModel
-- Quality checks passing
-
-✅ **Phase 3 Partially Complete**:
-- Converted `MessageFlow` and `_MessageFlowBuilder` to BaseModel
-- Currently using `arbitrary_types_allowed=True` (needs removal for maximum type safety)
+✅ **Phase 3A Almost Complete**:
+- CallbackHandler and CompositeHandler now inherit from StrictBaseModel
+- Replaced MappingProxyType with Mapping type annotations
+- Removed arbitrary_types_allowed from _MessageFlowBuilder
+- Need to verify everything still works with quality checks
 
 ## Remaining Migration Phases
 
-### Phase 3A: Achieve Maximum Type Safety (NEXT)
+### Phase 3A: Achieve Maximum Type Safety (IN PROGRESS)
 
 **Goal**: Eliminate `arbitrary_types_allowed=True` by making ALL types validated Pydantic types.
 
-#### 3A.1 Convert CallbackHandler to BaseModel
+#### Completed Tasks:
+- ✅ CallbackHandler now inherits from StrictBaseModel
+- ✅ CompositeHandler now inherits from StrictBaseModel with tuple[CallbackHandler, ...] field
+- ✅ Replaced MappingProxyType with Mapping type annotations
+- ✅ Removed MappingProxyType(...) wrappers, using plain dict values
+- ✅ Removed arbitrary_types_allowed from _MessageFlowBuilder
 
-- [ ] Change `CallbackHandler` from regular class to inherit from `StrictBaseModel`
-- [ ] Keep all async methods as-is (BaseModel supports methods)
-- [ ] Run `./quality-check.sh clearflow/callbacks.py`
-
-#### 3A.2 Convert CompositeHandler to BaseModel
-
-- [ ] Change `CompositeHandler` from regular class to inherit from `StrictBaseModel`
-- [ ] Change `handlers` field from list to `tuple[CallbackHandler, ...]` for immutability
-- [ ] Update `__init__` to work with BaseModel initialization
-- [ ] Run `./quality-check.sh clearflow/callbacks.py`
-
-#### 3A.3 Replace MappingProxyType with Mapping in MessageFlow
-
-- [ ] Change `routes` field type from `MappingProxyType` to `Mapping` (from collections.abc)
-- [ ] Remove MappingProxyType import from message_flow.py
-- [ ] Keep using `Mapping` for immutable type annotation (satisfies linter)
-- [ ] Remove MappingProxyType(...) wrappers when creating routes (just use plain dict)
-- [ ] Run `./quality-check.sh clearflow/message_flow.py`
-
-#### 3A.4 Replace MappingProxyType with Mapping in _MessageFlowBuilder
-
-- [ ] Change `_routes` field type from `MappingProxyType` to `Mapping`
-- [ ] Update all builder methods to use plain dict instead of MappingProxyType(...)
-- [ ] Remove MappingProxyType wrapper in builder method returns
-- [ ] Ensure all route creation uses plain dict (Pydantic handles immutability)
-- [ ] Run `./quality-check.sh clearflow/message_flow.py`
-
-#### 3A.5 Remove arbitrary_types_allowed from MessageFlow
-
-- [ ] Remove custom `model_config` from `MessageFlow` class
-- [ ] Let it inherit StrictBaseModel's config (frozen=True, strict=True, no arbitrary types)
-- [ ] Verify all fields are now validated Pydantic types
-- [ ] Run `./quality-check.sh clearflow/message_flow.py`
-
-#### 3A.6 Remove arbitrary_types_allowed from _MessageFlowBuilder
-
-- [ ] Remove custom `model_config` from `_MessageFlowBuilder` class
-- [ ] Let it inherit StrictBaseModel's config
-- [ ] Verify all fields are now validated Pydantic types
-- [ ] Run `./quality-check.sh clearflow/message_flow.py`
+#### Remaining Task:
 
 #### 3A.7 Full clearflow/ directory validation
 
 - [ ] Run `./quality-check.sh clearflow/`
 - [ ] Ensure 100% quality checks pass
 - [ ] Verify no `arbitrary_types_allowed` anywhere in codebase
+- [ ] Run tests to ensure everything still works
 
 ### Phase 4: Remove strict_dataclass Module
 

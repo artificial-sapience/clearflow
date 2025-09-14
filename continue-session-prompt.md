@@ -2,35 +2,35 @@
 
 Please read the following context files to understand the current state:
 
-1. @session-context.md - Full context from previous session including completed work
+1. @session-context.md - Full context from this session including completed work
 2. @plan.md - Remaining tasks and current progress
 
 ## Current Task
 
-We're migrating ClearFlow's message-driven architecture from Pydantic dataclasses to Pydantic BaseModel for maximum type safety, correctness, and proper generic support.
+We're at the final step of Phase 3A: Achieving Maximum Type Safety.
 
 ## Immediate Next Step
 
-**Phase 2: Node Infrastructure to BaseModel**
+**Phase 3A.7: Full clearflow/ directory validation**
 
-Start by converting the `Node` class in `clearflow/message_node.py`:
-1. Change from `@strict_dataclass` to inherit from `StrictBaseModel`
-2. Ensure generic type parameters work with PEP 695 syntax
-3. Update validators as needed
-4. Run `./quality-check.sh clearflow/message_node.py`
+Please:
+1. Run `./quality-check.sh clearflow/` to validate the entire directory
+2. Verify that NO `arbitrary_types_allowed` exists anywhere in the codebase
+3. Run the test suite to ensure all functionality still works
+4. If any issues arise, fix them while maintaining immutability compliance
 
-## Key Context
+## Key Technical Context
 
-- We created `StrictBaseModel` as our base class with strictest validation
-- Message, Event, and Command classes already migrated successfully
-- No backwards compatibility needed (feature branch)
-- NodeProtocol workaround can be removed once MessageFlow uses BaseModel
+- We've successfully removed all `arbitrary_types_allowed` from the codebase
+- All callback handlers now inherit from StrictBaseModel
+- We use `Mapping` for type annotations (not `dict`) to satisfy immutability linter
+- MessageFlow and _MessageFlowBuilder no longer have custom model_config
 
 ## Success Criteria
 
-- All quality checks must pass 100%
-- Maintain Grade A complexity
-- Preserve all validation rules
-- Generic types must work properly
+- Quality check must pass 100% on entire clearflow/ directory
+- No `arbitrary_types_allowed` anywhere
+- All types are validated Pydantic types
+- Tests must pass
 
-Continue with Phase 2 as outlined in the plan!
+After completing Phase 3A.7, proceed to Phase 4: Remove strict_dataclass Module (see plan.md)

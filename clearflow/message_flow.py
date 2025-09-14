@@ -170,11 +170,10 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
     Call end() to specify where the flow terminates and get the completed flow.
     """
 
-    model_config = ConfigDict(frozen=True, strict=True, arbitrary_types_allowed=True)
 
     _name: str = Field(alias="name")
     _start_node: Node[Message, Message] = Field(alias="start_node")  # At runtime, this is type-erased
-    _routes: MappingProxyType[MessageRouteKey, Node[Message, Message] | None] = Field(alias="routes")
+    _routes: Mapping[MessageRouteKey, Node[Message, Message] | None] = Field(alias="routes")
     _reachable_nodes: frozenset[str] = Field(alias="reachable_nodes")  # Node names that are reachable from start
     _callbacks: CallbackHandler | None = Field(default=None, alias="callbacks")  # REQ-009: Optional callbacks
 
@@ -267,7 +266,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
         return _MessageFlowBuilder[TStartMessage, TStartOut](
             name=self._name,
             start_node=self._start_node,
-            routes=MappingProxyType(new_routes),
+            routes=new_routes,
             reachable_nodes=new_reachable,
             callbacks=self._callbacks,
         )
@@ -295,7 +294,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
         return MessageFlow[TStartMessage, TEndMessage](
             name=self._name,
             start_node=self._start_node,
-            routes=MappingProxyType(new_routes),
+            routes=new_routes,
             callbacks=self._callbacks,  # REQ-009: Pass callbacks to MessageFlow
         )
 
@@ -325,7 +324,7 @@ def message_flow(
     return _MessageFlowBuilder[Message, Message](
         name=name,
         start_node=start_node,
-        routes=MappingProxyType({}),
+        routes={},
         reachable_nodes=frozenset({start_node.name}),
         callbacks=None,  # REQ-016: Zero overhead when no callbacks attached
     )
