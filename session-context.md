@@ -1,53 +1,82 @@
-# Session Context: Callback System Complete
+# Session Context: Pydantic Migration for ClearFlow
 
 ## Session Summary
 
-Successfully completed the callback system implementation for ClearFlow, replacing the Observer pattern with a more standard callback approach. The system is production-ready with full test coverage and integrated into examples.
+Successfully migrated ClearFlow's Message API from vanilla dataclasses to Pydantic dataclasses with strictest validation settings for mission-critical correctness.
+
+## Key Architectural Decision
+
+Created `strict_dataclass` decorator using `functools.partial` to avoid configuration duplication:
+- Location: `clearflow/strict_dataclass.py`
+- Exported from: `clearflow/__init__.py`
+- Settings: `frozen=True, slots=True, kw_only=True` with strict Pydantic config
+- **IMPORTANT**: Decorator must be applied to EVERY message class (not inherited)
 
 ## Completed Work
 
-### 1. Callback System Core ✅
-- Implemented `CallbackHandler` base class with 4 lifecycle methods
-- Created `CompositeHandler` for multiple callback support with error isolation
-- Integrated callbacks into `MessageFlow` with zero overhead when disabled
-- 17 comprehensive tests achieving 100% coverage
-- All quality checks passing
+### Phase 1-3: Core Migration ✅
+1. **Infrastructure**: Added `pydantic>=2.11.0` dependency
+2. **Message Classes**: Migrated Message, Event, Command to strict_dataclass
+3. **MessageNode**: Migrated with model_validator replacing __post_init__
+4. **Type Changes**: `datetime` → `AwareDatetime`, UUID validation automatic
 
-### 2. Observer Pattern Removal ✅
-- Deleted `clearflow/observer.py` and `tests/test_observer.py`
-- Updated `clearflow/__init__.py` exports
-- Maintained backward compatibility
+### Key Technical Solutions
 
-### 3. ConsoleHandler Implementation ✅
-- Created `examples/shared/console_handler.py`
-- Fully immutable and stateless design
-- Removed timing state to comply with immutability requirements
-- Always shows full message content (removed verbose option)
-- Provides colored output for Commands (→ cyan) and Events (← magenta)
+1. **Validator Migration**: `__post_init__` → `@model_validator(mode="after")`
+2. **Pyright Compatibility**: Used `getattr(self, "triggered_by_id", None)` for inherited fields
+3. **Abstract Method Fix**: Added `_ = message` to silence Vulture warnings
+4. **Return Type**: Added `Self` type hint for validators
 
-### 4. Portfolio Example Update ✅
-- Updated `portfolio_flow.py` to always use ConsoleHandler
-- Simplified `main.py` to rely on ConsoleHandler for output
-- Removed redundant printing logic
-- All quality checks passing
+## Current Blocker
 
-## Key Technical Decisions
+### Phase 4: MessageFlow Inheritance Issue
 
-1. **Immutable ConsoleHandler**: Removed timing functionality to achieve full immutability
-2. **Always verbose**: Examples always show full message content for better understanding
-3. **Static methods**: Made helper methods static where appropriate
-4. **Public API**: All static methods called with class name must be public
+**Problem**: MessageFlow inherits from Node (now Pydantic dataclass) but uses vanilla `@dataclass`
+```python
+@dataclass(frozen=True, kw_only=True)  # Vanilla
+class MessageFlow(Node[...]):  # Node is @strict_dataclass (Pydantic)
+```
 
-## Current State
+**Error**: ~76 Pyright errors - type incompatibility between vanilla and Pydantic dataclasses
 
-- **Core**: Callback system fully integrated into MessageFlow
-- **Tests**: 95 tests passing with 100% coverage
-- **Examples**: Portfolio example using callbacks, others pending
-- **Quality**: All checks passing (architecture, immutability, complexity, etc.)
+**Preferred Solution**: Convert MessageFlow to `@strict_dataclass` for consistency and maximum strictness
 
-## Next Steps
+**Challenge**: MessageFlow has complex initialization with MappingProxyType and needs careful migration
 
-See plan.md for remaining tasks:
-- Add LoadingIndicator to chat and RAG examples
-- Update documentation to mention callback system
-- Ensure all examples demonstrate best practices
+## Test Suite Status
+
+**CRITICAL**: ~300+ test failures because test message classes still use vanilla `@dataclass`:
+- `tests/conftest_message.py`: ProcessCommand, ProcessedEvent, etc.
+- All test files with Command/Event subclasses
+- Need bulk update to `@strict_dataclass`
+
+## Pydantic Benefits Achieved
+
+1. **Runtime Validation**: Strict type checking, no coercion
+2. **Enhanced Safety**: `extra='forbid'`, `allow_inf_nan=False`
+3. **Memory Efficiency**: `slots=True` prevents dynamic attributes
+4. **Serialization Ready**: Native `.model_dump_json()` for ConsoleHandler
+
+## Next Session Focus
+
+1. **Priority 1**: Resolve MessageFlow inheritance (Phase 4)
+2. **Priority 2**: Update test message classes (Phase 6.1)
+3. **Priority 3**: Complete remaining phases per plan.md
+
+## Files Modified
+
+- ✅ `clearflow/strict_dataclass.py` (created)
+- ✅ `clearflow/message.py` (migrated)
+- ✅ `clearflow/message_node.py` (migrated)
+- ✅ `clearflow/__init__.py` (exports strict_dataclass)
+- ✅ `pyproject.toml` (added pydantic dependency)
+- 🚧 `clearflow/message_flow.py` (attempted, needs resolution)
+
+## Quality Status
+
+- `./quality-check.sh clearflow/message.py` ✅
+- `./quality-check.sh clearflow/message_node.py` ✅
+- `./quality-check.sh clearflow/message_flow.py` ❌ (76 type errors)
+- `./quality-check.sh tests` ❌ (300+ errors)
+
+See `plan.md` for detailed remaining tasks.

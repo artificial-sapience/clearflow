@@ -11,7 +11,7 @@ from typing import override
 import pytest
 
 from clearflow import MessageNode as Node
-from clearflow import message_flow
+from clearflow import message_flow, strict_dataclass
 from tests.conftest_message import (
     AnalysisCompleteEvent,
     ErrorEvent,

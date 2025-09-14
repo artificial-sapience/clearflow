@@ -1,16 +1,19 @@
 """Node implementation for message-driven architecture."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from typing import Self
+
+from pydantic import model_validator
 
 from clearflow.message import Message
+from clearflow.strict_dataclass import strict_dataclass
 
 __all__ = [
     "Node",
 ]
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class Node[TMessageIn: Message, TMessageOut: Message](ABC):
     """Orchestration node that can embody AI intelligence.
 
@@ -30,8 +33,12 @@ class Node[TMessageIn: Message, TMessageOut: Message](ABC):
 
     name: str
 
-    def __post_init__(self) -> None:
+    @model_validator(mode="after")
+    def _validate_node(self) -> Self:
         """Validate node configuration after initialization.
+
+        Returns:
+            Self after validation.
 
         Raises:
             ValueError: If node name is empty or contains only whitespace.
@@ -40,6 +47,7 @@ class Node[TMessageIn: Message, TMessageOut: Message](ABC):
         if not self.name or not self.name.strip():
             msg = f"Node name must be a non-empty string, got: {self.name!r}"
             raise ValueError(msg)
+        return self
 
     @abstractmethod
     async def process(self, message: TMessageIn) -> TMessageOut:
@@ -52,4 +60,5 @@ class Node[TMessageIn: Message, TMessageOut: Message](ABC):
             Output message representing the result of processing
 
         """
+        _ = message  # Vulture: abstract method parameter
         ...

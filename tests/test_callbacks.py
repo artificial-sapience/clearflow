@@ -5,25 +5,33 @@ import gc
 import sys
 import time
 import weakref
-from dataclasses import dataclass
 from io import StringIO
 from typing import override
 from uuid import uuid4
 
 import pytest
 
-from clearflow import CallbackHandler, Command, CompositeHandler, Event, Message, MessageNode, message_flow
+from clearflow import (
+    CallbackHandler,
+    Command,
+    CompositeHandler,
+    Event,
+    Message,
+    MessageNode,
+    message_flow,
+    strict_dataclass,
+)
 
 
 # Test messages using public API
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class StartCommand(Command):
     """Command to start processing."""
 
     value: str
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class ProcessedEvent(Event):
     """Event indicating processing complete."""
 
@@ -335,13 +343,13 @@ async def test_flow_callback_integration() -> None:
     """
 
     # Create a multi-node flow
-    @dataclass(frozen=True, kw_only=True)
+    @strict_dataclass
     class ValidateCommand(Command):
         """Command to validate data."""
 
         data: str
 
-    @dataclass(frozen=True, kw_only=True)
+    @strict_dataclass
     class ValidationEvent(Event):
         """Event indicating validation result."""
 

@@ -1,16 +1,5 @@
 # Pydantic Migration Plan for ClearFlow Messages
 
-## Current Status
-
-✅ **Completed**: Phases 1-3 (Infrastructure, Message classes, MessageNode)
-
-🚧 **In Progress**: Phase 4 - Message Flow Migration
-- Issue: MessageFlow inherits from Node (now Pydantic dataclass)
-- Challenge: Mixing vanilla dataclass with Pydantic inheritance
-- Solution needed: Make MessageFlow compatible with Pydantic Node parent
-
-**Next**: Resolve MessageFlow inheritance issue
-
 ## Overview
 
 Migrate Message API from vanilla frozen dataclasses to Pydantic dataclasses with strict validation for mission-critical correctness.
@@ -19,40 +8,83 @@ Migrate Message API from vanilla frozen dataclasses to Pydantic dataclasses with
 
 ## Migration Phases
 
+### Phase 1: Core Infrastructure Setup
 
-## Remaining Tasks
+#### 1.1 Add Pydantic Dependency
 
-### Phase 4: Message Flow Migration 🚧
+- [ ] Update `pyproject.toml` to add `pydantic>=2.11.0` as dependency
+- [ ] Run `uv sync` to install
+- [ ] Run `./quality-check.sh` to ensure no breakage
 
-#### 4.1 Resolve Inheritance Issue
+#### 1.2 Create Migration Branch
 
-- [ ] Investigate: MessageFlow inherits from Node (Pydantic) but is vanilla dataclass
-- [ ] Solution 1: Convert MessageFlow to strict_dataclass (preferred for consistency)
-- [ ] Solution 2: Make Node support both Pydantic and vanilla subclasses
-- [ ] Ensure _MessageFlowBuilder also migrates correctly
+- [ ] Create feature branch `feat/pydantic-messages`
+- [ ] Document breaking changes if any
+
+### Phase 2: Message Base Class Migration
+
+#### 2.1 Update Message Base Class
+
+- [ ] Import from `pydantic.dataclasses` instead of `dataclasses`
+- [ ] Add strict config: `config={'strict': True, 'extra': 'forbid', 'validate_assignment': True}`
+- [ ] Change `datetime` to `AwareDatetime` type
+- [ ] Update UUID handling for Pydantic compatibility
+- [ ] Run `./quality-check.sh clearflow/message.py`
+
+#### 2.2 Update Event Class
+
+- [ ] Migrate Event to Pydantic dataclass
+- [ ] Ensure `__post_init__` validation works with Pydantic
+- [ ] Test triggered_by_id validation
+- [ ] Run `./quality-check.sh clearflow/message.py`
+
+#### 2.3 Update Command Class
+
+- [ ] Migrate Command to Pydantic dataclass
+- [ ] Ensure `__post_init__` validation works
+- [ ] Test abstract class instantiation prevention
+- [ ] Run `./quality-check.sh clearflow/message.py`
+
+### Phase 3: Message Node Migration
+
+#### 3.1 Update MessageNode
+
+- [ ] Migrate MessageNode to Pydantic dataclass
+- [ ] Ensure name validation works
+- [ ] Test frozen behavior maintained
+- [ ] Run `./quality-check.sh clearflow/message_node.py`
+
+### Phase 4: Message Flow Migration
+
+#### 4.1 Update MessageFlow Components
+
+- [ ] Check if MessageFlow needs Pydantic migration
+- [ ] Update any internal dataclasses
 - [ ] Run `./quality-check.sh clearflow/message_flow.py`
 
-### Phase 5: Callback System Check
+### Phase 5: Callback System Migration
 
-- [ ] Verify CallbackHandler doesn't use dataclasses (likely just ABC)
+#### 5.1 Update CallbackHandler if needed
+
+- [ ] Check if callbacks use dataclasses
+- [ ] Migrate if necessary
 - [ ] Run `./quality-check.sh clearflow/callbacks.py`
 
-### Phase 6: Test Suite Updates 🔴 CRITICAL
+### Phase 6: Test Suite Verification
 
-#### 6.1 Update Test Message Classes
+#### 6.1 Run Existing Tests
 
-- [ ] Replace `@dataclass` with `@strict_dataclass` in conftest_message.py
-- [ ] Update all test Command/Event classes in test files
-- [ ] Fix ~300+ type errors from Pydantic inheritance
-- [ ] Run `./quality-check.sh tests`
+- [ ] Run `./quality-check.sh tests` - should pass 100%
+- [ ] Fix any test failures due to stricter validation
+- [ ] Document any behavior changes
 
-#### 6.2 Add Pydantic Validation Tests
+#### 6.2 Add Pydantic-Specific Tests
 
-- [ ] Test strict mode (no type coercion)
-- [ ] Test extra='forbid' (reject unknown fields)
+- [ ] Test strict mode validation
+- [ ] Test extra='forbid' behavior
+- [ ] Test validate_assignment=True
 - [ ] Test AwareDatetime validation
-- [ ] Test UUID strict validation
-- [ ] Test frozen behavior with slots=True
+- [ ] Run `./quality-check.sh tests`
 
 ### Phase 7: Example Updates
 

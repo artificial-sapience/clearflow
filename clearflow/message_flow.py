@@ -10,11 +10,21 @@ import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import cast, final, override
+from typing import Protocol, cast, final
 
 from clearflow.callbacks import CallbackHandler
 from clearflow.message import Message
-from clearflow.message_node import Node
+
+
+class NodeProtocol(Protocol):
+    """Protocol for message nodes with type erasure for runtime compatibility."""
+
+    name: str
+
+    async def process(self, message: Message) -> Message:
+        """Process a message."""
+        ...
+
 
 __all__ = [
     "MessageFlow",
@@ -26,11 +36,10 @@ MessageRouteKey = tuple[type[Message], str]  # (outcome, node_name)
 
 @final
 @dataclass(frozen=True, kw_only=True)
-class MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessage, TEndMessage]):
+class MessageFlow[TStartMessage: Message, TEndMessage: Message]:
     """Message flow that routes messages based on their types.
 
     Executes flows by routing messages through nodes based on their runtime types.
-    Being a Node allows flows to be composed within other flows.
 
     The flow uses type erasure internally at routing boundaries to handle complex
     type patterns like union types, while maintaining type safety at the flow's
@@ -44,8 +53,8 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessa
     """
 
     name: str
-    start_node: Node[Message, Message]
-    routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
+    start_node: NodeProtocol
+    routes: Mapping[MessageRouteKey, NodeProtocol | None]
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
 
     async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
@@ -70,7 +79,7 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessa
             # REQ-006: Log but don't propagate
             sys.stderr.write(f"Callback {method} failed: {e}\n")
 
-    async def _execute_node(self, node: Node[Message, Message], message: Message) -> Message:
+    async def _execute_node(self, node: NodeProtocol, message: Message) -> Message:
         """Execute a single node with callback notifications.
 
         Args:
@@ -95,7 +104,7 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessa
             await self._safe_callback("on_node_end", node.name, output, None)
             return output
 
-    def _get_next_node(self, message: Message, current_node: Node[Message, Message]) -> Node[Message, Message] | None:
+    def _get_next_node(self, message: Message, current_node: NodeProtocol) -> NodeProtocol | None:
         """Get the next node for routing based on message type.
 
         Args:
@@ -115,7 +124,6 @@ class MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessa
             raise ValueError(msg)
         return self.routes[route_key]
 
-    @override
     async def process(self, message: TStartMessage) -> TEndMessage:
         """Process message by routing through the flow.
 
@@ -174,8 +182,8 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
     """
 
     _name: str
-    _start_node: Node[TStartMessage, TStartOut]
-    _routes: MappingProxyType[MessageRouteKey, Node[Message, Message] | None]
+    _start_node: NodeProtocol  # At runtime, this is type-erased
+    _routes: MappingProxyType[MessageRouteKey, NodeProtocol | None]
     _reachable_nodes: frozenset[str]  # Node names that are reachable from start
     _callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks
 
@@ -231,11 +239,11 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
             _callbacks=handler,
         )
 
-    def route[TFromIn: Message, TFromOut: Message, TToIn: Message, TToOut: Message](
+    def route(
         self,
-        from_node: Node[TFromIn, TFromOut],
+        from_node: NodeProtocol,
         outcome: type[Message],
-        to_node: Node[TToIn, TToOut],
+        to_node: NodeProtocol,
     ) -> "_MessageFlowBuilder[TStartMessage, TStartOut]":
         """Route specific message type from source node to destination.
 
@@ -262,7 +270,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
         route_key = self._validate_and_create_route(from_node.name, outcome)
 
         # Add route and mark to_node as reachable
-        new_routes = {**self._routes, route_key: cast("Node[Message, Message]", to_node)}
+        new_routes = {**self._routes, route_key: to_node}
         new_reachable = self._reachable_nodes | {to_node.name}
 
         return _MessageFlowBuilder[TStartMessage, TStartOut](
@@ -273,9 +281,9 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
             _callbacks=self._callbacks,
         )
 
-    def end[TFromIn: Message, TFromOut: Message, TEndMessage: Message](
+    def end[TEndMessage: Message](
         self,
-        from_node: Node[TFromIn, TFromOut],
+        from_node: NodeProtocol,
         outcome: type[TEndMessage],
     ) -> MessageFlow[TStartMessage, TEndMessage]:
         """Mark message type as terminal from source node.
@@ -295,16 +303,16 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
 
         return MessageFlow[TStartMessage, TEndMessage](
             name=self._name,
-            start_node=cast("Node[Message, Message]", self._start_node),
+            start_node=self._start_node,
             routes=MappingProxyType(new_routes),
             callbacks=self._callbacks,  # REQ-009: Pass callbacks to MessageFlow
         )
 
 
-def message_flow[TStartMessage: Message, TStartOut: Message](
+def message_flow(
     name: str,
-    start_node: Node[TStartMessage, TStartOut],
-) -> _MessageFlowBuilder[TStartMessage, TStartOut]:
+    start_node: NodeProtocol,  # At runtime, accepts any node
+) -> _MessageFlowBuilder[Message, Message]:
     """Create a message flow with explicit routing.
 
     This is the entry point for building message-driven workflows. The flow
@@ -323,7 +331,7 @@ def message_flow[TStartMessage: Message, TStartOut: Message](
         Builder for route definition and flow completion
 
     """
-    return _MessageFlowBuilder[TStartMessage, TStartOut](
+    return _MessageFlowBuilder[Message, Message](
         _name=name,
         _start_node=start_node,
         _routes=MappingProxyType({}),

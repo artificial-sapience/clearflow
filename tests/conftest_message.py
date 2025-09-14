@@ -6,12 +6,11 @@ demonstrating mission-critical AI orchestration patterns with message-driven flo
 """
 
 import uuid
-from dataclasses import dataclass
 
-from clearflow import Command, Event
+from clearflow import Command, Event, strict_dataclass
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class ProcessCommand(Command):
     """Command to initiate processing."""
 
@@ -19,7 +18,7 @@ class ProcessCommand(Command):
     priority: int = 1
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class ValidateCommand(Command):
     """Command to validate input."""
 
@@ -27,7 +26,7 @@ class ValidateCommand(Command):
     strict: bool = True
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class AnalyzeCommand(Command):
     """Command to analyze data."""
 
@@ -35,7 +34,7 @@ class AnalyzeCommand(Command):
     analysis_type: str = "basic"
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class ProcessedEvent(Event):
     """Event indicating processing completed."""
 
@@ -43,7 +42,7 @@ class ProcessedEvent(Event):
     processing_time_ms: float
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class ValidationPassedEvent(Event):
     """Event indicating validation succeeded."""
 
@@ -51,7 +50,7 @@ class ValidationPassedEvent(Event):
     validation_score: float = 1.0
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class ValidationFailedEvent(Event):
     """Event indicating validation failed."""
 
@@ -59,7 +58,7 @@ class ValidationFailedEvent(Event):
     errors: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class AnalysisCompleteEvent(Event):
     """Event indicating analysis completed."""
 
@@ -67,7 +66,7 @@ class AnalysisCompleteEvent(Event):
     confidence: float = 0.95
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class ErrorEvent(Event):
     """Event indicating an error occurred."""
 
@@ -75,7 +74,7 @@ class ErrorEvent(Event):
     error_type: str = "general"
 
 
-@dataclass(frozen=True, kw_only=True)
+@strict_dataclass
 class SecurityAlertEvent(Event):
     """Event indicating a security issue detected."""
 

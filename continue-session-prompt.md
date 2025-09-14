@@ -1,28 +1,38 @@
-# Continue Session: Callback System Examples
+# Continue Pydantic Migration Session
 
-Please continue implementing the ClearFlow callback system examples (Phase 4.2).
+Please read the following context files to understand the current state:
 
-## Current Status
-- See session-context.md for detailed session history
-- See plan.md for task breakdown
+1. @session-context.md - Full context from previous session
+2. @plan.md - Remaining tasks and current progress
 
-## Immediate Task
-Fix the ConsoleHandler immutability linter issue in `examples/shared/console_handler.py`:
-- The linter flags `_start_times: dict[str, datetime]` even though it's private mutable state
-- Options:
-  1. Try removing the type annotation entirely
-  2. Ask user for approval to suppress the linter for this specific case
-  3. Refactor to avoid mutable state (may require significant redesign)
+## Current Task
 
-## Next Steps After ConsoleHandler Fix
-1. Update portfolio_analysis_message_driven example to use callbacks for all logging
-2. Add LoadingIndicator to all examples for async operations
-3. Ensure all examples pass quality checks
+We're migrating ClearFlow from vanilla dataclasses to Pydantic dataclasses for maximum type safety and validation. We've completed Phases 1-3 but hit a blocker in Phase 4.
 
-## Key Context
-- The callback system core is 100% complete and production-ready
-- Only example/documentation tasks remain
-- Examples must meet the same quality standards as core code
-- No suppressions without explicit user approval
+## Immediate Priority
 
-Start by running `./quality-check.sh examples/shared/console_handler.py` to see the current state of the linting issues.
+**Resolve MessageFlow inheritance issue**: MessageFlow inherits from Node (now a Pydantic dataclass) but itself uses vanilla `@dataclass`, causing ~76 type errors.
+
+**Your task**:
+
+1. Analyze why MessageFlow can't simply use `@strict_dataclass`
+2. Propose and implement a solution that uses `@strict_dataclass`
+3. Ensure both MessageFlow and _MessageFlowBuilder are properly migrated
+4. Run `./quality-check.sh clearflow/message_flow.py` to verify
+
+## Constraints
+
+- Prefer maximum strictness (use `@strict_dataclass` wherever possible)
+- Maintain 100% quality check compliance
+- Don't use suppressions without explicit approval
+- Follow patterns established in session-context.md
+
+## Success Criteria
+
+- MessageFlow properly inherits from Pydantic Node
+- Zero type errors in message_flow.py
+- Quality check passes 100%
+
+After resolving MessageFlow, we'll tackle the test suite updates (Phase 6) where ~300+ test message classes need migration to `@strict_dataclass`.
+
+Let's continue where we left off!
