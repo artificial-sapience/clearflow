@@ -10,8 +10,6 @@ import sys
 from collections.abc import Mapping
 from typing import cast, final
 
-from pydantic import Field
-
 from clearflow.callbacks import CallbackHandler
 from clearflow.message import Message
 from clearflow.message_node import Node
@@ -170,11 +168,11 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
     Call end() to specify where the flow terminates and get the completed flow.
     """
 
-    _name: str = Field(alias="name")
-    _start_node: Node[Message, Message] = Field(alias="start_node")  # At runtime, this is type-erased
-    _routes: Mapping[MessageRouteKey, Node[Message, Message] | None] = Field(alias="routes")
-    _reachable_nodes: frozenset[str] = Field(alias="reachable_nodes")  # Node names that are reachable from start
-    _callbacks: CallbackHandler | None = Field(default=None, alias="callbacks")  # REQ-009: Optional callbacks
+    name: str
+    start_node: Node[Message, Message]  # At runtime, this is type-erased
+    routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
+    reachable_nodes: frozenset[str]  # Node names that are reachable from start
+    callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks
 
     def _validate_and_create_route(
         self, from_node_name: str, outcome: type[Message], *, is_termination: bool = False
@@ -194,14 +192,14 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
 
         """
         # Check reachability
-        if from_node_name not in self._reachable_nodes:
+        if from_node_name not in self.reachable_nodes:
             action = "end at" if is_termination else "route from"
             msg = f"Cannot {action} node '{from_node_name}' - not reachable from start"
             raise ValueError(msg)
 
         # Check for duplicate routes
         route_key: MessageRouteKey = (outcome, from_node_name)
-        if route_key in self._routes:
+        if route_key in self.routes:
             msg = f"Route already defined for message type '{outcome.__name__}' from node '{from_node_name}'"
             raise ValueError(msg)
 
@@ -221,10 +219,10 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
 
         """
         return _MessageFlowBuilder[TStartMessage, TStartOut](
-            name=self._name,
-            start_node=self._start_node,
-            routes=self._routes,
-            reachable_nodes=self._reachable_nodes,
+            name=self.name,
+            start_node=self.start_node,
+            routes=self.routes,
+            reachable_nodes=self.reachable_nodes,
             callbacks=handler,
         )
 
@@ -259,15 +257,15 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
         route_key = self._validate_and_create_route(from_node.name, outcome)
 
         # Add route and mark to_node as reachable
-        new_routes = {**self._routes, route_key: cast("Node[Message, Message]", to_node)}
-        new_reachable = self._reachable_nodes | {to_node.name}
+        new_routes = {**self.routes, route_key: cast("Node[Message, Message]", to_node)}
+        new_reachable = self.reachable_nodes | {to_node.name}
 
         return _MessageFlowBuilder[TStartMessage, TStartOut](
-            name=self._name,
-            start_node=self._start_node,
+            name=self.name,
+            start_node=self.start_node,
             routes=new_routes,
             reachable_nodes=new_reachable,
-            callbacks=self._callbacks,
+            callbacks=self.callbacks,
         )
 
     def end[TFromIn: Message, TFromOut: Message, TEndMessage: Message](
@@ -288,13 +286,13 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
         route_key = self._validate_and_create_route(from_node.name, outcome, is_termination=True)
 
         # Add termination route
-        new_routes = {**self._routes, route_key: None}
+        new_routes = {**self.routes, route_key: None}
 
         return MessageFlow[TStartMessage, TEndMessage](
-            name=self._name,
-            start_node=self._start_node,
+            name=self.name,
+            start_node=self.start_node,
             routes=new_routes,
-            callbacks=self._callbacks,  # REQ-009: Pass callbacks to MessageFlow
+            callbacks=self.callbacks,  # REQ-009: Pass callbacks to MessageFlow
         )
 
 
