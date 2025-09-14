@@ -80,12 +80,11 @@ def print_final_decision(event: DecisionMadeEvent) -> None:
         print("⚠️  Requires human review")
 
 
-async def run_portfolio_analysis(scenario: str = "normal", *, verbose: bool = False) -> None:
+async def run_portfolio_analysis(scenario: str = "normal") -> None:
     """Run the portfolio analysis workflow.
 
     Args:
         scenario: Market scenario - "normal", "bullish", or "volatile"
-        verbose: If True, show detailed message content
 
     """
     # Configure DSPy with OpenAI
@@ -104,7 +103,7 @@ async def run_portfolio_analysis(scenario: str = "normal", *, verbose: bool = Fa
     print_market_summary(command)
 
     # Create and run the flow with built-in console output
-    flow = create_portfolio_analysis_flow(verbose=verbose)
+    flow = create_portfolio_analysis_flow()
     result = await flow.process(command)
 
     # Display final decision summary
@@ -118,26 +117,24 @@ def print_menu() -> None:
     print("1. Normal market conditions (default)")
     print("2. Bullish market (growth opportunities)")
     print("3. Volatile market (high risk)")
-    print("4. Normal market with verbose output")
 
 
 async def main() -> None:
     """Run the main entry point with menu."""
     print_menu()
-    choice = input("\nEnter choice (1-4, default=1): ").strip()
+    choice = input("\nEnter choice (1-3, default=1): ").strip()
 
     scenarios = {
-        "1": ("normal", False),
-        "2": ("bullish", False),
-        "3": ("volatile", False),
-        "4": ("normal", True),  # verbose
+        "1": "normal",
+        "2": "bullish",
+        "3": "volatile",
     }
 
-    scenario, verbose = scenarios.get(choice, ("normal", False))
+    scenario = scenarios.get(choice, "normal")
     if choice and choice not in scenarios:
         print("Invalid choice. Using default (normal).")
 
-    await run_portfolio_analysis(scenario, verbose=verbose)
+    await run_portfolio_analysis(scenario)
 
 
 if __name__ == "__main__":

@@ -22,14 +22,8 @@ class ConsoleHandler(CallbackHandler):
     - Error states
     """
 
-    def __init__(self, *, verbose: bool = False) -> None:
-        """Initialize console handler.
-
-        Args:
-            verbose: If True, show detailed message content
-
-        """
-        self.verbose = verbose
+    def __init__(self) -> None:
+        """Initialize console handler."""
 
     @override
     async def on_flow_start(self, flow_name: str, message: Message) -> None:
@@ -41,7 +35,7 @@ class ConsoleHandler(CallbackHandler):
 
         """
         ConsoleHandler.print_header(f"🚀 Flow Started: {flow_name}")
-        self._print_message("Input", message)
+        ConsoleHandler.print_message("Input", message)
         ConsoleHandler.print_timestamp(message.timestamp)
 
     @override
@@ -59,7 +53,7 @@ class ConsoleHandler(CallbackHandler):
             ConsoleHandler.print_error(error)
         else:
             ConsoleHandler.print_header(f"✅ Flow Completed: {flow_name}", color="green")
-            self._print_message("Output", message)
+            ConsoleHandler.print_message("Output", message)
             ConsoleHandler.print_timestamp(message.timestamp)
 
         sys.stderr.write("\n")
@@ -74,8 +68,7 @@ class ConsoleHandler(CallbackHandler):
 
         """
         ConsoleHandler.print_node_status(f"⚙️  {node_name}", "processing", color="yellow")
-        if self.verbose:
-            self._print_message("Input", message, indent=2)
+        ConsoleHandler.print_message("Input", message, indent=2)
 
     @override
     async def on_node_end(self, node_name: str, message: Message, error: Exception | None) -> None:
@@ -92,8 +85,7 @@ class ConsoleHandler(CallbackHandler):
             ConsoleHandler.print_error(error, indent=2)
         else:
             ConsoleHandler.print_node_status(f"✓  {node_name}", "completed", color="green")
-            if self.verbose:
-                self._print_message("Output", message, indent=2)
+            ConsoleHandler.print_message("Output", message, indent=2)
 
     @staticmethod
     def print_header(text: str, color: str = "blue") -> None:
@@ -125,7 +117,8 @@ class ConsoleHandler(CallbackHandler):
             return "magenta", "←"
         return "white", "•"
 
-    def _print_message(self, label: str, message: Message, indent: int = 1) -> None:
+    @staticmethod
+    def print_message(label: str, message: Message, indent: int = 1) -> None:
         """Print message details."""
         spaces = "  " * indent
         msg_type = message.__class__.__name__
@@ -134,11 +127,10 @@ class ConsoleHandler(CallbackHandler):
         colored_type = ConsoleHandler.colorize(f"{type_symbol} {msg_type}", type_color)
         sys.stderr.write(f"{spaces}{label}: {colored_type}\n")
 
-        if self.verbose:
-            # Show key fields (excluding internal metadata)
-            for key, value in message.__dict__.items():
-                if not key.startswith("_") and key not in {"id", "timestamp", "triggered_by_id", "run_id"}:
-                    sys.stderr.write(f"{spaces}  {key}: {value}\n")
+        # Show key fields (excluding internal metadata)
+        for key, value in message.__dict__.items():
+            if not key.startswith("_") and key not in {"id", "timestamp", "triggered_by_id", "run_id"}:
+                sys.stderr.write(f"{spaces}  {key}: {value}\n")
 
     @staticmethod
     def print_error(error: Exception, indent: int = 1) -> None:

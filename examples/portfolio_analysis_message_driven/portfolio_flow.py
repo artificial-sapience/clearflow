@@ -24,7 +24,7 @@ from examples.portfolio_analysis_message_driven.nodes import (
 from examples.shared.console_handler import ConsoleHandler
 
 
-def create_portfolio_analysis_flow(*, verbose: bool = False) -> MessageFlow[StartAnalysisCommand, DecisionMadeEvent]:
+def create_portfolio_analysis_flow() -> MessageFlow[StartAnalysisCommand, DecisionMadeEvent]:
     """Create the portfolio analysis workflow with pure event-driven architecture.
 
     This flow demonstrates:
@@ -43,9 +43,6 @@ def create_portfolio_analysis_flow(*, verbose: bool = False) -> MessageFlow[Star
     5. ComplianceReviewedEvent → DecisionMaker
     6. Any AnalysisFailedEvent → DecisionMaker (conservative handling)
 
-    Args:
-        verbose: If True, show detailed message content in console output
-
     Returns:
         MessageFlow that processes market analysis into trading decisions.
 
@@ -58,7 +55,7 @@ def create_portfolio_analysis_flow(*, verbose: bool = False) -> MessageFlow[Star
     decision = DecisionMakerNode()
 
     # Create console handler for visibility
-    console = ConsoleHandler(verbose=verbose)
+    console = ConsoleHandler()
 
     # Build the flow with console output
     return (
