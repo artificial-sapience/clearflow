@@ -17,9 +17,9 @@ readme = "README.md"
 requires-python = ">=3.13"
 
 keywords = [
-    "message-driven", "observable", "event-sourcing", "language-models", 
-    "ai-agents", "orchestration", "agents", "async", "type-safe", 
-    "zero-dependencies", "reliable"
+    "message-driven", "observable", "event-sourcing", "language-models",
+    "ai-agents", "orchestration", "agents", "async", "type-safe",
+    "pydantic", "validation", "reliable"
 ]
 
 classifiers = [
@@ -36,7 +36,9 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-dependencies = []
+dependencies = [
+    "pydantic>=2.11.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/artificial-sapience/clearflow"

@@ -231,6 +231,9 @@ wheels = [
 name = "clearflow"
 version = "0.0.0"
 source = { editable = "." }
+dependencies = [
+    { name = "pydantic" },
+]
 
 [package.optional-dependencies]
 dev = [
@@ -279,6 +282,7 @@ requires-dist = [
     { name = "numpy", marker = "extra == 'examples'", specifier = ">=2.3.0" },
     { name = "openai", marker = "extra == 'examples'", specifier = ">=1.107.0" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.9.0" },
+    { name = "pydantic", specifier = ">=2.11.0" },
     { name = "pydantic", marker = "extra == 'examples'", specifier = ">=2.11.0" },
     { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.405" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.2" },
