@@ -37,9 +37,9 @@ Complete migration from dataclasses to Pydantic BaseModel for ALL message-driven
 - [ ] Verify frozen behavior maintained
 - [ ] Run `./quality-check.sh clearflow/message.py`
 
-#### 1.3 Convert Command Class
+#### 1.4 Convert Command Class
 
-- [ ] Change `Command` to inherit from BaseModel (and Message)
+- [ ] Change `Command` to inherit from Message (which now inherits from StrictBaseModel)
 - [ ] Update abstract class validation
 - [ ] Test that Command cannot be instantiated directly
 - [ ] Verify all validation rules work
