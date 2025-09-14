@@ -24,9 +24,7 @@ from examples.portfolio_analysis_message_driven.nodes import (
 from examples.shared.console_handler import ConsoleHandler
 
 
-def create_portfolio_analysis_flow(
-    *, verbose: bool = False
-) -> MessageFlow[StartAnalysisCommand, DecisionMadeEvent]:
+def create_portfolio_analysis_flow(*, verbose: bool = False) -> MessageFlow[StartAnalysisCommand, DecisionMadeEvent]:
     """Create the portfolio analysis workflow with pure event-driven architecture.
 
     This flow demonstrates:
