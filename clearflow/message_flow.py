@@ -8,15 +8,14 @@ flow input/output boundaries.
 
 import sys
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import cast, final, override
 
 from clearflow.callbacks import CallbackHandler
 from clearflow.message import Message
 from clearflow.message_node import Node
-from clearflow.strict_base_model import StrictBaseModel
 
 __all__ = [
-    "MessageFlow",
     "message_flow",
 ]
 
@@ -24,8 +23,8 @@ MessageRouteKey = tuple[type[Message], str]  # (outcome, node_name)
 
 
 @final
-class MessageFlow[TStartMessage: Message, TStartOut: Message, TEndMessage: Message](Node[TStartMessage, TEndMessage]):
-    """Message flow that routes messages based on their types.
+class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessage, TEndMessage]):
+    """Internal message flow that routes messages based on their types.
 
     Executes flows by routing messages through nodes based on their runtime types.
 
@@ -35,9 +34,9 @@ class MessageFlow[TStartMessage: Message, TStartOut: Message, TEndMessage: Messa
 
     """
 
-    _start_node: Node[TStartMessage, TStartOut]
-    _routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
-    _callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
+    start_node: Node[Message, Message]
+    routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
+    callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
 
     async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
         """Execute callback safely without affecting flow.
@@ -51,11 +50,11 @@ class MessageFlow[TStartMessage: Message, TStartOut: Message, TEndMessage: Messa
             *args: Arguments to pass to the callback method (flow_name, node_name, message, error)
 
         """
-        if not self._callbacks:  # REQ-016: Zero overhead when no callbacks
+        if not self.callbacks:  # REQ-016: Zero overhead when no callbacks
             return
 
         try:
-            callback_method = getattr(self._callbacks, method)
+            callback_method = getattr(self.callbacks, method)
             await callback_method(*args)
         except Exception as e:  # noqa: BLE001  # REQ-005: Must catch all exceptions to prevent flow disruption
             # REQ-006: Log but don't propagate
@@ -101,10 +100,10 @@ class MessageFlow[TStartMessage: Message, TStartOut: Message, TEndMessage: Messa
 
         """
         route_key = (type(message), current_node.name)
-        if route_key not in self._routes:
+        if route_key not in self.routes:
             msg = f"No route defined for message type '{message.__class__.__name__}' from node '{current_node.name}'"
             raise ValueError(msg)
-        return self._routes[route_key]
+        return self.routes[route_key]
 
     @override
     async def process(self, message: TStartMessage) -> TEndMessage:
@@ -120,7 +119,7 @@ class MessageFlow[TStartMessage: Message, TStartOut: Message, TEndMessage: Messa
         # REQ-010: Invoke on_flow_start at beginning
         await self._safe_callback("on_flow_start", self.name, message)
 
-        current_node: Node[Message, Message] = cast("Node[Message, Message]", self._start_node)
+        current_node: Node[Message, Message] = self.start_node
         current_message: Message = message
 
         try:
@@ -146,7 +145,8 @@ class MessageFlow[TStartMessage: Message, TStartOut: Message, TEndMessage: Messa
 
 
 @final
-class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBaseModel):
+@dataclass(frozen=True)
+class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
     """Builder for composing message routes with explicit source nodes.
 
     Uses the pattern from the original flow API where each route explicitly
@@ -267,7 +267,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
         self,
         from_node: Node[TFromIn, TFromOut],
         outcome: type[TEndMessage],
-    ) -> MessageFlow[TStartMessage, TStartOut, TEndMessage]:
+    ) -> Node[TStartMessage, TEndMessage]:
         """Mark message type as terminal from source node.
 
         Args:
@@ -275,7 +275,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
             outcome: The message type that completes the flow
 
         Returns:
-            A MessageFlow that represents the complete flow (for composability)
+            A Node that represents the complete flow
 
         """
         route_key = self._validate_and_create_route(from_node.name, outcome, is_termination=True)
@@ -283,11 +283,11 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
         # Add termination route
         new_routes = {**self.routes, route_key: None}
 
-        return MessageFlow[TStartMessage, TStartOut, TEndMessage](
+        return _MessageFlow[TStartMessage, TEndMessage](
             name=self.name,
-            _start_node=self.start_node,
-            _routes=new_routes,
-            _callbacks=self.callbacks,  # REQ-009: Pass callbacks to MessageFlow
+            start_node=cast("Node[Message, Message]", self.start_node),
+            routes=new_routes,
+            callbacks=self.callbacks,  # REQ-009: Pass callbacks to MessageFlow
         )
 
 

@@ -9,7 +9,7 @@ from typing import Protocol, cast, final, override
 # Import message API components
 from clearflow.callbacks import CallbackHandler, CompositeHandler
 from clearflow.message import Command, Event, Message
-from clearflow.message_flow import MessageFlow, message_flow
+from clearflow.message_flow import message_flow
 from clearflow.message_node import Node as MessageNode
 from clearflow.strict_base_model import StrictBaseModel
 
@@ -19,7 +19,6 @@ __all__ = [
     "CompositeHandler",
     "Event",
     "Message",
-    "MessageFlow",
     "MessageNode",
     "Node",
     "NodeResult",
