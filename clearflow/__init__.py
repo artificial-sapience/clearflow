@@ -11,7 +11,6 @@ from clearflow.callbacks import CallbackHandler, CompositeHandler
 from clearflow.message import Command, Event, Message
 from clearflow.message_flow import MessageFlow, message_flow
 from clearflow.message_node import Node as MessageNode
-from clearflow.observer import ObservableFlow, Observer
 
 __all__ = [
     "CallbackHandler",
@@ -23,8 +22,6 @@ __all__ = [
     "MessageNode",
     "Node",
     "NodeResult",
-    "ObservableFlow",
-    "Observer",
     "flow",
     "message_flow",
 ]
