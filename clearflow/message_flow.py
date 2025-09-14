@@ -170,7 +170,6 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
     Call end() to specify where the flow terminates and get the completed flow.
     """
 
-
     _name: str = Field(alias="name")
     _start_node: Node[Message, Message] = Field(alias="start_node")  # At runtime, this is type-erased
     _routes: Mapping[MessageRouteKey, Node[Message, Message] | None] = Field(alias="routes")
