@@ -10,7 +10,7 @@ import sys
 from collections.abc import Mapping
 from typing import cast, final
 
-from pydantic import ConfigDict, Field
+from pydantic import Field
 
 from clearflow.callbacks import CallbackHandler
 from clearflow.message import Message
@@ -170,8 +170,6 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
     Call end() to specify where the flow terminates and get the completed flow.
     """
 
-    model_config = ConfigDict(frozen=True, strict=True, arbitrary_types_allowed=True)
-
     _name: str = Field(alias="name")
     _start_node: Node[Message, Message] = Field(alias="start_node")  # At runtime, this is type-erased
     _routes: Mapping[MessageRouteKey, Node[Message, Message] | None] = Field(alias="routes")
@@ -230,11 +228,11 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
             callbacks=handler,
         )
 
-    def route(
+    def route[TFromIn: Message, TFromOut: Message, TToIn: Message, TToOut: Message](
         self,
-        from_node: Node[Message, Message],
+        from_node: Node[TFromIn, TFromOut],
         outcome: type[Message],
-        to_node: Node[Message, Message],
+        to_node: Node[TToIn, TToOut],
     ) -> "_MessageFlowBuilder[TStartMessage, TStartOut]":
         """Route specific message type from source node to destination.
 
@@ -261,7 +259,7 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
         route_key = self._validate_and_create_route(from_node.name, outcome)
 
         # Add route and mark to_node as reachable
-        new_routes = {**self._routes, route_key: to_node}
+        new_routes = {**self._routes, route_key: cast("Node[Message, Message]", to_node)}
         new_reachable = self._reachable_nodes | {to_node.name}
 
         return _MessageFlowBuilder[TStartMessage, TStartOut](
@@ -272,9 +270,9 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
             callbacks=self._callbacks,
         )
 
-    def end[TEndMessage: Message](
+    def end[TFromIn: Message, TFromOut: Message, TEndMessage: Message](
         self,
-        from_node: Node[Message, Message],
+        from_node: Node[TFromIn, TFromOut],
         outcome: type[TEndMessage],
     ) -> MessageFlow[TStartMessage, TEndMessage]:
         """Mark message type as terminal from source node.
@@ -300,10 +298,10 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message](StrictBase
         )
 
 
-def message_flow(
+def message_flow[TStartMessage: Message, TStartOut: Message](
     name: str,
-    start_node: Node[Message, Message],  # At runtime, accepts any node
-) -> _MessageFlowBuilder[Message, Message]:
+    start_node: Node[TStartMessage, TStartOut],
+) -> _MessageFlowBuilder[TStartMessage, TStartOut]:
     """Create a message flow with explicit routing.
 
     This is the entry point for building message-driven workflows. The flow
@@ -322,9 +320,9 @@ def message_flow(
         Builder for route definition and flow completion
 
     """
-    return _MessageFlowBuilder[Message, Message](
+    return _MessageFlowBuilder[TStartMessage, TStartOut](
         name=name,
-        start_node=start_node,
+        start_node=cast("Node[Message, Message]", start_node),
         routes={},
         reachable_nodes=frozenset({start_node.name}),
         callbacks=None,  # REQ-016: Zero overhead when no callbacks attached

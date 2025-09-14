@@ -7,10 +7,9 @@ demonstrating mission-critical AI orchestration patterns with message-driven flo
 
 import uuid
 
-from clearflow import Command, Event, strict_dataclass
+from clearflow import Command, Event
 
 
-@strict_dataclass
 class ProcessCommand(Command):
     """Command to initiate processing."""
 
@@ -18,7 +17,6 @@ class ProcessCommand(Command):
     priority: int = 1
 
 
-@strict_dataclass
 class ValidateCommand(Command):
     """Command to validate input."""
 
@@ -26,7 +24,6 @@ class ValidateCommand(Command):
     strict: bool = True
 
 
-@strict_dataclass
 class AnalyzeCommand(Command):
     """Command to analyze data."""
 
@@ -34,7 +31,6 @@ class AnalyzeCommand(Command):
     analysis_type: str = "basic"
 
 
-@strict_dataclass
 class ProcessedEvent(Event):
     """Event indicating processing completed."""
 
@@ -42,7 +38,6 @@ class ProcessedEvent(Event):
     processing_time_ms: float
 
 
-@strict_dataclass
 class ValidationPassedEvent(Event):
     """Event indicating validation succeeded."""
 
@@ -50,7 +45,6 @@ class ValidationPassedEvent(Event):
     validation_score: float = 1.0
 
 
-@strict_dataclass
 class ValidationFailedEvent(Event):
     """Event indicating validation failed."""
 
@@ -58,7 +52,6 @@ class ValidationFailedEvent(Event):
     errors: tuple[str, ...] = ()
 
 
-@strict_dataclass
 class AnalysisCompleteEvent(Event):
     """Event indicating analysis completed."""
 
@@ -66,7 +59,6 @@ class AnalysisCompleteEvent(Event):
     confidence: float = 0.95
 
 
-@strict_dataclass
 class ErrorEvent(Event):
     """Event indicating an error occurred."""
 
@@ -74,7 +66,6 @@ class ErrorEvent(Event):
     error_type: str = "general"
 
 
-@strict_dataclass
 class SecurityAlertEvent(Event):
     """Event indicating a security issue detected."""
 

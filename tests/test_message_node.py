@@ -5,13 +5,12 @@ process method and message transformation patterns.
 
 """
 
-from dataclasses import FrozenInstanceError, dataclass
+from dataclasses import FrozenInstanceError
 from typing import override
 
 import pytest
 
 from clearflow import MessageNode as Node
-from clearflow import strict_dataclass
 from tests.conftest_message import (
     AnalysisCompleteEvent,
     AnalyzeCommand,
@@ -26,7 +25,6 @@ from tests.conftest_message import (
 
 
 # Test node implementations
-@dataclass(frozen=True, kw_only=True)
 class ProcessorNode(Node[ProcessCommand, ProcessedEvent]):
     """Node that processes commands into events."""
 
@@ -44,7 +42,6 @@ class ProcessorNode(Node[ProcessCommand, ProcessedEvent]):
         )
 
 
-@dataclass(frozen=True, kw_only=True)
 class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFailedEvent]):
     """Node that validates commands into success or failure events."""
 
@@ -68,7 +65,6 @@ class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFail
         )
 
 
-@dataclass(frozen=True, kw_only=True)
 class AnalyzerNode(Node[AnalyzeCommand, AnalysisCompleteEvent | ErrorEvent]):
     """Node that analyzes commands, potentially failing with errors."""
 
@@ -94,7 +90,6 @@ class AnalyzerNode(Node[AnalyzeCommand, AnalysisCompleteEvent | ErrorEvent]):
         )
 
 
-@dataclass(frozen=True, kw_only=True)
 class ChainNode(Node[ProcessedEvent, AnalyzeCommand]):
     """Node that chains event to command transformation."""
 
@@ -136,7 +131,7 @@ def _assert_event_metadata_correct(output: ProcessedEvent, input_msg: ProcessCom
 
 async def test_node_basic_processing() -> None:
     """Test basic node message processing."""
-    node = ProcessorNode()
+    node = ProcessorNode(name="processor")
     input_msg = _create_test_command()
     output = await node.process(input_msg)
     _assert_processed_event_correct(output, input_msg, "processed: test data")
@@ -148,12 +143,12 @@ def test_node_immutability() -> None:
 
     # Should not be able to modify node
     with pytest.raises((FrozenInstanceError, AttributeError)):
-        node.name = "modified"  # type: ignore[misc]
+        node.name = "modified"
 
 
 async def test_node_union_return_types() -> None:
     """Test nodes that return union types."""
-    node = ValidatorNode()
+    node = ValidatorNode(name="validator")
     run_id = create_flow_id()
 
     # Test validation success
@@ -219,9 +214,9 @@ async def _process_chain_step3(analyzer: AnalyzerNode, cmd2: AnalyzeCommand) -> 
 
 async def test_node_message_chaining() -> None:
     """Test chaining messages through multiple nodes."""
-    processor = ProcessorNode()
-    chainer = ChainNode()
-    analyzer = AnalyzerNode(fail_on_empty=False)
+    processor = ProcessorNode(name="processor")
+    chainer = ChainNode(name="chainer")
+    analyzer = AnalyzerNode(name="analyzer", fail_on_empty=False)
 
     cmd = _create_test_command("important")
     event1 = await _process_chain_step1(processor, cmd)
@@ -231,7 +226,7 @@ async def test_node_message_chaining() -> None:
 
 async def test_node_error_handling() -> None:
     """Test node error event generation."""
-    analyzer = AnalyzerNode(fail_on_empty=True)
+    analyzer = AnalyzerNode(name="analyzer", fail_on_empty=True)
     run_id = create_flow_id()
 
     # Empty input should trigger error
@@ -249,7 +244,7 @@ async def test_node_error_handling() -> None:
 
 async def test_node_causality_preservation() -> None:
     """Test that nodes preserve message causality."""
-    node = ProcessorNode()
+    node = ProcessorNode(name="processor")
     run_id = create_flow_id()
 
     cmd = ProcessCommand(
@@ -268,7 +263,7 @@ async def test_node_causality_preservation() -> None:
 def test_node_name_property() -> None:
     """Test node name configuration."""
     # Default name
-    node1 = ProcessorNode()
+    node1 = ProcessorNode(name="processor")
     assert node1.name == "processor"
 
     # Custom name
@@ -300,8 +295,8 @@ async def test_node_with_configuration() -> None:
 
 async def test_node_type_safety() -> None:
     """Test that nodes maintain type safety."""
-    processor = ProcessorNode()
-    validator = ValidatorNode()
+    processor = ProcessorNode(name="processor")
+    validator = ValidatorNode(name="validator")
     run_id = create_flow_id()
 
     # Processor expects ProcessCommand
