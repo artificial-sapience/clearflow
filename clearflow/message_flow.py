@@ -33,14 +33,8 @@ class MessageFlow[TStartMessage: Message, TStartOut: Message, TEndMessage: Messa
     type patterns like union types, while maintaining type safety at the flow's
     external boundaries (input/output).
 
-    Attributes:
-        name: Unique identifier for this flow
-        start_node: The entry point node that processes initial messages
-        routes: Mapping from (message_type, node_name) to next node or None for termination
-
     """
 
-    name: str
     _start_node: Node[TStartMessage, TStartOut]
     _routes: Mapping[MessageRouteKey, Node[Message, Message] | None]
     _callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
