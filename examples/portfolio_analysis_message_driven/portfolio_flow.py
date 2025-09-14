@@ -21,9 +21,12 @@ from examples.portfolio_analysis_message_driven.nodes import (
     QuantAnalystNode,
     RiskAnalystNode,
 )
+from examples.shared.console_handler import ConsoleHandler
 
 
-def create_portfolio_analysis_flow() -> MessageFlow[StartAnalysisCommand, DecisionMadeEvent]:
+def create_portfolio_analysis_flow(
+    *, verbose: bool = False
+) -> MessageFlow[StartAnalysisCommand, DecisionMadeEvent]:
     """Create the portfolio analysis workflow with pure event-driven architecture.
 
     This flow demonstrates:
@@ -32,6 +35,7 @@ def create_portfolio_analysis_flow() -> MessageFlow[StartAnalysisCommand, Decisi
     - Direct node routing without orchestrators
     - Each node reads what it needs from events
     - Error handling routes failures to decision maker
+    - Built-in console output for visibility
 
     Flow sequence:
     1. StartAnalysisCommand → QuantAnalyst
@@ -40,6 +44,9 @@ def create_portfolio_analysis_flow() -> MessageFlow[StartAnalysisCommand, Decisi
     4. RecommendationsGeneratedEvent → ComplianceOfficer
     5. ComplianceReviewedEvent → DecisionMaker
     6. Any AnalysisFailedEvent → DecisionMaker (conservative handling)
+
+    Args:
+        verbose: If True, show detailed message content in console output
 
     Returns:
         MessageFlow that processes market analysis into trading decisions.
@@ -52,9 +59,13 @@ def create_portfolio_analysis_flow() -> MessageFlow[StartAnalysisCommand, Decisi
     compliance = ComplianceOfficerNode()
     decision = DecisionMakerNode()
 
-    # Build the flow with direct event routing
+    # Create console handler for visibility
+    console = ConsoleHandler(verbose=verbose)
+
+    # Build the flow with console output
     return (
         message_flow("PortfolioAnalysis", quant)
+        .with_callbacks(console)
         # Quant analysis outcomes
         .route(quant, MarketAnalyzedEvent, risk)  # Success → Risk assessment
         .route(quant, AnalysisFailedEvent, decision)  # Failure → Conservative decision
