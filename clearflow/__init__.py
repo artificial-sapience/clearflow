@@ -15,8 +15,8 @@ from clearflow.observer import ObservableFlow, Observer
 
 __all__ = [
     "CallbackHandler",
-    "CompositeHandler",
     "Command",
+    "CompositeHandler",
     "Event",
     "Message",
     "MessageFlow",

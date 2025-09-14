@@ -57,26 +57,38 @@ class ProcessorNode(MessageNode[StartCommand, ProcessedEvent]):
 
 
 # Task 3.1: Core Interface Tests
+def _verify_handler_methods_exist(handler: CallbackHandler) -> None:
+    """Verify handler has all required methods."""
+    assert hasattr(handler, "on_flow_start")
+    assert hasattr(handler, "on_flow_end")
+    assert hasattr(handler, "on_node_start")
+    assert hasattr(handler, "on_node_end")
+
+
+def _verify_handler_methods_async(handler: CallbackHandler) -> None:
+    """Verify handler methods are async."""
+    assert asyncio.iscoroutinefunction(handler.on_flow_start)
+    assert asyncio.iscoroutinefunction(handler.on_flow_end)
+    assert asyncio.iscoroutinefunction(handler.on_node_start)
+    assert asyncio.iscoroutinefunction(handler.on_node_end)
+
+
 def test_callback_handler_interface() -> None:
     """Test that CallbackHandler is properly defined with all required methods.
 
     REQ-001: CallbackHandler base class with lifecycle methods
     REQ-002: Four async lifecycle methods
     """
-    # Create instance of base handler
     handler = CallbackHandler()
+    _verify_handler_methods_exist(handler)
+    _verify_handler_methods_async(handler)
 
-    # Verify all methods exist and are callable
-    assert hasattr(handler, "on_flow_start")
-    assert hasattr(handler, "on_flow_end")
-    assert hasattr(handler, "on_node_start")
-    assert hasattr(handler, "on_node_end")
 
-    # Verify they are async methods
-    assert asyncio.iscoroutinefunction(handler.on_flow_start)
-    assert asyncio.iscoroutinefunction(handler.on_flow_end)
-    assert asyncio.iscoroutinefunction(handler.on_node_start)
-    assert asyncio.iscoroutinefunction(handler.on_node_end)
+async def _verify_noop_method(handler: CallbackHandler, method_name: str, *args: object) -> None:
+    """Verify a handler method returns None."""
+    method = getattr(handler, method_name)
+    result = await method(*args)
+    assert result is None
 
 
 @pytest.mark.asyncio
@@ -87,27 +99,15 @@ async def test_callback_default_noop() -> None:
     """
     handler = CallbackHandler()
     command = StartCommand(value="test", run_id=uuid4())
-
-    # All methods should complete without error and return None
-    result = await handler.on_flow_start("test_flow", command)
-    assert result is None
-
-    result = await handler.on_flow_end("test_flow", command, None)
-    assert result is None
-
-    result = await handler.on_node_start("test_node", command)
-    assert result is None
-
-    result = await handler.on_node_end("test_node", command, None)
-    assert result is None
-
-    # Also test with error parameter
     test_error = ValueError("test error")
-    result = await handler.on_flow_end("test_flow", command, test_error)
-    assert result is None
 
-    result = await handler.on_node_end("test_node", command, test_error)
-    assert result is None
+    # Test all methods return None
+    await _verify_noop_method(handler, "on_flow_start", "test_flow", command)
+    await _verify_noop_method(handler, "on_flow_end", "test_flow", command, None)
+    await _verify_noop_method(handler, "on_node_start", "test_node", command)
+    await _verify_noop_method(handler, "on_node_end", "test_node", command, None)
+    await _verify_noop_method(handler, "on_flow_end", "test_flow", command, test_error)
+    await _verify_noop_method(handler, "on_node_end", "test_node", command, test_error)
 
 
 @pytest.mark.asyncio
@@ -622,25 +622,45 @@ async def test_composite_handler_error_logging() -> None:
 
         @override
         async def on_flow_start(self, flow_name: str, message: Message) -> None:
-            """Fail on flow start."""
+            """Fail on flow start.
+
+            Raises:
+                RuntimeError: Always raises to test error logging
+
+            """
             msg = "on_flow_start error"
             raise RuntimeError(msg)
 
         @override
         async def on_flow_end(self, flow_name: str, message: Message, error: Exception | None) -> None:
-            """Fail on flow end."""
+            """Fail on flow end.
+
+            Raises:
+                RuntimeError: Always raises to test error logging
+
+            """
             msg = "on_flow_end error"
             raise RuntimeError(msg)
 
         @override
         async def on_node_start(self, node_name: str, message: Message) -> None:
-            """Fail on node start."""
+            """Fail on node start.
+
+            Raises:
+                RuntimeError: Always raises to test error logging
+
+            """
             msg = "on_node_start error"
             raise RuntimeError(msg)
 
         @override
         async def on_node_end(self, node_name: str, message: Message, error: Exception | None) -> None:
-            """Fail on node end."""
+            """Fail on node end.
+
+            Raises:
+                RuntimeError: Always raises to test error logging
+
+            """
             msg = "on_node_end error"
             raise RuntimeError(msg)
 
@@ -682,3 +702,51 @@ async def test_composite_handler_error_logging() -> None:
         assert "CompositeHandler: FailingHandler.on_node_end failed: on_node_end error" in stderr_output
     finally:
         sys.stderr = old_stderr
+
+
+@pytest.mark.asyncio
+async def test_callback_on_node_error() -> None:
+    """Test that callbacks are invoked when a node raises an error.
+
+    Tests coverage of error path in _execute_node (lines 89-92).
+    """
+
+    @dataclass(frozen=True, kw_only=True)
+    class FailingNode(MessageNode[StartCommand, ProcessedEvent]):
+        """Node that always fails."""
+
+        name: str = "failing_node"
+
+        @override
+        async def process(self, message: StartCommand) -> ProcessedEvent:
+            """Fail processing.
+
+            Raises:
+                ValueError: Always fails
+
+            """
+            msg = "Node processing failed"
+            raise ValueError(msg)
+
+    # Create flow with handler
+    handler = TrackingHandler()
+    failing_node = FailingNode()
+    flow = message_flow("test_flow", failing_node).with_callbacks(handler).end(failing_node, ProcessedEvent)
+
+    # Process should raise the error
+    command = StartCommand(value="test", run_id=uuid4())
+    with pytest.raises(ValueError, match="Node processing failed"):
+        await flow.process(command)
+
+    # Callbacks should have been invoked including on_node_end with error
+    assert handler.calls == [
+        "flow_start:test_flow",
+        "node_start:failing_node",
+        "node_end:failing_node",  # Should be called with error
+        "flow_end:test_flow",  # Should be called with error
+    ]
+
+    # Handler should have captured the errors
+    assert len(handler.errors) == 2  # node_end and flow_end errors
+    assert all(isinstance(e, ValueError) for e in handler.errors)
+    assert all(str(e) == "Node processing failed" for e in handler.errors)
