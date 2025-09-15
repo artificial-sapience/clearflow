@@ -1,56 +1,78 @@
-"""Portfolio analysis example using DSPy-powered nodes."""
+"""Portfolio analysis flow using pure event-driven architecture.
+
+Direct event-to-node routing without orchestrators.
+The flow definition is the single source of routing truth.
+"""
 
 from clearflow import Node, flow
-from examples.portfolio_analysis.shared import MarketData, configure_dspy
-from examples.portfolio_analysis.specialists import (
-    ComplianceOfficer,
-    DecisionNode,
-    ErrorHandler,
-    PortfolioManager,
-    QuantAnalyst,
-    RiskAnalyst,
+from examples.portfolio_analysis.messages import (
+    AnalysisFailedEvent,
+    ComplianceReviewedEvent,
+    DecisionMadeEvent,
+    MarketAnalyzedEvent,
+    RecommendationsGeneratedEvent,
+    RiskAssessedEvent,
+    StartAnalysisCommand,
 )
-from examples.portfolio_analysis.specialists.decision.models import TradingDecision
+from examples.portfolio_analysis.nodes import (
+    ComplianceOfficerNode,
+    DecisionMakerNode,
+    PortfolioManagerNode,
+    QuantAnalystNode,
+    RiskAnalystNode,
+)
+from examples.shared.console_handler import ConsoleHandler
 
 
-def create_portfolio_analysis_flow() -> Node[MarketData, TradingDecision]:
-    """Create the AI portfolio analysis workflow with DSPy nodes.
+def create_portfolio_analysis_flow() -> Node[StartAnalysisCommand, DecisionMadeEvent]:
+    """Create the portfolio analysis workflow with pure event-driven architecture.
+
+    This flow demonstrates:
+    - Single initiating command (StartAnalysisCommand)
+    - Events describe outcomes, not instructions
+    - Direct node routing without orchestrators
+    - Each node reads what it needs from events
+    - Error handling routes failures to decision maker
+    - Built-in console output for visibility
+
+    Flow sequence:
+    1. StartAnalysisCommand → QuantAnalyst
+    2. MarketAnalyzedEvent → RiskAnalyst
+    3. RiskAssessedEvent → PortfolioManager
+    4. RecommendationsGeneratedEvent → ComplianceOfficer
+    5. ComplianceReviewedEvent → DecisionMaker
+    6. Any AnalysisFailedEvent → DecisionMaker (conservative handling)
 
     Returns:
-        Flow that processes MarketData through multiple AI specialists
-        to produce TradingDecision or error states.
+        MessageFlow that processes market analysis into trading decisions.
 
     """
-    # Configure DSPy with OpenAI
-    configure_dspy()
+    # Create specialist nodes (no orchestrators needed)
+    quant = QuantAnalystNode()
+    risk = RiskAnalystNode()
+    portfolio = PortfolioManagerNode()
+    compliance = ComplianceOfficerNode()
+    decision = DecisionMakerNode()
 
-    # Create nodes
-    quant = QuantAnalyst()
-    risk = RiskAnalyst()
-    pm = PortfolioManager()
-    compliance = ComplianceOfficer()
-    decision = DecisionNode()
-    error_handler = ErrorHandler()
+    # Create console handler for visibility
+    console = ConsoleHandler()
 
-    # Build the flow with routing
-    # Note: We need a converged end point. Let's use decision as the final node
-    # and have error_handler route to it with a "hold" decision
+    # Build the flow with console output
     return (
         flow("PortfolioAnalysis", quant)
-        # Quantitative analysis routes
-        .route(quant, "analysis_complete", risk)
-        .route(quant, "analysis_failed", error_handler)
-        # Risk assessment routes
-        .route(risk, "risk_acceptable", pm)
-        .route(risk, "risk_limits_exceeded", error_handler)
-        # Portfolio management routes
-        .route(pm, "recommendations_ready", compliance)
-        .route(pm, "analysis_failed", error_handler)
-        # Compliance review routes
-        .route(compliance, "compliance_approved", decision)
-        .route(compliance, "compliance_failed", error_handler)
-        # Error handler produces a minimal decision
-        .route(error_handler, "error_handled", decision)
-        # Single termination point
-        .end(decision, "decision_ready")
+        .with_callbacks(console)
+        # Quant analysis outcomes
+        .route(quant, MarketAnalyzedEvent, risk)  # Success → Risk assessment
+        .route(quant, AnalysisFailedEvent, decision)  # Failure → Conservative decision
+        # Risk analysis outcomes
+        .route(risk, RiskAssessedEvent, portfolio)  # Success → Portfolio optimization
+        .route(risk, AnalysisFailedEvent, decision)  # Failure → Conservative decision
+        # Portfolio management outcomes
+        .route(portfolio, RecommendationsGeneratedEvent, compliance)  # Success → Compliance review
+        .route(portfolio, AnalysisFailedEvent, decision)  # Failure → Conservative decision
+        # Compliance review outcomes
+        .route(compliance, ComplianceReviewedEvent, decision)  # Success → Final decision
+        .route(compliance, AnalysisFailedEvent, decision)  # Failure → Conservative decision
+        # Final decision (terminal node)
+        .end(decision, DecisionMadeEvent)  # Flow terminates with decision
     )

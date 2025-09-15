@@ -10,7 +10,7 @@ from typing import override
 import pytest
 from pydantic import ValidationError
 
-from clearflow import MessageNode as Node
+from clearflow import Node as Node
 from tests.conftest_message import (
     AnalysisCompleteEvent,
     AnalyzeCommand,

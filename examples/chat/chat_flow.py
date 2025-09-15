@@ -1,32 +1,41 @@
-"""Chat flow construction - conversation between two intelligent entities."""
+"""Chat flow - natural back-and-forth conversation between user and assistant."""
 
 from clearflow import Node, flow
-from examples.chat.nodes import ChatState, HumanNode, LlmNode
+from examples.chat.messages import (
+    AssistantMessageReceived,
+    ChatEnded,
+    StartChat,
+    UserMessageReceived,
+)
+from examples.chat.nodes import AssistantNode, UserNode
 
 
-def create_chat_flow() -> Node[ChatState]:
-    """Create a conversation flow between two intelligent entities.
+def create_chat_flow() -> Node[StartChat, ChatEnded]:
+    """Create a natural chat flow between user and assistant.
 
-    This flow models conversation as interaction between two complete
-    intelligent entities, each with their own I/O capabilities:
+    This flow demonstrates a simple, familiar chat pattern:
+    - User initiates with StartChat
+    - User and Assistant alternate messages
+    - Continues until user decides to end
 
-    - HumanNode: Human intelligent entity with console I/O
-    - LlmNode: AI intelligent entity with OpenAI API I/O
-
-    The flow alternates between the two entities until the human
-    chooses to quit, creating a natural conversational pattern.
+    Flow sequence:
+    1. StartChat → UserNode
+    2. UserMessageReceived → AssistantNode
+    3. AssistantMessageReceived → UserNode (loop back)
+    4. ChatEnded (when user quits)
 
     Returns:
-        Flow configured for intelligent entity conversation.
+        MessageFlow for natural chat conversation.
 
     """
-    human = HumanNode(name="human")
-    llm = LlmNode(name="llm")
+    # Just two participants
+    user = UserNode()
+    assistant = AssistantNode()
 
-    # Conversation between two intelligent entities
+    # Build the natural alternating flow
     return (
-        flow("IntelligentConversation", human)
-        .route(human, "responded", llm)
-        .route(llm, "responded", human)
-        .end(human, "quit")  # Single termination when human decides to quit
+        flow("Chat", user)
+        .route(user, UserMessageReceived, assistant)
+        .route(assistant, AssistantMessageReceived, user)
+        .end(user, ChatEnded)
     )

@@ -10,8 +10,8 @@ from typing import override
 import pytest
 from pydantic import ValidationError
 
-from clearflow import MessageNode as Node
-from clearflow import message_flow
+from clearflow import Node as Node
+from clearflow import flow
 from tests.conftest_message import (
     AnalysisCompleteEvent,
     ErrorEvent,
@@ -26,21 +26,25 @@ from tests.conftest_message import (
 
 # Reusable test nodes
 class StartNode(Node[ProcessCommand, ProcessedEvent | ErrorEvent]):
-    """Initial processing node."""
-
-    should_fail: bool = False
+    """Initial processing node that succeeds."""
 
     @override
     async def process(self, message: ProcessCommand) -> ProcessedEvent | ErrorEvent:
-        if self.should_fail:
-            return ErrorEvent(
-                error_message="Start failed",
-                triggered_by_id=message.id,
-                run_id=message.run_id,
-            )
         return ProcessedEvent(
             result=f"started: {message.data}",
             processing_time_ms=50.0,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+        )
+
+
+class FailingStartNode(Node[ProcessCommand, ProcessedEvent | ErrorEvent]):
+    """Initial processing node that always fails."""
+
+    @override
+    async def process(self, message: ProcessCommand) -> ProcessedEvent | ErrorEvent:
+        return ErrorEvent(
+            error_message="Start failed",
             triggered_by_id=message.id,
             run_id=message.run_id,
         )
@@ -60,13 +64,29 @@ class TransformNode(Node[ProcessedEvent, ValidateCommand]):
 
 
 class ValidateNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFailedEvent]):
-    """Validation node."""
-
-    min_length: int = 5
+    """Validation node with default minimum length of 5."""
 
     @override
     async def process(self, message: ValidateCommand) -> ValidationPassedEvent | ValidationFailedEvent:
-        if len(message.content) < self.min_length:
+        if len(message.content) < 5:
+            return ValidationFailedEvent(
+                reason="Too short",
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )
+        return ValidationPassedEvent(
+            validated_content=message.content,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+        )
+
+
+class StrictValidateNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFailedEvent]):
+    """Validation node with strict minimum length of 10."""
+
+    @override
+    async def process(self, message: ValidateCommand) -> ValidationPassedEvent | ValidationFailedEvent:
+        if len(message.content) < 10:
             return ValidationFailedEvent(
                 reason="Too short",
                 triggered_by_id=message.id,
@@ -96,7 +116,7 @@ async def test_simple_flow() -> None:
     """Test a simple linear flow."""
     start = StartNode(name="start")
 
-    flow = message_flow("simple", start).end(start, ProcessedEvent)
+    flow = flow("simple", start).end(start, ProcessedEvent)
 
     # Execute flow
     run_id = create_flow_id()
@@ -116,7 +136,7 @@ async def test_flow_with_routing() -> None:
     finalize = FinalizeNode(name="finalize")
 
     flow = (
-        message_flow("pipeline", start)
+        flow("pipeline", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
         .route(validate, ValidationPassedEvent, finalize)
@@ -135,10 +155,10 @@ async def test_flow_with_routing() -> None:
 
 async def test_flow_with_error_handling() -> None:
     """Test flow with error route."""
-    start = StartNode(name="start", should_fail=True)
+    start = FailingStartNode(name="start")
     transform = TransformNode(name="transform")
 
-    flow = message_flow("error_handling", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
+    flow = flow("error_handling", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
 
     run_id = create_flow_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
@@ -153,10 +173,10 @@ async def test_flow_with_branching() -> None:
     """Test flow with conditional branching."""
     start = StartNode(name="start")
     transform = TransformNode(name="transform")
-    validate = ValidateNode(name="validate", min_length=10)  # Strict validation
+    validate = StrictValidateNode(name="validate")  # Strict validation
 
     flow = (
-        message_flow("branching", start)
+        flow("branching", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
         .end(validate, ValidationFailedEvent)  # Only test failure path
@@ -177,7 +197,7 @@ async def test_flow_missing_route_error() -> None:
 
     # Build flow missing route for ValidateCommand
     # Only route ProcessedEvent to transform, but don't handle ValidateCommand output
-    flow = message_flow("incomplete", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
+    flow = flow("incomplete", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
 
     run_id = create_flow_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
@@ -198,7 +218,7 @@ async def test_flow_composability() -> None:
     finalize = FinalizeNode(name="finalize")
 
     inner_flow = (
-        message_flow("inner", validate)
+        flow("inner", validate)
         .route(validate, ValidationPassedEvent, finalize)
         .end(finalize, AnalysisCompleteEvent)
     )
@@ -208,7 +228,7 @@ async def test_flow_composability() -> None:
     transform = TransformNode(name="transform")
 
     outer_flow = (
-        message_flow("outer", start)
+        flow("outer", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, inner_flow)  # Inner flow as node!
         .end(inner_flow, AnalysisCompleteEvent)
@@ -228,7 +248,7 @@ def test_flow_reachability_validation() -> None:
     start = StartNode(name="start")
     unreachable = ValidateNode(name="unreachable")
 
-    builder = message_flow("test", start)
+    builder = flow("test", start)
 
     # Try to route from unreachable node
     with pytest.raises(ValueError, match="not reachable from start") as exc_info:
@@ -243,7 +263,7 @@ def test_flow_duplicate_route_error() -> None:
     node1 = TransformNode(name="transform1")
     node2 = TransformNode(name="transform2")
 
-    builder = message_flow("test", start)
+    builder = flow("test", start)
     builder = builder.route(start, ProcessedEvent, node1)
 
     # Try to add duplicate route for same message type from same node
@@ -256,7 +276,7 @@ def test_flow_duplicate_route_error() -> None:
 def test_flow_name_property() -> None:
     """Test flow name is preserved."""
     start = StartNode(name="start")
-    flow = message_flow("my_flow", start).end(start, ProcessedEvent)
+    flow = flow("my_flow", start).end(start, ProcessedEvent)
 
     assert flow.name == "my_flow"
 
@@ -264,7 +284,7 @@ def test_flow_name_property() -> None:
 def test_flow_immutability() -> None:
     """Test that flows are immutable."""
     start = StartNode(name="start")
-    flow = message_flow("immutable", start).end(start, ProcessedEvent)
+    flow = flow("immutable", start).end(start, ProcessedEvent)
 
     # Should not be able to modify flow
     with pytest.raises(ValidationError, match="frozen"):
@@ -278,7 +298,7 @@ def test_flow_builder_chaining() -> None:
     validate = ValidateNode(name="validate")
 
     # Each route returns a new builder
-    builder1 = message_flow("test", start)
+    builder1 = flow("test", start)
     builder2 = builder1.route(start, ProcessedEvent, transform)
     builder3 = builder2.route(transform, ValidateCommand, validate)
 
@@ -288,7 +308,7 @@ def test_flow_builder_chaining() -> None:
 
     # But can chain fluently
     flow = (
-        message_flow("fluent", start)
+        flow("fluent", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
         .end(validate, ValidationPassedEvent)
@@ -302,7 +322,7 @@ def test_single_termination_enforcement() -> None:
     start = StartNode(name="start")
 
     # First create a flow with one termination
-    builder = message_flow("test", start)
+    builder = flow("test", start)
     flow = builder.end(start, ProcessedEvent)
 
     # Verify flow works
@@ -312,7 +332,7 @@ def test_single_termination_enforcement() -> None:
     start2 = StartNode(name="start2")
     transform = TransformNode(name="transform")
 
-    builder2 = message_flow("multi_end", start2)
+    builder2 = flow("multi_end", start2)
     builder3 = builder2.route(start2, ProcessedEvent, transform)
 
     # Create one flow ending at start2 with ErrorEvent

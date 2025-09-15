@@ -1,62 +1,173 @@
-# Pydantic BaseModel Migration Plan for ClearFlow Messages
+# ClearFlow Architecture Restructuring Plan
 
-## Current Status
+## Overview
 
-**BLOCKED** - Discovered fundamental Pydantic limitation with generic ABC inheritance
+Migrate ClearFlow to a clean architecture with explicit public/private boundaries using the "_internal/" pattern. This will eliminate ambiguity about what is public API vs internal implementation detail, fixing all linter warnings and making the codebase more maintainable.
 
-## Critical Blocker
+## Current Issues
 
-Pydantic cannot instantiate classes that inherit from generic ABCs when TypeVars are unresolved at runtime. This affects `_MessageFlow` which inherits from `Node[TStartMessage, TEndMessage]`.
+1. `_NodeInterface` causes pyright "private usage" errors when used across modules
+2. No clear boundary between public API and internal implementation
 
-**Root Cause**: When `end()` returns `_MessageFlow[TStartMessage, TEndMessage]`, Pydantic's validator sees unresolved TypeVars and fails with:
+## Target Architecture
+
+```text
+clearflow/
+  __init__.py                 # Re-exports only (no implementation)
+
+  # Public API modules (thin wrappers)
+  messages.py                 # Public Message, Command, Event
+  nodes.py                    # Public Node (was MessageNode)
+  flows.py                    # Public flow (was message_flow)
+  callbacks.py                # Public CallbackHandler, CompositeHandler
+  strict_base_model.py        # Public StrictBaseModel
+
+  _internal/                  # All real implementation
+    __init__.py
+    node_interface.py         # NodeInterface (no underscore needed!)
+    message_impl.py           # Message, Command, Event implementation
+    node_impl.py              # Node implementation (was message_node_impl)
+    flow_impl.py              # flow implementation (was message_flow_impl)
+    callbacks_impl.py         # Callback implementations
+    strict_base_model_impl.py # StrictBaseModel implementation
 ```
-TypeError: Can't instantiate abstract class Node[TypeVar, TypeVar] without an implementation for abstract method 'process'
+
+## Remaining Migration Steps
+
+### Step 1: Create _internal/ Directory Structure
+
+```bash
+mkdir clearflow/_internal
+touch clearflow/_internal/__init__.py
 ```
 
-## Completed Tasks ✅
+### Step 2: Move Implementations to _internal/
 
-- Changed `revalidate_instances` from 'always' to 'never' in StrictBaseModel (1.7x performance improvement)
-- Made MessageFlow private (`_MessageFlow`) and removed from exports
-- Changed `end()` return type to `Node[TStartMessage, TEndMessage]`
-- Removed underscore prefixes from _MessageFlow fields (Pythonic best practice)
-- Converted `_MessageFlowBuilder` to frozen dataclass (not Pydantic)
-- Fixed test node field redefinitions (removed `name` field overrides)
-- All quality checks pass EXCEPT one test blocked by Pydantic issue
+Move and rename files:
+- `node_interface.py` → `_internal/node_interface.py` (keep as NodeInterface)
+- `message.py` → `_internal/message_impl.py`
+- `message_node.py` → `_internal/node_impl.py`
+- `message_flow.py` → `_internal/flow_impl.py`
+- `callbacks.py` → `_internal/callbacks_impl.py`
+- `strict_base_model.py` → `_internal/strict_base_model_impl.py`
 
-## Next Critical Decision
+Update internal imports within `_internal/`:
+```python
+# _internal/node_impl.py
+from clearflow._internal.node_interface import NodeInterface  # No underscore!
+from clearflow._internal.strict_base_model_impl import StrictBaseModelImpl
+```
 
-### Option A: Duck Typing (Recommended)
-Make `_MessageFlow` NOT inherit from `Node` at all:
-- Implement same interface (name field, async process method)
-- Use `cast()` in end() to satisfy type checker
-- Avoids Pydantic's generic ABC issue completely
+### Step 3: Create Public Wrapper Modules
 
-### Option B: Type Erasure at Instantiation
-Instantiate `_MessageFlow` without type parameters:
-- Use `_MessageFlow(...)` instead of `_MessageFlow[T1, T2](...)`
-- Cast result to proper type
-- May lose some type safety
+Create thin wrapper modules at root:
 
-### Option C: Alternative Architecture
-Consider if MessageFlow needs to be a Node at all:
-- Could be a separate type that wraps nodes
-- Might require API changes
+```python
+# clearflow/nodes.py
+"""Nodes for ClearFlow orchestration."""
+from clearflow._internal.node_impl import NodeImpl as _Node
 
-## Remaining Tasks
+__all__ = ["Node"]
 
-1. **Fix Pydantic Generic ABC Issue** (BLOCKER)
-   - Choose and implement one of the options above
-   - Ensure test_callback_error_handling passes
+class Node(_Node):
+    """Base class for workflow nodes."""
+    pass
+```
 
-2. **Complete Test Suite**
-   - Run all tests with 100% coverage
-   - Fix any remaining test failures
+```python
+# clearflow/flows.py
+"""Flow construction for ClearFlow."""
+from clearflow._internal.flow_impl import flow as _flow
 
-3. **Update Examples**
-   - portfolio_analysis_message_driven
-   - chat_message_driven
-   - rag_message_driven
+__all__ = ["flow"]
 
-4. **Final Verification**
-   - Run `./quality-check.sh` on entire codebase
-   - Verify no `arbitrary_types_allowed` remains
+flow = _flow  # Direct re-export of function
+```
+
+Similar pattern for messages.py, callbacks.py, strict_base_model.py.
+
+### Step 4: Update __init__.py to Re-export Only
+
+```python
+# clearflow/__init__.py
+"""ClearFlow: Compose type-safe flows for emergent AI."""
+
+from clearflow.callbacks import CallbackHandler, CompositeHandler
+from clearflow.flows import flow
+from clearflow.messages import Command, Event, Message
+from clearflow.nodes import Node
+from clearflow.strict_base_model import StrictBaseModel
+
+__all__ = [
+    "CallbackHandler",
+    "Command",
+    "CompositeHandler",
+    "Event",
+    "flow",
+    "Message",
+    "Node",
+    "StrictBaseModel",
+]
+```
+
+### Step 5: Update All Imports
+
+Update test and example imports to use public API:
+```python
+# Instead of:
+from clearflow.message import Message
+from clearflow.message_node import Node
+
+# Use:
+from clearflow import Message, Node
+# or
+from clearflow.messages import Message
+from clearflow.nodes import Node
+```
+
+### Step 6: Configure Linters
+
+Add to `pyproject.toml`:
+```toml
+[tool.pyright]
+reportPrivateImportUsage = "error"
+reportPrivateUsage = "warning"
+
+[tool.importlinter]
+root_package = "clearflow"
+
+[[tool.importlinter.contracts]]
+name = "No external access to internals"
+type = "forbidden"
+sources = ["tests", "examples"]
+forbidden = ["clearflow._internal"]
+```
+
+### Step 7: Add Boundary Tests
+
+Create `tests/test_public_api.py` to verify API boundaries.
+
+### Step 8: Documentation Updates
+
+Update README.md and CLAUDE.md with new structure.
+
+### Step 9: Final Quality Check
+
+Run `./quality-check.sh` to ensure everything passes.
+
+## Success Criteria
+
+1. ✅ No linter warnings about private usage
+2. ✅ Clear public/private boundary
+3. ✅ All tests use public API only
+4. ✅ All examples use public API only
+5. ✅ NodeInterface is internal but usable within `_internal/`
+6. ✅ Documentation reflects new structure
+
+## Benefits After Migration
+
+1. **Developer Experience**: Clear what's public vs private
+2. **Maintainability**: Can refactor `_internal/` freely
+3. **Documentation**: Each public module is a natural docs chapter
+4. **Type Safety**: No ambiguity about what types are exposed
+5. **Tool Support**: Linters and IDEs understand the boundaries

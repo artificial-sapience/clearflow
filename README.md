@@ -24,7 +24,6 @@ Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.
 pip install clearflow
 ```
 
-> **Upgrading from v0.x?** See the [Migration Guide](MIGRATION.md) for breaking changes.
 
 ## AI Assistant Integration
 

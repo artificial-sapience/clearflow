@@ -98,7 +98,7 @@ def test_message_causality_tracking() -> None:
     assert next_evt.triggered_by_id == evt.id
 
 
-def test_message_flow_tracking() -> None:
+def test_flow_tracking() -> None:
     """Test that messages track their flow session."""
     flow1 = create_flow_id()
     flow2 = create_flow_id()

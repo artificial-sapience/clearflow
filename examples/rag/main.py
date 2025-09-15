@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Main entry point for RAG example."""
+"""Main entry point for message-driven RAG example."""
 
 import asyncio
 import os
@@ -7,8 +7,9 @@ import sys
 
 from dotenv import load_dotenv
 
-from examples.rag.models import QueryState, RAGState
-from examples.rag.rag_flow import create_offline_flow, create_online_flow
+from examples.rag.messages import IndexDocumentsCommand, QueryCommand
+from examples.rag.rag_flows import create_indexing_flow, create_query_flow
+from tests.conftest_message import create_flow_id
 
 
 def get_sample_documents() -> tuple[str, ...]:
@@ -52,82 +53,81 @@ def get_sample_documents() -> tuple[str, ...]:
     )
 
 
-def print_header() -> None:
-    """Print application header."""
-    print("=" * 60)
-    print("ClearFlow RAG Example")
-    print("=" * 60)
-    print()
-
-
-def get_query() -> str:
-    """Get query from command line or use default.
+async def run_indexing_phase() -> tuple[tuple[str, ...], tuple[tuple[float, ...], ...]]:
+    """Run the document indexing phase.
 
     Returns:
-        Query string
+        Tuple containing (chunks, embeddings) for query phase.
 
     """
-    # Check for command line argument
-    if len(sys.argv) > 1:
-        # Join all arguments after the script name
-        query = " ".join(sys.argv[1:])
-        # Remove leading -- if present
-        query = query.removeprefix("--")
-    else:
-        query = "How to install ClearFlow?"
+    print("📚 Indexing documents...")
 
-    return query
+    # Create indexing flow
+    indexing_flow = create_indexing_flow()
 
-
-async def run_rag_pipeline() -> None:
-    """Run the complete RAG pipeline."""
-    print_header()
-
-    # Get sample documents
+    # Create indexing command
     documents = get_sample_documents()
-    print(f"📚 Loaded {len(documents)} documents for indexing\n")
-
-    # Create initial state
-    initial_state = RAGState(documents=documents)
-
-    # Run offline indexing
-    print("=" * 60)
-    print("OFFLINE: Document Indexing")
-    print("=" * 60)
-    offline_flow = create_offline_flow()
-    indexed_result = await offline_flow(initial_state)
-    indexed_state = indexed_result.state
-    print()
-
-    # Get query
-    query = get_query()
-
-    # Create query state from indexed state
-    query_state = QueryState(
-        documents=indexed_state.documents,
-        chunks=indexed_state.chunks,
-        embeddings=indexed_state.embeddings,
-        index=indexed_state.index,
-        query=query,
+    index_command = IndexDocumentsCommand(
+        triggered_by_id=None,
+        run_id=create_flow_id(),
+        documents=documents,
     )
 
-    # Run online query
-    print("=" * 60)
-    print("ONLINE: Query Processing")
-    print("=" * 60)
-    online_flow = create_online_flow()
-    result = await online_flow(query_state)
+    # Process indexing
+    index_result = await indexing_flow.process(index_command)
 
-    # Display final answer
-    print("\n" + "=" * 60)
-    print("FINAL ANSWER")
-    print("=" * 60)
-    print(f"Question: {result.state.query}")
-    print(f"Answer: {result.state.answer}")
+    print(f"✅ Indexed {len(index_result.chunks)} chunks")
+    return index_result.chunks, index_result.embeddings
+
+
+async def run_query_phase(chunks: tuple[str, ...], embeddings: tuple[tuple[float, ...], ...]) -> None:
+    """Run the query processing phase.
+
+    Args:
+        chunks: Text chunks from indexing
+        embeddings: Vector embeddings from indexing
+
+    """
+    print("\\n🔍 Ready for queries!")
+    print("Type 'quit' to exit.")
+
+    # Create query flow
+    query_flow = create_query_flow()
+
+    while True:
+        try:
+            query_text = input("\\nEnter your question: ").strip()
+
+            if query_text.lower() in {"quit", "exit", "bye"}:
+                print("Goodbye!")
+                break
+
+            if not query_text:
+                continue
+
+            # Create query command
+            query_command = QueryCommand(
+                triggered_by_id=None,
+                run_id=create_flow_id(),
+                query=query_text,
+                chunks=chunks,
+                embeddings=embeddings,
+            )
+
+            # Process query
+            print("\\n🤔 Thinking...")
+            answer_result = await query_flow.process(query_command)
+
+            print(f"\\n💡 Answer: {answer_result.answer}")
+            print(f"\\n📖 Based on {len(answer_result.relevant_chunks)} relevant sources")
+
+        except (EOFError, KeyboardInterrupt):
+            print("\\nGoodbye!")
+            break
 
 
 async def main() -> None:
-    """Run the main application entry point."""
+    """Run the message-driven RAG application."""
     # Load environment variables
     load_dotenv()
 
@@ -135,15 +135,24 @@ async def main() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
         print("Error: OPENAI_API_KEY environment variable is not set")
         print("Please set it in your .env file or environment")
-        print("\nExample:")
-        print("  export OPENAI_API_KEY='your-api-key-here'")
         sys.exit(1)
 
+    print("🚀 Message-Driven RAG Example")
+    print("=" * 50)
+
     try:
-        await run_rag_pipeline()
+        # Run indexing phase
+        chunks, embeddings = await run_indexing_phase()
+
+        # Run query phase
+        await run_query_phase(chunks, embeddings)
+
+    except (OSError, ValueError, RuntimeError) as e:
+        print(f"Error: {e}")
+        sys.exit(1)
     except KeyboardInterrupt:
-        print("\n\nOperation cancelled by user")
-        sys.exit(0)
+        print("\nInterrupted by user")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

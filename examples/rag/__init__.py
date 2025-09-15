@@ -1,1 +1,1 @@
-"""RAG (Retrieval-Augmented Generation) example for ClearFlow."""
+"""Message-driven RAG example using observable flows."""

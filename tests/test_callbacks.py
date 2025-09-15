@@ -17,8 +17,8 @@ from clearflow import (
     CompositeHandler,
     Event,
     Message,
-    MessageNode,
-    message_flow,
+    Node,
+    flow,
 )
 
 
@@ -36,7 +36,7 @@ class ProcessedEvent(Event):
 
 
 # Test nodes using public API
-class ProcessorNode(MessageNode[StartCommand, ProcessedEvent]):
+class ProcessorNode(Node[StartCommand, ProcessedEvent]):
     """Node that processes commands."""
 
     @override
@@ -199,7 +199,7 @@ async def test_callback_error_handling() -> None:
     processor = ProcessorNode(name="processor")
 
     # Add handler that raises errors
-    flow_with_error = message_flow("test_flow", processor).with_callbacks(ErrorHandler()).end(processor, ProcessedEvent)
+    flow_with_error = flow("test_flow", processor).with_callbacks(ErrorHandler()).end(processor, ProcessedEvent)
 
     # Flow should complete successfully despite callback errors
     command = StartCommand(value="test", run_id=uuid4())
@@ -218,7 +218,7 @@ async def test_callback_error_logging() -> None:
     """
     # Create a simple flow with error handler
     processor = ProcessorNode(name="processor")
-    flow = message_flow("test_flow", processor).with_callbacks(ErrorHandler()).end(processor, ProcessedEvent)
+    flow = flow("test_flow", processor).with_callbacks(ErrorHandler()).end(processor, ProcessedEvent)
 
     # Capture stderr
     captured_stderr = StringIO()
@@ -248,7 +248,7 @@ async def test_callback_execution_order() -> None:
     # Create flow with tracking handler
     handler = TrackingHandler()
     processor = ProcessorNode(name="processor")
-    flow = message_flow("test_flow", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    flow = flow("test_flow", processor).with_callbacks(handler).end(processor, ProcessedEvent)
 
     # Process message
     command = StartCommand(value="test", run_id=uuid4())
@@ -278,7 +278,7 @@ async def test_composite_handler() -> None:
 
     # Create flow with composite handler
     processor = ProcessorNode(name="processor")
-    flow = message_flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
+    flow = flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
 
     # Process message
     command = StartCommand(value="test", run_id=uuid4())
@@ -309,7 +309,7 @@ async def test_composite_handler_error_isolation() -> None:
 
     # Create flow
     processor = ProcessorNode(name="processor")
-    flow = message_flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
+    flow = flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
 
     # Process message
     command = StartCommand(value="test", run_id=uuid4())
@@ -348,7 +348,7 @@ async def test_flow_callback_integration() -> None:
         valid: bool
         data: str
 
-    class ValidatorNode(MessageNode[ValidateCommand, ValidationEvent]):
+    class ValidatorNode(Node[ValidateCommand, ValidationEvent]):
         """Node that validates data."""
 
         name: str = "validator"
@@ -368,7 +368,7 @@ async def test_flow_callback_integration() -> None:
                 run_id=message.run_id,
             )
 
-    class ProcessorNode2(MessageNode[ValidationEvent, ProcessedEvent]):
+    class ProcessorNode2(Node[ValidationEvent, ProcessedEvent]):
         """Node that processes validated data."""
 
         name: str = "processor2"
@@ -399,7 +399,7 @@ async def test_flow_callback_integration() -> None:
     processor2 = ProcessorNode2(name="processor2")
 
     flow = (
-        message_flow("validation_flow", validator)
+        flow("validation_flow", validator)
         .with_callbacks(handler)
         .route(validator, ValidationEvent, processor2)
         .end(processor2, ProcessedEvent)
@@ -438,7 +438,7 @@ async def test_nested_flow_callbacks() -> None:
     # Outer flow with handler - simulating nested behavior
     # Since MessageFlow can't be used directly as a node, we simulate
     # the nested behavior by testing callback propagation
-    outer_flow = message_flow("outer_flow", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    outer_flow = flow("outer_flow", processor).with_callbacks(handler).end(processor, ProcessedEvent)
 
     # Process through outer flow
     command = StartCommand(value="nested", run_id=uuid4())
@@ -461,14 +461,14 @@ async def test_nested_flow_callbacks() -> None:
 async def test_no_node_modification() -> None:
     """Test that existing nodes work unchanged with callbacks.
 
-    REQ-012: Existing MessageNode classes require no modification
+    REQ-012: Existing Node classes require no modification
     """
     # Standard node with no callback awareness
     processor = ProcessorNode(name="processor")
 
     # Should work with callbacks
     handler = TrackingHandler()
-    flow = message_flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    flow = flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
 
     command = StartCommand(value="test", run_id=uuid4())
     result = await flow.process(command)
@@ -488,7 +488,7 @@ async def test_callback_type_safety() -> None:
     handler = CallbackHandler()
 
     # Flow type should be preserved with callbacks
-    flow = message_flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    flow = flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
 
     # Should accept correct message type
     command = StartCommand(value="test", run_id=uuid4())
@@ -508,10 +508,10 @@ async def test_callback_zero_overhead() -> None:
     processor = ProcessorNode(name="processor")
 
     # Flow without callbacks
-    flow_no_cb = message_flow("test", processor).end(processor, ProcessedEvent)
+    flow_no_cb = flow("test", processor).end(processor, ProcessedEvent)
 
     # Another flow without callbacks (for timing comparison)
-    flow_no_cb2 = message_flow("test", processor).end(processor, ProcessedEvent)
+    flow_no_cb2 = flow("test", processor).end(processor, ProcessedEvent)
 
     command = StartCommand(value="test", run_id=uuid4())
 
@@ -559,7 +559,7 @@ async def test_callback_async_execution() -> None:
 
     handler = AsyncHandler()
     processor = ProcessorNode(name="processor")
-    flow = message_flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    flow = flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
 
     command = StartCommand(value="test", run_id=uuid4())
     result = await flow.process(command)
@@ -590,7 +590,7 @@ async def test_callback_no_retention() -> None:
 
     handler = WeakRefHandler()
     processor = ProcessorNode(name="processor")
-    flow = message_flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    flow = flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
 
     command = StartCommand(value="test", run_id=uuid4())
     result = await flow.process(command)
@@ -681,7 +681,7 @@ async def test_composite_handler_error_logging() -> None:
     try:
         # Process message through flow
         processor = ProcessorNode(name="processor")
-        flow = message_flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
+        flow = flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
         command = StartCommand(value="test", run_id=uuid4())
         result = await flow.process(command)
 
@@ -705,7 +705,7 @@ async def test_callback_on_node_error() -> None:
     Tests coverage of error path in _execute_node (lines 89-92).
     """
 
-    class FailingNode(MessageNode[StartCommand, ProcessedEvent]):
+    class FailingNode(Node[StartCommand, ProcessedEvent]):
         """Node that always fails."""
 
         name: str = "failing_node"
@@ -724,7 +724,7 @@ async def test_callback_on_node_error() -> None:
     # Create flow with handler
     handler = TrackingHandler()
     failing_node = FailingNode(name="failing_node")
-    flow = message_flow("test_flow", failing_node).with_callbacks(handler).end(failing_node, ProcessedEvent)
+    flow = flow("test_flow", failing_node).with_callbacks(handler).end(failing_node, ProcessedEvent)
 
     # Process should raise the error
     command = StartCommand(value="test", run_id=uuid4())

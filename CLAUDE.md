@@ -45,7 +45,7 @@ uv run pytest --cov=clearflow --cov-report=term-missing --cov-fail-under=100
 
 ## Architecture Overview
 
-ClearFlow is a minimal orchestration framework with functional patterns and **zero third-party dependencies**. It implements a **Node-Flow-State** pattern for managing workflows that include language model calls and other async operations.
+ClearFlow is a minimal orchestration framework with functional patterns and **zero third-party dependencies**. It implements a **message-driven architecture** for managing workflows that include language model calls and other async operations.
 
 ### Core Concepts
 
@@ -53,7 +53,7 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
    - Inherit from `Node[T]` or `Node[TIn, TOut]` and override `exec()` method
    - Nodes are frozen dataclasses with a `name` field
    - Input: state of type `T` (any type: dict, TypedDict, dataclass, primitives)
-   - Output: `NodeResult[T](state, outcome)`
+   - Output: Message (Event or Command)
    - Designed for explicit transformations
    - Lifecycle hooks: `prep()`, `exec()`, `post()`
 
@@ -84,7 +84,7 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
 ```python
 from dataclasses import dataclass
 from typing import override
-from clearflow import Node, NodeResult, flow
+from clearflow import MessageNode, Message, Event, Command, message_flow
 
 # Creating nodes - Node is a frozen dataclass
 @dataclass(frozen=True)
@@ -92,10 +92,13 @@ class DocumentLoader(Node[DocumentState]):
     name: str = "loader"
     
     @override
-    async def exec(self, state: DocumentState) -> NodeResult[DocumentState]:
-        content = await load_document(state["path"])
-        new_state: DocumentState = {**state, "content": content}
-        return NodeResult(new_state, outcome="loaded")
+    async def process(self, message: LoadCommand) -> DocumentLoadedEvent:
+        content = await load_document(message.path)
+        return DocumentLoadedEvent(
+            content=content,
+            run_id=message.run_id,
+            triggered_by_id=message.id
+        )
 
 # Building a flow with single termination
 loader = DocumentLoader()
@@ -366,7 +369,7 @@ import subprocess  # noqa: S404  # Required for running uv/mcpdoc commands in de
 ```python
 __all__ = [
     # Original API  
-    "Node", "NodeResult", "flow",
+    "Node", "flow",
     # Message API
     "Message", "Event", "Command", "MessageFlow", "MessageNode", "message_flow", "Observer", "ObservableFlow",
 ]
@@ -448,12 +451,9 @@ if node.module in non_public_modules and is_test_file:
 3. Only proceed if approved
 4. Always include justification comment in suppression
 
-## Message-Driven Architecture Migration
+## Message-Driven Architecture
 
-### Creating Parallel Examples Strategy
-
-**Pattern**: Always create message-driven versions alongside legacy examples before removal
-**Benefits**: Validates new architecture, provides migration reference, maintains working code
+### Example Organization
 
 **Mission-Critical Example Standards**:
 - Examples MUST use absolute imports only (no relative imports)
@@ -464,11 +464,10 @@ if node.module in non_public_modules and is_test_file:
 **Directory Structure**:
 ```
 examples/
-├── chat/                    # Legacy Node-Flow-State
-├── chat_message_driven/     # New message-driven version  
-├── rag/                     # Legacy
-├── rag_message_driven/      # New
-└── README_message_driven.md # Architecture comparison guide
+├── chat/                    # Chat example
+├── portfolio_analysis/      # Portfolio analysis example
+├── rag/                     # RAG example
+└── README.md                # Examples overview
 ```
 
 **Critical Design Rule**: Avoid god-objects in events

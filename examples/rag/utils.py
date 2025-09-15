@@ -1,4 +1,4 @@
-"""Utilities for LLM and embedding operations."""
+"""Utilities for LLM and embedding operations (message-driven RAG)."""
 
 import os
 from pathlib import Path
@@ -66,7 +66,7 @@ def call_llm(prompt: str) -> str:
 
     """
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-5-nano-2025-08-07",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
         max_tokens=200,
