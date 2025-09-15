@@ -12,13 +12,12 @@ from uuid import uuid4
 import pytest
 
 from clearflow import (
-    CallbackHandler,
     Command,
-    CompositeHandler,
     Event,
     Message,
     Node,
-    flow,
+    Observer,
+    create_flow,
 )
 
 
@@ -59,64 +58,62 @@ class ProcessorNode(Node[StartCommand, ProcessedEvent]):
 
 
 # Task 3.1: Core Interface Tests
-def _verify_handler_methods_exist(handler: CallbackHandler) -> None:
-    """Verify handler has all required methods."""
-    assert hasattr(handler, "on_flow_start")
-    assert hasattr(handler, "on_flow_end")
-    assert hasattr(handler, "on_node_start")
-    assert hasattr(handler, "on_node_end")
+def _verify_observer_methods_exist(observer: Observer) -> None:
+    """Verify observer has all required methods."""
+    assert hasattr(observer, "on_flow_start")
+    assert hasattr(observer, "on_flow_end")
+    assert hasattr(observer, "on_node_start")
+    assert hasattr(observer, "on_node_end")
 
 
-def _verify_handler_methods_async(handler: CallbackHandler) -> None:
-    """Verify handler methods are async."""
-    assert asyncio.iscoroutinefunction(handler.on_flow_start)
-    assert asyncio.iscoroutinefunction(handler.on_flow_end)
-    assert asyncio.iscoroutinefunction(handler.on_node_start)
-    assert asyncio.iscoroutinefunction(handler.on_node_end)
+def _verify_observer_methods_async(observer: Observer) -> None:
+    """Verify observer methods are async."""
+    assert asyncio.iscoroutinefunction(observer.on_flow_start)
+    assert asyncio.iscoroutinefunction(observer.on_flow_end)
+    assert asyncio.iscoroutinefunction(observer.on_node_start)
+    assert asyncio.iscoroutinefunction(observer.on_node_end)
 
 
-def test_callback_handler_interface() -> None:
-    """Test that CallbackHandler is properly defined with all required methods.
+def test_observer_interface() -> None:
+    """Test that Observer is properly defined with all required methods.
 
-    REQ-001: CallbackHandler base class with lifecycle methods
+    REQ-001: Observer base class for monitoring
     REQ-002: Four async lifecycle methods
     """
-    handler = CallbackHandler()
-    _verify_handler_methods_exist(handler)
-    _verify_handler_methods_async(handler)
+    observer = Observer()
+    _verify_observer_methods_exist(observer)
+    _verify_observer_methods_async(observer)
 
 
-async def _verify_noop_method(
-    handler: CallbackHandler, method_name: str, *args: str | Message | Exception | None
-) -> None:
-    """Verify a handler method returns None."""
-    method = getattr(handler, method_name)
+async def _verify_noop_method(observer: Observer, method_name: str, *args: str | Message | Exception | None) -> None:
+    """Verify an observer method returns None."""
+    method = getattr(observer, method_name)
     result = await method(*args)
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_callback_default_noop() -> None:
-    """Test that default implementations are no-ops.
+async def test_observer_default_noop() -> None:
+    """Test that Observer with no-op defaults works correctly.
 
-    REQ-003: All methods have default no-op implementations
+    REQ-003: Observer works with no-op defaults
     """
-    handler = CallbackHandler()
+    observer = Observer()  # Base observer with no-op methods
     command = StartCommand(value="test", run_id=uuid4())
     test_error = ValueError("test error")
 
-    # Test all methods return None
-    await _verify_noop_method(handler, "on_flow_start", "test_flow", command)
-    await _verify_noop_method(handler, "on_flow_end", "test_flow", command, None)
-    await _verify_noop_method(handler, "on_node_start", "test_node", command)
-    await _verify_noop_method(handler, "on_node_end", "test_node", command, None)
-    await _verify_noop_method(handler, "on_flow_end", "test_flow", command, test_error)
-    await _verify_noop_method(handler, "on_node_end", "test_node", command, test_error)
+    # Test all methods return None (no-op defaults)
+    await _verify_noop_method(observer, "on_flow_start", "test_flow", command)
+    await _verify_noop_method(observer, "on_flow_end", "test_flow", command, None)
+    await _verify_noop_method(observer, "on_node_start", "test_node", command)
+    await _verify_noop_method(observer, "on_node_end", "test_node", command, None)
+    await _verify_noop_method(observer, "on_flow_end", "test_flow", command, test_error)
+    await _verify_noop_method(observer, "on_node_end", "test_node", command, test_error)
 
 
 @pytest.mark.asyncio
-async def test_callback_stdlib_only() -> None:
-    """Test that CallbackHandler uses only stdlib types.
+async def test_observer_stdlib_only() -> None:
+    """Test that Observer uses only stdlib types.
 
     REQ-004: Uses only Python standard library types
     """
@@ -124,23 +121,23 @@ async def test_callback_stdlib_only() -> None:
     # This is implicitly tested by the import at the top
     # We can also verify the signature types
 
-    handler = CallbackHandler()
+    observer = Observer()
 
     # Test that we can pass basic Python types
     command = StartCommand(value="test", run_id=uuid4())
     error = Exception("test")
 
     # These should all work with stdlib types
-    await handler.on_flow_start("string", command)  # str, Message
-    await handler.on_flow_end("string", command, error)  # str, Message, Exception
-    await handler.on_flow_end("string", command, None)  # str, Message, None
-    await handler.on_node_start("string", command)  # str, Message
-    await handler.on_node_end("string", command, error)  # str, Message, Exception
-    await handler.on_node_end("string", command, None)  # str, Message, None
+    await observer.on_flow_start("string", command)  # str, Message
+    await observer.on_flow_end("string", command, error)  # str, Message, Exception
+    await observer.on_flow_end("string", command, None)  # str, Message, None
+    await observer.on_node_start("string", command)  # str, Message
+    await observer.on_node_end("string", command, error)  # str, Message, Exception
+    await observer.on_node_end("string", command, None)  # str, Message, None
 
 
 # Task 3.2: Execution and Error Handling Tests
-class TrackingHandler(CallbackHandler):
+class TrackingHandler(Observer):
     """Handler that tracks callback invocations."""
 
     def __init__(self) -> None:
@@ -173,7 +170,7 @@ class TrackingHandler(CallbackHandler):
             self.errors.append(error)
 
 
-class ErrorHandler(CallbackHandler):
+class ErrorHandler(Observer):
     """Handler that raises errors to test error handling."""
 
     @override
@@ -199,7 +196,7 @@ async def test_callback_error_handling() -> None:
     processor = ProcessorNode(name="processor")
 
     # Add handler that raises errors
-    flow_with_error = flow("test_flow", processor).with_callbacks(ErrorHandler()).end(processor, ProcessedEvent)
+    flow_with_error = create_flow("test_flow", processor).observe(ErrorHandler()).end(processor, ProcessedEvent)
 
     # Flow should complete successfully despite callback errors
     command = StartCommand(value="test", run_id=uuid4())
@@ -218,7 +215,7 @@ async def test_callback_error_logging() -> None:
     """
     # Create a simple flow with error handler
     processor = ProcessorNode(name="processor")
-    flow = flow("test_flow", processor).with_callbacks(ErrorHandler()).end(processor, ProcessedEvent)
+    test_flow = create_flow("test_flow", processor).observe(ErrorHandler()).end(processor, ProcessedEvent)
 
     # Capture stderr
     captured_stderr = StringIO()
@@ -228,11 +225,11 @@ async def test_callback_error_logging() -> None:
     try:
         # Process message
         command = StartCommand(value="test", run_id=uuid4())
-        await flow.process(command)
+        await test_flow.process(command)
 
         # Check that error was logged
         stderr_output = captured_stderr.getvalue()
-        assert "Callback on_flow_start failed" in stderr_output
+        assert "Observer error in ErrorHandler.on_flow_start" in stderr_output
         assert "Callback error" in stderr_output
     finally:
         sys.stderr = old_stderr
@@ -248,11 +245,11 @@ async def test_callback_execution_order() -> None:
     # Create flow with tracking handler
     handler = TrackingHandler()
     processor = ProcessorNode(name="processor")
-    flow = flow("test_flow", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    test_flow = create_flow("test_flow", processor).observe(handler).end(processor, ProcessedEvent)
 
     # Process message
     command = StartCommand(value="test", run_id=uuid4())
-    await flow.process(command)
+    await test_flow.process(command)
 
     # Verify execution order
     assert handler.calls == [
@@ -266,23 +263,22 @@ async def test_callback_execution_order() -> None:
 
 # Task 3.3: Integration Tests
 @pytest.mark.asyncio
-async def test_composite_handler() -> None:
-    """Test that CompositeHandler executes multiple handlers.
+async def test_multiple_observers() -> None:
+    """Test that multiple observers can be attached.
 
-    REQ-008: CompositeHandler for multiple handlers
+    REQ-008: Flow supports multiple observers
     """
-    # Create multiple tracking handlers
+    # Create multiple tracking observers
     handler1 = TrackingHandler()
     handler2 = TrackingHandler()
-    composite = CompositeHandler(handlers=(handler1, handler2))
 
-    # Create flow with composite handler
+    # Create flow with multiple observers
     processor = ProcessorNode(name="processor")
-    flow = flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
+    test_flow = create_flow("test_flow", processor).observe(handler1, handler2).end(processor, ProcessedEvent)
 
     # Process message
     command = StartCommand(value="test", run_id=uuid4())
-    await flow.process(command)
+    await test_flow.process(command)
 
     # Both handlers should have been called
     assert handler1.calls == [
@@ -297,23 +293,24 @@ async def test_composite_handler() -> None:
 
 
 @pytest.mark.asyncio
-async def test_composite_handler_error_isolation() -> None:
-    """Test that errors in one handler don't affect others.
+async def test_observer_error_isolation() -> None:
+    """Test that errors in one observer don't affect others.
 
-    REQ-008: Each handler's errors isolated
+    REQ-008: Each observer's errors isolated
     """
-    # Create handler that raises error and tracking handler
+    # Create observer that raises error and tracking observer
     error_handler = ErrorHandler()
     tracking_handler = TrackingHandler()
-    composite = CompositeHandler(handlers=(error_handler, tracking_handler))
 
     # Create flow
     processor = ProcessorNode(name="processor")
-    flow = flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
+    test_flow = (
+        create_flow("test_flow", processor).observe(error_handler, tracking_handler).end(processor, ProcessedEvent)
+    )
 
     # Process message
     command = StartCommand(value="test", run_id=uuid4())
-    result = await flow.process(command)
+    result = await test_flow.process(command)
 
     # Flow should complete successfully
     assert isinstance(result, ProcessedEvent)
@@ -332,7 +329,7 @@ async def test_composite_handler_error_isolation() -> None:
 async def test_flow_callback_integration() -> None:
     """Test that callbacks are invoked correctly during flow execution.
 
-    REQ-009: Flow builder supports callbacks via with_callbacks()
+    REQ-009: Flow builder supports callbacks via observe()
     REQ-010: Callbacks invoked at lifecycle points
     """
 
@@ -398,16 +395,16 @@ async def test_flow_callback_integration() -> None:
     validator = ValidatorNode(name="validator")
     processor2 = ProcessorNode2(name="processor2")
 
-    flow = (
-        flow("validation_flow", validator)
-        .with_callbacks(handler)
+    test_flow = (
+        create_flow("validation_flow", validator)
+        .observe(handler)
         .route(validator, ValidationEvent, processor2)
         .end(processor2, ProcessedEvent)
     )
 
     # Process valid data
     command = ValidateCommand(data="test", run_id=uuid4())
-    result = await flow.process(command)
+    result = await test_flow.process(command)
 
     assert isinstance(result, ProcessedEvent)
     assert result.result == "Processed: test"
@@ -438,7 +435,7 @@ async def test_nested_flow_callbacks() -> None:
     # Outer flow with handler - simulating nested behavior
     # Since MessageFlow can't be used directly as a node, we simulate
     # the nested behavior by testing callback propagation
-    outer_flow = flow("outer_flow", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    outer_flow = create_flow("outer_flow", processor).observe(handler).end(processor, ProcessedEvent)
 
     # Process through outer flow
     command = StartCommand(value="nested", run_id=uuid4())
@@ -468,10 +465,10 @@ async def test_no_node_modification() -> None:
 
     # Should work with callbacks
     handler = TrackingHandler()
-    flow = flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    test_flow = create_flow("test", processor).observe(handler).end(processor, ProcessedEvent)
 
     command = StartCommand(value="test", run_id=uuid4())
-    result = await flow.process(command)
+    result = await test_flow.process(command)
 
     assert isinstance(result, ProcessedEvent)
     assert handler.calls  # Handler was called
@@ -485,14 +482,14 @@ async def test_callback_type_safety() -> None:
     """
     # Type-safe flow creation
     processor = ProcessorNode(name="processor")
-    handler = CallbackHandler()
+    observer = Observer()
 
     # Flow type should be preserved with callbacks
-    flow = flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    test_flow = create_flow("test", processor).observe(observer).end(processor, ProcessedEvent)
 
     # Should accept correct message type
     command = StartCommand(value="test", run_id=uuid4())
-    result = await flow.process(command)
+    result = await test_flow.process(command)
 
     # Result type should be preserved
     assert isinstance(result, ProcessedEvent)
@@ -508,10 +505,10 @@ async def test_callback_zero_overhead() -> None:
     processor = ProcessorNode(name="processor")
 
     # Flow without callbacks
-    flow_no_cb = flow("test", processor).end(processor, ProcessedEvent)
+    flow_no_cb = create_flow("test", processor).end(processor, ProcessedEvent)
 
     # Another flow without callbacks (for timing comparison)
-    flow_no_cb2 = flow("test", processor).end(processor, ProcessedEvent)
+    flow_no_cb2 = create_flow("test", processor).end(processor, ProcessedEvent)
 
     command = StartCommand(value="test", run_id=uuid4())
 
@@ -538,7 +535,7 @@ async def test_callback_async_execution() -> None:
     REQ-017: Callbacks execute asynchronously
     """
 
-    class AsyncHandler(CallbackHandler):
+    class AsyncHandler(Observer):
         """Handler with async operations."""
 
         def __init__(self) -> None:
@@ -559,10 +556,10 @@ async def test_callback_async_execution() -> None:
 
     handler = AsyncHandler()
     processor = ProcessorNode(name="processor")
-    flow = flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    test_flow = create_flow("test", processor).observe(handler).end(processor, ProcessedEvent)
 
     command = StartCommand(value="test", run_id=uuid4())
-    result = await flow.process(command)
+    result = await test_flow.process(command)
 
     # Async handlers should have executed
     assert handler.events == ["flow_start", "flow_end"]
@@ -576,7 +573,7 @@ async def test_callback_no_retention() -> None:
     REQ-018: Callbacks don't retain message references
     """
 
-    class WeakRefHandler(CallbackHandler):
+    class WeakRefHandler(Observer):
         """Handler that stores weak references."""
 
         def __init__(self) -> None:
@@ -590,10 +587,10 @@ async def test_callback_no_retention() -> None:
 
     handler = WeakRefHandler()
     processor = ProcessorNode(name="processor")
-    flow = flow("test", processor).with_callbacks(handler).end(processor, ProcessedEvent)
+    test_flow = create_flow("test", processor).observe(handler).end(processor, ProcessedEvent)
 
     command = StartCommand(value="test", run_id=uuid4())
-    result = await flow.process(command)
+    result = await test_flow.process(command)
 
     # Handler should have stored weak ref
     assert len(handler.message_refs) == 1
@@ -610,7 +607,7 @@ async def test_callback_no_retention() -> None:
     assert weak_ref() is None or weak_ref() is not None  # Either is acceptable
 
 
-class FailingHandler(CallbackHandler):
+class FailingHandler(Observer):
     """Handler that fails in all methods for testing."""
 
     @override
@@ -660,18 +657,17 @@ class FailingHandler(CallbackHandler):
 
 def _verify_error_logged(stderr_output: str, method_name: str) -> None:
     """Verify that a specific error was logged."""
-    expected = f"CompositeHandler: FailingHandler.{method_name} failed: {method_name} error"
+    expected = f"Observer error in FailingHandler.{method_name}: {method_name} error"
     assert expected in stderr_output
 
 
 @pytest.mark.asyncio
-async def test_composite_handler_error_logging() -> None:
-    """Test that CompositeHandler logs errors from failing handlers.
+async def test_observer_error_logging() -> None:
+    """Test that observer errors are logged.
 
-    Tests coverage of error handling paths in CompositeHandler.
+    Tests coverage of error handling paths.
     """
-    # Create composite with failing and tracking handlers
-    composite = CompositeHandler(handlers=(FailingHandler(), TrackingHandler()))
+    # Create flow with failing and tracking observers
 
     # Capture stderr to verify logging
     captured_stderr = StringIO()
@@ -681,9 +677,13 @@ async def test_composite_handler_error_logging() -> None:
     try:
         # Process message through flow
         processor = ProcessorNode(name="processor")
-        flow = flow("test_flow", processor).with_callbacks(composite).end(processor, ProcessedEvent)
+        test_flow = (
+            create_flow("test_flow", processor)
+            .observe(FailingHandler(), TrackingHandler())
+            .end(processor, ProcessedEvent)
+        )
         command = StartCommand(value="test", run_id=uuid4())
-        result = await flow.process(command)
+        result = await test_flow.process(command)
 
         # Verify flow completed successfully
         assert isinstance(result, ProcessedEvent)
@@ -724,12 +724,12 @@ async def test_callback_on_node_error() -> None:
     # Create flow with handler
     handler = TrackingHandler()
     failing_node = FailingNode(name="failing_node")
-    flow = flow("test_flow", failing_node).with_callbacks(handler).end(failing_node, ProcessedEvent)
+    test_flow = create_flow("test_flow", failing_node).observe(handler).end(failing_node, ProcessedEvent)
 
     # Process should raise the error
     command = StartCommand(value="test", run_id=uuid4())
     with pytest.raises(ValueError, match="Node processing failed"):
-        await flow.process(command)
+        await test_flow.process(command)
 
     # Callbacks should have been invoked including on_node_end with error
     assert handler.calls == [

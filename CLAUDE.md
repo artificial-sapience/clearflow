@@ -64,7 +64,7 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
    - Works with dict, TypedDict, dataclass, primitives
 
 3. **Flow**: Type-safe workflow builder
-   - Create with `flow("name", start_node)` function
+   - Create with `flow("name", starting_node)` function
    - Chain with `.route(from_node, outcome, to_node)`
    - End with `.end(final_node, outcome)` for single termination
    - Single termination rule: exactly one route to `None`
@@ -380,7 +380,7 @@ __all__ = [
 **Enforcement**: Tests use `from clearflow import MessageNode, message_flow` instead of submodule imports
 
 **Critical Rule**: Public functions should only accept and return public types
-**Discovered**: If `message_flow().end()` returns `_MessageFlow`, then `MessageFlow` must be public
+**Discovered**: If `message_flow().end()` returns `_Flow`, then `MessageFlow` must be public
 **Solution**: Remove underscore prefix and export in `__all__` rather than using `Any` type suppressions
 
 ### Coverage Gap Patterns
@@ -498,8 +498,8 @@ class RecommendationGeneratedEvent(Event):
 **Standard Pattern**: Chain message transformations with explicit routing
 ```python
 flow = (
-    message_flow("ProcessName", start_node)
-    .from_node(start_node)
+    message_flow("ProcessName", starting_node)
+    .from_node(starting_node)
     .route(OutputEvent, transform_node)
     .from_node(transform_node)
     .route(TransformedEvent, end_node)
@@ -549,6 +549,51 @@ class MyCommand(Command):
 ## Messaging Principles
 
 - **Avoid vague claims** - "Full transparency" misleads about features we don't have
-- **Use active voice** - "Compose flows" not "Composing flows"  
+- **Use active voice** - "Compose flows" not "Composing flows"
 - **Acknowledge AI nature** - "emergent AI" not "unpredictable AI" (less adversarial)
 - **Be specific** - "Type-safe", "Zero dependencies" are verifiable features
+
+## Session Learnings: 2025-01-15
+
+### Observer Pattern Refactoring
+
+**Completed**: Renamed callback system to Observer pattern for clarity
+- `CallbackHandler` → internal implementation detail
+- `Observer` → public base class with no-op defaults
+- `.with_callbacks()` → `.observe()` method
+- Removed redundant error handling in `_safe_callback` (CallbackHandler already handles all errors)
+
+### API Naming Decisions
+
+**Renamed**: `flow()` → `create_flow()` for self-documentation
+**Rationale**: Even our own tests renamed it, follows stdlib patterns like `asyncio.create_task()`
+**Implementation**: Changed at source in `flow_impl.py`, not just aliased
+
+### StrictBaseModel Documentation
+
+**Key Setting**: `arbitrary_types_allowed=True` is essential for user flexibility
+**Rationale**: Mission-critical systems need to integrate with existing codebases
+**Users need**: Frozen dataclasses, domain types, AI library types (LangChain, DSPy, etc.)
+
+### Architecture Compliance
+
+**Discovered**: Tests importing from `_internal` violate architecture and are caught by linter
+**Pattern**: ARCH003 violation prevents tests from using internal implementation
+**Solution**: All tests must use public API from `clearflow/__init__.py`
+
+### Documentation Best Practices
+
+**Config documentation pattern**:
+```python
+model_config = ConfigDict(
+    # Category name
+    setting=value,  # One-line what
+    # One-line why
+)
+```
+
+**Class docstring structure**:
+1. One-line purpose statement
+2. "Why use this" section with bullets
+3. Realistic code example with >>> prompts
+4. "Perfect for" section with use cases

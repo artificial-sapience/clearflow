@@ -12,30 +12,19 @@ import pytest
 from pydantic import ValidationError
 
 from clearflow import Command, Event, Message
-from tests.conftest_message import (
+from tests.conftest import (
     ProcessCommand,
     ProcessedEvent,
     ValidationFailedEvent,
-    create_flow_id,
+    create_run_id,
     create_test_command,
     create_test_event,
 )
 
 
-def test_message_type_property() -> None:
-    """Test that message_type returns the concrete class type."""
-    # Create a command instance
-    cmd = create_test_command()
-    assert cmd.message_type == ProcessCommand
-
-    # Create an event instance
-    evt = create_test_event()
-    assert evt.message_type == ProcessedEvent
-
-
 def test_message_auto_generated_fields() -> None:
     """Test that id and timestamp are auto-generated."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
     cmd = ProcessCommand(
         data="test",
         triggered_by_id=None,
@@ -70,7 +59,7 @@ def test_message_immutability() -> None:
 
 def test_message_causality_tracking() -> None:
     """Test message causality chain tracking."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     # Initial command has no trigger
     cmd = ProcessCommand(
@@ -100,8 +89,8 @@ def test_message_causality_tracking() -> None:
 
 def test_flow_tracking() -> None:
     """Test that messages track their flow session."""
-    flow1 = create_flow_id()
-    flow2 = create_flow_id()
+    flow1 = create_run_id()
+    flow2 = create_run_id()
 
     cmd1 = ProcessCommand(data="flow1", triggered_by_id=None, run_id=flow1)
     cmd2 = ProcessCommand(data="flow2", triggered_by_id=None, run_id=flow2)
@@ -113,7 +102,7 @@ def test_flow_tracking() -> None:
 
 def test_command_optional_trigger() -> None:
     """Test that commands can have optional triggered_by_id."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     # Command without trigger (initial command)
     cmd1 = ProcessCommand(
@@ -150,7 +139,7 @@ def test_command_inheritance() -> None:
 
 def test_command_concrete_implementation() -> None:
     """Test concrete command implementation with custom fields."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
     cmd = ProcessCommand(
         data="important data",
         priority=5,
@@ -165,7 +154,7 @@ def test_command_concrete_implementation() -> None:
 
 def test_event_required_trigger() -> None:
     """Test that events MUST have triggered_by_id."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
     trigger_id = uuid.uuid4()
 
     # Event with trigger works
@@ -198,7 +187,7 @@ def test_event_inheritance() -> None:
 
 def test_event_concrete_implementation() -> None:
     """Test concrete event implementation with custom fields."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
     trigger_id = uuid.uuid4()
 
     evt = ValidationFailedEvent(
@@ -220,7 +209,7 @@ def test_event_immutable_collections() -> None:
         reason="test",
         errors=("error1", "error2"),
         triggered_by_id=uuid.uuid4(),
-        run_id=create_flow_id(),
+        run_id=create_run_id(),
     )
 
     # Tuple is immutable
@@ -231,7 +220,7 @@ def test_event_immutable_collections() -> None:
 
 def test_message_equality() -> None:
     """Test that messages with same fields are equal."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
     trigger_id = uuid.uuid4()
 
     # Commands should not be equal even with same data (different IDs)
@@ -262,11 +251,19 @@ def test_message_hashability() -> None:
 
     # BaseModel instances are not hashable by default in Pydantic
     # This is expected behavior - we use IDs for uniqueness instead
+    _assert_unique_ids(cmd, evt)
+    _assert_same_data_different_ids(cmd)
+
+
+def _assert_unique_ids(cmd: ProcessCommand, evt: ProcessedEvent) -> None:
+    """Assert that commands and events have unique UUIDs."""
     assert cmd.id != evt.id
     assert isinstance(cmd.id, uuid.UUID)
     assert isinstance(evt.id, uuid.UUID)
 
-    # Messages with same data but different IDs are different
+
+def _assert_same_data_different_ids(cmd: ProcessCommand) -> None:
+    """Assert that messages with same data have different IDs."""
     cmd2 = create_test_command()
     assert cmd.id != cmd2.id
     assert cmd.data == cmd2.data
@@ -318,7 +315,7 @@ def test_command_event_distinction() -> None:
 
 def test_cannot_instantiate_event_directly() -> None:
     """Test that Event cannot be instantiated directly."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     with pytest.raises(TypeError, match="Cannot instantiate abstract Event directly"):
         Event(
@@ -329,7 +326,7 @@ def test_cannot_instantiate_event_directly() -> None:
 
 def test_cannot_instantiate_command_directly() -> None:
     """Test that Command cannot be instantiated directly."""
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     with pytest.raises(TypeError, match="Cannot instantiate abstract Command directly"):
         Command(

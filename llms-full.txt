@@ -143,8 +143,8 @@ Holds the **new state** and an **outcome** string used for routing.
 A function that creates a flow with **explicit routing**:
 
 ```python
-flow("Name", start_node)
-  .route(start_node, "outcome1", next_node)
+flow("Name", starting_node)
+  .route(starting_node, "outcome1", next_node)
   .route(next_node, "outcome2", final_node)
   .end(final_node, "done")  # exactly one termination
 ```
@@ -542,7 +542,7 @@ ClearFlow is a minimal orchestration framework with functional patterns and **ze
    - Works with dict, TypedDict, dataclass, primitives
 
 3. **Flow**: Type-safe workflow builder
-   - Create with `flow("name", start_node)` function
+   - Create with `flow("name", starting_node)` function
    - Chain with `.route(from_node, outcome, to_node)`
    - End with `.end(final_node, outcome)` for single termination
    - Single termination rule: exactly one route to `None`
@@ -2382,7 +2382,7 @@ class MyNode(Node[T]):
 **Before:** Flow class with add() method
 
 ```python
-flow = Flow(name="pipeline", start_node=start)
+flow = Flow(name="pipeline", starting_node=start)
 flow.add(start, "success", processor)
 flow.add(processor, "done", None)  # Termination
 ```
@@ -2499,7 +2499,7 @@ class ProcessNode(Node[dict]):
         return NodeResult(state, outcome="done")
 
 process = ProcessNode()
-flow = Flow(name="pipeline", start_node=process)
+flow = Flow(name="pipeline", starting_node=process)
 flow.add(process, "done", None)
 ```
 

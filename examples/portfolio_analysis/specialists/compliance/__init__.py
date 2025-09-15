@@ -1,7 +1,6 @@
 """Compliance Officer specialist module."""
 
 from examples.portfolio_analysis.specialists.compliance.models import ComplianceCheck, ComplianceError, ComplianceReview
-from examples.portfolio_analysis.specialists.compliance.node import ComplianceOfficer
 from examples.portfolio_analysis.specialists.compliance.signature import (
     ComplianceOfficerSignature,
     ComplianceViolationSignature,
@@ -15,7 +14,6 @@ from examples.portfolio_analysis.specialists.compliance.validators import (
 __all__ = [
     "ComplianceCheck",
     "ComplianceError",
-    "ComplianceOfficer",
     "ComplianceOfficerSignature",
     "ComplianceReview",
     "ComplianceViolationSignature",

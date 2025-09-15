@@ -72,7 +72,7 @@ Observability platforms expect these callbacks:
 Callbacks are injected during flow building, before termination:
 
 ```python
-flow = message_flow("name", start_node)
+flow = message_flow("name", starting_node)
     .with_callbacks(handler)  # Optional callback attachment
     .route(...)
     .end(...)  # Returns MessageFlow, must be last

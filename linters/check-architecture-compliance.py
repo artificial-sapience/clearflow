@@ -91,43 +91,75 @@ def _check_private_imports(node: ast.ImportFrom, file_path: Path, *, is_internal
     if not node.module:
         return tuple(violations)
 
-    # Check for _internal module imports (existing check)
-    private_module = "clearflow." + "_internal"
-    if private_module in node.module and not is_internal:
-        violations.append(
-            Violation(
-                file=file_path,
-                line=node.lineno,
-                column=node.col_offset,
-                code="ARCH003",
-                message=f"Importing from private module '{node.module}'",
-                requirement="REQ-ARCH-003",
-            )
-        )
+    # Check for _internal module imports
+    violation = _check_internal_imports(node, file_path, is_internal=is_internal)
+    if violation:
+        violations.append(violation)
 
     # Check for test files importing from non-public API modules
-    is_test_file = "test" in str(file_path) or file_path.name.startswith("conftest")
-    if is_test_file and node.module and node.module.startswith("clearflow."):
-        # List of non-public modules that tests should not import from directly
-        non_public_modules = [
-            "clearflow.message",
-            "clearflow.message_node",
-            "clearflow.message_flow",
-            "clearflow.observer",
-        ]
-        if node.module in non_public_modules:
-            violations.append(
-                Violation(
-                    file=file_path,
-                    line=node.lineno,
-                    column=node.col_offset,
-                    code="ARCH011",
-                    message=f"Test file importing from non-public API module '{node.module}' - tests must use only public API from clearflow.__init__.py",
-                    requirement="REQ-ARCH-011",
-                )
-            )
+    violation = _check_test_imports(node, file_path)
+    if violation:
+        violations.append(violation)
 
     return tuple(violations)
+
+
+def _check_internal_imports(node: ast.ImportFrom, file_path: Path, *, is_internal: bool) -> Violation | None:
+    """Check for imports from _internal modules.
+
+    Returns:
+        Violation if found, None otherwise.
+
+    """
+    if not node.module:
+        return None
+
+    # Public wrapper modules are allowed to import from _internal
+    public_wrapper_modules = {"__init__.py"}
+    is_public_wrapper = file_path.name in public_wrapper_modules and "_internal" not in str(file_path)
+
+    # Check for _internal module imports
+    private_module = "clearflow." + "_internal"
+    if private_module in node.module and not is_internal and not is_public_wrapper:
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="ARCH003",
+            message=f"Importing from private module '{node.module}'",
+            requirement="REQ-ARCH-003",
+        )
+    return None
+
+
+def _check_test_imports(node: ast.ImportFrom, file_path: Path) -> Violation | None:
+    """Check for test files importing from non-public API modules.
+
+    Returns:
+        Violation if found, None otherwise.
+
+    """
+    is_test_file = "test" in str(file_path) or file_path.name.startswith("conftest")
+    if not is_test_file or not node.module or not node.module.startswith("clearflow."):
+        return None
+
+    # List of non-public modules that tests should not import from directly
+    non_public_modules = [
+        "clearflow.message",
+        "clearflow.message_node",
+        "clearflow.message_flow",
+        "clearflow.observer",
+    ]
+    if node.module in non_public_modules:
+        return Violation(
+            file=file_path,
+            line=node.lineno,
+            column=node.col_offset,
+            code="ARCH011",
+            message=f"Test file importing from non-public API module '{node.module}' - tests must use only public API from clearflow.__init__.py",
+            requirement="REQ-ARCH-011",
+        )
+    return None
 
 
 def _check_mock_imports(node: ast.ImportFrom, file_path: Path) -> tuple[Violation, ...]:
@@ -502,7 +534,7 @@ def check_private_access(file_path: Path, content: str) -> tuple[Violation, ...]
                 if before_dot.endswith(("_builder", "_flow", "_node")):
                     # This looks like same-module class collaboration
                     # In clearflow/message_flow.py, _MessageFlowBuilderContext accessing
-                    # _MessageFlowBuilder's methods is valid Python convention
+                    # _FlowBuilder's methods is valid Python convention
                     continue
 
                 violations.append(

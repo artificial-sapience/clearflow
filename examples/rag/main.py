@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from examples.rag.messages import IndexDocumentsCommand, QueryCommand
 from examples.rag.rag_flows import create_indexing_flow, create_query_flow
-from tests.conftest_message import create_flow_id
+from tests.conftest import create_run_id
 
 
 def get_sample_documents() -> tuple[str, ...]:
@@ -69,7 +69,7 @@ async def run_indexing_phase() -> tuple[tuple[str, ...], tuple[tuple[float, ...]
     documents = get_sample_documents()
     index_command = IndexDocumentsCommand(
         triggered_by_id=None,
-        run_id=create_flow_id(),
+        run_id=create_run_id(),
         documents=documents,
     )
 
@@ -108,7 +108,7 @@ async def run_query_phase(chunks: tuple[str, ...], embeddings: tuple[tuple[float
             # Create query command
             query_command = QueryCommand(
                 triggered_by_id=None,
-                run_id=create_flow_id(),
+                run_id=create_run_id(),
                 query=query_text,
                 chunks=chunks,
                 embeddings=embeddings,

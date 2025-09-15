@@ -6,26 +6,26 @@ routing boundaries to handle union types while maintaining type safety at
 flow input/output boundaries.
 """
 
-import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import cast, final, override
 
-from clearflow.callbacks import CallbackHandler
+from clearflow._internal.callback_handler import CallbackHandler
+from clearflow.flow import FlowBuilder
 from clearflow.message import Message
-from clearflow.message_node import Node
-from clearflow.node_interface import _NodeInterface
+from clearflow.node import Node, NodeInterface
+from clearflow.observer import Observer
 
 __all__ = [
-    "flow",
+    "create_flow",
 ]
 
-MessageRouteKey = tuple[type[Message], str]  # (outcome, node_name)
+RouteKey = tuple[type[Message], str]  # (outcome, node_name)
 
 
 @final
-class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMessage, TEndMessage]):
-    """Internal message flow that routes messages based on their types.
+class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
+    """Module private flow that routes messages based on their types.
 
     Executes flows by routing messages through nodes based on their runtime types.
 
@@ -35,16 +35,18 @@ class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMess
 
     """
 
-    start_node: _NodeInterface[Message, Message]
-    routes: Mapping[MessageRouteKey, _NodeInterface[Message, Message] | None]
+    starting_node: NodeInterface[Message, Message]
+    routes: Mapping[RouteKey, NodeInterface[Message, Message] | None]
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
 
     async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
         """Execute callback safely without affecting flow.
 
-        REQ-005: Wrap callback execution in try-except
-        REQ-006: Log errors to stderr but don't propagate
+        REQ-016: Zero overhead when no callbacks
         REQ-017: Async execution (non-blocking)
+
+        CallbackHandler internally handles all errors (REQ-005, REQ-006) so we don't
+        need additional error handling here.
 
         Args:
             method: Name of callback method to invoke
@@ -54,14 +56,11 @@ class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMess
         if not self.callbacks:  # REQ-016: Zero overhead when no callbacks
             return
 
-        try:
-            callback_method = getattr(self.callbacks, method)
-            await callback_method(*args)
-        except Exception as e:  # noqa: BLE001  # REQ-005: Must catch all exceptions to prevent flow disruption
-            # REQ-006: Log but don't propagate
-            sys.stderr.write(f"Callback {method} failed: {e}\n")
+        # CallbackHandler already provides error isolation, so we can call directly
+        callback_method = getattr(self.callbacks, method)
+        await callback_method(*args)
 
-    async def _execute_node(self, node: _NodeInterface[Message, Message], message: Message) -> Message:
+    async def _execute_node(self, node: NodeInterface[Message, Message], message: Message) -> Message:
         """Execute a single node with callback notifications.
 
         Args:
@@ -89,8 +88,8 @@ class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMess
             return output
 
     def _get_next_node(
-        self, message: Message, current_node: _NodeInterface[Message, Message]
-    ) -> _NodeInterface[Message, Message] | None:
+        self, message: Message, current_node: NodeInterface[Message, Message]
+    ) -> NodeInterface[Message, Message] | None:
         """Get the next node for routing based on message type.
 
         Args:
@@ -113,7 +112,7 @@ class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMess
         return self.routes[route_key]
 
     @override
-    async def process(self, message: TStartMessage) -> TEndMessage:
+    async def process(self, message: TStartIn) -> TEnd:
         """Process message by routing through the flow.
 
         Args:
@@ -126,7 +125,7 @@ class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMess
         # REQ-010: Invoke on_flow_start at beginning
         await self._safe_callback("on_flow_start", self.name, message)
 
-        current_node: _NodeInterface[Message, Message] = self.start_node
+        current_node: NodeInterface[Message, Message] = self.starting_node
         current_message: Message = message
 
         try:
@@ -140,7 +139,7 @@ class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMess
                 if next_node is None:
                     # REQ-010: Invoke on_flow_end at termination
                     await self._safe_callback("on_flow_end", self.name, output_message, None)
-                    return cast("TEndMessage", output_message)
+                    return cast("TEnd", output_message)
 
                 # Continue
                 current_node = next_node
@@ -153,15 +152,15 @@ class _MessageFlow[TStartMessage: Message, TEndMessage: Message](Node[TStartMess
 
 @final
 @dataclass(frozen=True)
-class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
-    """Builder for composing message routes with explicit source nodes.
+class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, TStartOut]):
+    """Module private builder for composing message routes with explicit source nodes.
 
     Uses the pattern from the original flow API where each route explicitly
     specifies: from_node -> outcome -> to_node. This enables sequential thinking
     about workflow construction.
 
     Type parameters:
-        TStartMessage: The input message type the flow accepts
+        TStartIn: The input message type the flow accepts
         TStartOut: The output type of the start node (remains constant throughout builder chain)
 
     The builder maintains stable type parameters throughout the chain, unlike tracking
@@ -171,14 +170,14 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
     """
 
     name: str
-    start_node: Node[TStartMessage, TStartOut]
-    routes: Mapping[MessageRouteKey, _NodeInterface[Message, Message] | None]
+    starting_node: Node[TStartIn, TStartOut]
+    routes: Mapping[RouteKey, NodeInterface[Message, Message] | None]
     reachable_nodes: frozenset[str]  # Node names that are reachable from start
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks
 
     def _validate_and_create_route(
         self, from_node_name: str, outcome: type[Message], *, is_termination: bool = False
-    ) -> MessageRouteKey:
+    ) -> RouteKey:
         """Validate that a route can be added.
 
         Args:
@@ -200,40 +199,44 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
             raise ValueError(msg)
 
         # Check for duplicate routes
-        route_key: MessageRouteKey = (outcome, from_node_name)
+        route_key: RouteKey = (outcome, from_node_name)
         if route_key in self.routes:
             msg = f"Route already defined for message type '{outcome.__name__}' from node '{from_node_name}'"
             raise ValueError(msg)
 
         return route_key
 
-    def with_callbacks(self, handler: CallbackHandler) -> "_MessageFlowBuilder[TStartMessage, TStartOut]":
-        """Attach callback handler to the flow.
+    @override
+    def observe(self, *observers: Observer) -> "_FlowBuilder[TStartIn, TStartOut]":
+        """Attach observers to the flow.
 
-        REQ-009: MessageFlow accepts optional callbacks parameter
-        REQ-016: Zero overhead when callbacks is None
+        REQ-009: MessageFlow accepts optional observers
+        REQ-016: Zero overhead when no observers
 
         Args:
-            handler: Callback handler to observe flow execution
+            *observers: Observer instances to monitor flow execution
 
         Returns:
             Builder for continued configuration
 
         """
-        return _MessageFlowBuilder[TStartMessage, TStartOut](
+        # Create internal handler with observers
+        handler = CallbackHandler(observers) if observers else self.callbacks
+        return _FlowBuilder[TStartIn, TStartOut](
             name=self.name,
-            start_node=self.start_node,
+            starting_node=self.starting_node,
             routes=self.routes,
             reachable_nodes=self.reachable_nodes,
             callbacks=handler,
         )
 
+    @override
     def route[TFromIn: Message, TFromOut: Message, TToIn: Message, TToOut: Message](
         self,
         from_node: Node[TFromIn, TFromOut],
         outcome: type[Message],
         to_node: Node[TToIn, TToOut],
-    ) -> "_MessageFlowBuilder[TStartMessage, TStartOut]":
+    ) -> "_FlowBuilder[TStartIn, TStartOut]":
         """Route specific message type from source node to destination.
 
         Explicitly specifies that when `from_node` produces a message of type `outcome`,
@@ -262,19 +265,20 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
         new_routes = {**self.routes, route_key: cast("NodeInterface[Message, Message]", to_node)}
         new_reachable = self.reachable_nodes | {to_node.name}
 
-        return _MessageFlowBuilder[TStartMessage, TStartOut](
+        return _FlowBuilder[TStartIn, TStartOut](
             name=self.name,
-            start_node=self.start_node,
+            starting_node=self.starting_node,
             routes=new_routes,
             reachable_nodes=new_reachable,
             callbacks=self.callbacks,
         )
 
-    def end[TFromIn: Message, TFromOut: Message, TEndMessage: Message](
+    @override
+    def end[TFromIn: Message, TFromOut: Message, TEnd: Message](
         self,
         from_node: Node[TFromIn, TFromOut],
-        outcome: type[TEndMessage],
-    ) -> Node[TStartMessage, TEndMessage]:
+        outcome: type[TEnd],
+    ) -> Node[TStartIn, TEnd]:
         """Mark message type as terminal from source node.
 
         Args:
@@ -290,40 +294,35 @@ class _MessageFlowBuilder[TStartMessage: Message, TStartOut: Message]:
         # Add termination route
         new_routes = {**self.routes, route_key: None}
 
-        return _MessageFlow[TStartMessage, TEndMessage](
+        return _Flow[TStartIn, TEnd](
             name=self.name,
-            start_node=cast("NodeInterface[Message, Message]", self.start_node),
+            starting_node=cast("NodeInterface[Message, Message]", self.starting_node),
             routes=new_routes,
             callbacks=self.callbacks,  # REQ-009: Pass callbacks to MessageFlow
         )
 
 
-def flow[TStartMessage: Message, TStartOut: Message](
+def create_flow[TStartIn: Message, TStartOut: Message](
     name: str,
-    start_node: Node[TStartMessage, TStartOut],
-) -> _MessageFlowBuilder[TStartMessage, TStartOut]:
-    """Create a message flow with explicit routing.
+    starting_node: Node[TStartIn, TStartOut],
+) -> FlowBuilder[TStartIn, TStartOut]:
+    """Create a flow with type-safe routing.
 
     This is the entry point for building message-driven workflows. The flow
     starts at the given node and routes messages based on their types.
 
-    Design Decision - Explicit Source Nodes:
-        Following the original flow API pattern, we use explicit source nodes
-        in routing (from_node, outcome, to_node) rather than grouping routes
-        by source. This enables more natural, sequential thinking about workflows.
-
     Args:
         name: The name of the flow for identification and debugging
-        start_node: The starting node that processes TStartMessage
+        starting_node: The starting node that processes TStartIn
 
     Returns:
-        Builder for route definition and flow completion
+        Builder for defining a flow
 
     """
-    return _MessageFlowBuilder[TStartMessage, TStartOut](
+    return _FlowBuilder[TStartIn, TStartOut](
         name=name,
-        start_node=start_node,
+        starting_node=starting_node,
         routes={},
-        reachable_nodes=frozenset({start_node.name}),
+        reachable_nodes=frozenset({starting_node.name}),
         callbacks=None,  # REQ-016: Zero overhead when no callbacks attached
     )

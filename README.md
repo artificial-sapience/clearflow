@@ -79,8 +79,8 @@ Holds the **new state** and an **outcome** string used for routing.
 A function that creates a flow with **explicit routing**:
 
 ```python
-flow("Name", start_node)
-  .route(start_node, "outcome1", next_node)
+flow("Name", starting_node)
+  .route(starting_node, "outcome1", next_node)
   .route(next_node, "outcome2", final_node)
   .end(final_node, "done")  # exactly one termination
 ```

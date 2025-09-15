@@ -37,11 +37,6 @@ class Message(StrictBaseModel, ABC):
     timestamp: AwareDatetime = Field(default_factory=_utc_now)
     run_id: uuid.UUID  # Required - identifies the flow session
 
-    @property
-    def message_type(self) -> type["Message"]:
-        """Return the concrete message type for routing."""
-        return type(self)
-
 
 class Event(Message):
     """Abstract base Event extending Message for causality tracking.

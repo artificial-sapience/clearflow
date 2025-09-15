@@ -4,7 +4,7 @@ Direct event-to-node routing without orchestrators.
 The flow definition is the single source of routing truth.
 """
 
-from clearflow import Node, flow
+from clearflow import Node, create_flow
 from examples.portfolio_analysis.messages import (
     AnalysisFailedEvent,
     ComplianceReviewedEvent,
@@ -59,8 +59,8 @@ def create_portfolio_analysis_flow() -> Node[StartAnalysisCommand, DecisionMadeE
 
     # Build the flow with console output
     return (
-        flow("PortfolioAnalysis", quant)
-        .with_callbacks(console)
+        create_flow("PortfolioAnalysis", quant)
+        .observe(console)
         # Quant analysis outcomes
         .route(quant, MarketAnalyzedEvent, risk)  # Success → Risk assessment
         .route(quant, AnalysisFailedEvent, decision)  # Failure → Conservative decision

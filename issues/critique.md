@@ -28,7 +28,7 @@ class Node(BaseModel, ABC):  # Mixing data + behavior
     async def process(...): ...
 
 class Flow(Node):  # Inherits from Node
-    start_node: Node[...]  # Field of same abstract type - PROBLEMATIC!
+    starting_node: Node[...]  # Field of same abstract type - PROBLEMATIC!
 ```
 
 We're asking Pydantic to validate a behavioral contract, which isn't really its job.
@@ -46,7 +46,7 @@ class Node(BaseModel, _NodeInterface, ABC):  # Implements interface
     name: str  # Data schema
 
 class Flow(Node):
-    start_node: _NodeInterface[...]  # Field uses interface, not BaseModel
+    starting_node: _NodeInterface[...]  # Field uses interface, not BaseModel
 ```
 
 ## Why This Isn't a Bug

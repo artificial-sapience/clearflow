@@ -1,19 +1,20 @@
 """ClearFlow: Compose type-safe flows for emergent AI."""
 
-# Import message API components
-from clearflow.callbacks import CallbackHandler, CompositeHandler
+from clearflow._internal.flow_impl import create_flow
+from clearflow.flow import FlowBuilder
 from clearflow.message import Command, Event, Message
-from clearflow.message_flow import flow
-from clearflow.message_node import Node
+from clearflow.node import Node, NodeInterface
+from clearflow.observer import Observer
 from clearflow.strict_base_model import StrictBaseModel
 
 __all__ = [
-    "CallbackHandler",
     "Command",
-    "CompositeHandler",
     "Event",
+    "FlowBuilder",
     "Message",
     "Node",
+    "NodeInterface",
+    "Observer",
     "StrictBaseModel",
-    "flow",
+    "create_flow",
 ]

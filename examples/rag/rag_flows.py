@@ -1,6 +1,6 @@
 """Message-driven RAG flow construction."""
 
-from clearflow import Node, flow
+from clearflow import Node, create_flow
 from examples.rag.messages import (
     AnswerGeneratedEvent,
     ChunksEmbeddedEvent,
@@ -38,7 +38,7 @@ def create_indexing_flow() -> Node[IndexDocumentsCommand, IndexCreatedEvent]:
     indexer = IndexCreatorNode()
 
     return (
-        flow("DocumentIndexing", chunker)
+        create_flow("DocumentIndexing", chunker)
         .route(chunker, DocumentsChunkedEvent, embedder)
         .route(embedder, ChunksEmbeddedEvent, indexer)
         .end(indexer, IndexCreatedEvent)
@@ -62,7 +62,7 @@ def create_query_flow() -> Node[QueryCommand, AnswerGeneratedEvent]:
     generator = AnswerGeneratorNode()
 
     return (
-        flow("QueryProcessing", query_embedder)
+        create_flow("QueryProcessing", query_embedder)
         .route(query_embedder, QueryEmbeddedEvent, retriever)
         .route(retriever, DocumentsRetrievedEvent, generator)
         .end(generator, AnswerGeneratedEvent)

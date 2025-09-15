@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from examples.chat.chat_flow import create_chat_flow
 from examples.chat.messages import StartChat
-from tests.conftest_message import create_flow_id
+from tests.conftest import create_run_id
 
 
 async def main() -> None:
@@ -33,7 +33,7 @@ async def main() -> None:
     # Start the chat
     start_command = StartChat(
         triggered_by_id=None,
-        run_id=create_flow_id(),
+        run_id=create_run_id(),
         system_prompt="You are a helpful, friendly assistant.",
     )
 

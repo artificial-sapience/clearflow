@@ -9,11 +9,11 @@ from datetime import datetime
 from types import TracebackType
 from typing import override
 
-from clearflow import CallbackHandler, Command, Event, Message
+from clearflow import Command, Event, Message, Observer
 
 
-class ConsoleHandler(CallbackHandler):
-    """Callback handler that pretty-prints flow execution to console.
+class ConsoleHandler(Observer):
+    """Observer that pretty-prints flow execution to console.
 
     Provides colored, structured output showing:
     - Flow lifecycle (start/end)

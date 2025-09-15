@@ -114,7 +114,7 @@ def create_test_event(
     )
 
 
-def create_flow_id() -> uuid.UUID:
+def create_run_id() -> uuid.UUID:
     """Create a new flow ID for testing.
 
     Returns:

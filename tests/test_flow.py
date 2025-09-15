@@ -1,6 +1,6 @@
-"""Test message flow routing and composition.
+"""Test flow routing and composition.
 
-This module tests the message flow builder, routing logic, and flow composability
+This module tests the flow builder, routing logic, and flow composability
 for mission-critical AI orchestration with type-safe message routing.
 
 """
@@ -10,9 +10,8 @@ from typing import override
 import pytest
 from pydantic import ValidationError
 
-from clearflow import Node as Node
-from clearflow import flow
-from tests.conftest_message import (
+from clearflow import Node, create_flow
+from tests.conftest import (
     AnalysisCompleteEvent,
     ErrorEvent,
     ProcessCommand,
@@ -20,7 +19,7 @@ from tests.conftest_message import (
     ValidateCommand,
     ValidationFailedEvent,
     ValidationPassedEvent,
-    create_flow_id,
+    create_run_id,
 )
 
 
@@ -116,13 +115,13 @@ async def test_simple_flow() -> None:
     """Test a simple linear flow."""
     start = StartNode(name="start")
 
-    flow = flow("simple", start).end(start, ProcessedEvent)
+    test_flow = create_flow("simple", start).end(start, ProcessedEvent)
 
     # Execute flow
-    run_id = create_flow_id()
+    run_id = create_run_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
-    result = await flow.process(input_msg)
+    result = await test_flow.process(input_msg)
 
     assert isinstance(result, ProcessedEvent)
     assert result.result == "started: test"
@@ -135,8 +134,8 @@ async def test_flow_with_routing() -> None:
     validate = ValidateNode(name="validate")
     finalize = FinalizeNode(name="finalize")
 
-    flow = (
-        flow("pipeline", start)
+    test_flow = (
+        create_flow("pipeline", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
         .route(validate, ValidationPassedEvent, finalize)
@@ -144,10 +143,10 @@ async def test_flow_with_routing() -> None:
     )
 
     # Execute successful path
-    run_id = create_flow_id()
+    run_id = create_run_id()
     input_msg = ProcessCommand(data="valid data", triggered_by_id=None, run_id=run_id)
 
-    result = await flow.process(input_msg)
+    result = await test_flow.process(input_msg)
 
     assert isinstance(result, AnalysisCompleteEvent)
     assert "started: valid data" in result.findings
@@ -158,12 +157,12 @@ async def test_flow_with_error_handling() -> None:
     start = FailingStartNode(name="start")
     transform = TransformNode(name="transform")
 
-    flow = flow("error_handling", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
+    test_flow = create_flow("error_handling", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
 
-    run_id = create_flow_id()
+    run_id = create_run_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
-    result = await flow.process(input_msg)
+    result = await test_flow.process(input_msg)
 
     assert isinstance(result, ErrorEvent)
     assert result.error_message == "Start failed"
@@ -175,18 +174,18 @@ async def test_flow_with_branching() -> None:
     transform = TransformNode(name="transform")
     validate = StrictValidateNode(name="validate")  # Strict validation
 
-    flow = (
-        flow("branching", start)
+    test_flow = (
+        create_flow("branching", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
         .end(validate, ValidationFailedEvent)  # Only test failure path
     )
 
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     # Test failure branch - make input that results in short content after "started: "
     short_input = ProcessCommand(data="", triggered_by_id=None, run_id=run_id)  # "started: " = 9 chars < 10
-    result = await flow.process(short_input)
+    result = await test_flow.process(short_input)
     assert isinstance(result, ValidationFailedEvent)
 
 
@@ -197,20 +196,19 @@ async def test_flow_missing_route_error() -> None:
 
     # Build flow missing route for ValidateCommand
     # Only route ProcessedEvent to transform, but don't handle ValidateCommand output
-    flow = flow("incomplete", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
+    test_flow = create_flow("incomplete", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
 
-    run_id = create_flow_id()
+    run_id = create_run_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
     # Should raise ValueError for missing route
     with pytest.raises(ValueError, match="No route defined") as exc_info:
-        await flow.process(input_msg)
+        await test_flow.process(input_msg)
 
     assert "No route defined for message type" in str(exc_info.value)
     assert "ValidateCommand" in str(exc_info.value)
 
 
-@pytest.mark.skip(reason="MessageFlow as Node composition not yet implemented in BaseModel migration")
 async def test_flow_composability() -> None:
     """Test that flows can be composed as nodes."""
     # Create inner flow
@@ -218,7 +216,7 @@ async def test_flow_composability() -> None:
     finalize = FinalizeNode(name="finalize")
 
     inner_flow = (
-        flow("inner", validate)
+        create_flow("inner", validate)
         .route(validate, ValidationPassedEvent, finalize)
         .end(finalize, AnalysisCompleteEvent)
     )
@@ -228,13 +226,13 @@ async def test_flow_composability() -> None:
     transform = TransformNode(name="transform")
 
     outer_flow = (
-        flow("outer", start)
+        create_flow("outer", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, inner_flow)  # Inner flow as node!
         .end(inner_flow, AnalysisCompleteEvent)
     )
 
-    run_id = create_flow_id()
+    run_id = create_run_id()
     input_msg = ProcessCommand(data="composite test", triggered_by_id=None, run_id=run_id)
 
     result = await outer_flow.process(input_msg)
@@ -248,7 +246,7 @@ def test_flow_reachability_validation() -> None:
     start = StartNode(name="start")
     unreachable = ValidateNode(name="unreachable")
 
-    builder = flow("test", start)
+    builder = create_flow("test", start)
 
     # Try to route from unreachable node
     with pytest.raises(ValueError, match="not reachable from start") as exc_info:
@@ -263,7 +261,7 @@ def test_flow_duplicate_route_error() -> None:
     node1 = TransformNode(name="transform1")
     node2 = TransformNode(name="transform2")
 
-    builder = flow("test", start)
+    builder = create_flow("test", start)
     builder = builder.route(start, ProcessedEvent, node1)
 
     # Try to add duplicate route for same message type from same node
@@ -276,19 +274,19 @@ def test_flow_duplicate_route_error() -> None:
 def test_flow_name_property() -> None:
     """Test flow name is preserved."""
     start = StartNode(name="start")
-    flow = flow("my_flow", start).end(start, ProcessedEvent)
+    test_flow = create_flow("my_flow", start).end(start, ProcessedEvent)
 
-    assert flow.name == "my_flow"
+    assert test_flow.name == "my_flow"
 
 
 def test_flow_immutability() -> None:
     """Test that flows are immutable."""
     start = StartNode(name="start")
-    flow = flow("immutable", start).end(start, ProcessedEvent)
+    test_flow = create_flow("immutable", start).end(start, ProcessedEvent)
 
     # Should not be able to modify flow
     with pytest.raises(ValidationError, match="frozen"):
-        flow.name = "modified"
+        test_flow.name = "modified"
 
 
 def test_flow_builder_chaining() -> None:
@@ -298,7 +296,7 @@ def test_flow_builder_chaining() -> None:
     validate = ValidateNode(name="validate")
 
     # Each route returns a new builder
-    builder1 = flow("test", start)
+    builder1 = create_flow("test", start)
     builder2 = builder1.route(start, ProcessedEvent, transform)
     builder3 = builder2.route(transform, ValidateCommand, validate)
 
@@ -308,7 +306,7 @@ def test_flow_builder_chaining() -> None:
 
     # But can chain fluently
     flow = (
-        flow("fluent", start)
+        create_flow("fluent", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
         .end(validate, ValidationPassedEvent)
@@ -322,17 +320,17 @@ def test_single_termination_enforcement() -> None:
     start = StartNode(name="start")
 
     # First create a flow with one termination
-    builder = flow("test", start)
-    flow = builder.end(start, ProcessedEvent)
+    builder = create_flow("test", start)
+    test_flow2 = builder.end(start, ProcessedEvent)
 
     # Verify flow works
-    assert flow.name == "test"
+    assert test_flow2.name == "test"
 
     # Each call to end() creates a separate flow - this is allowed
     start2 = StartNode(name="start2")
     transform = TransformNode(name="transform")
 
-    builder2 = flow("multi_end", start2)
+    builder2 = create_flow("multi_end", start2)
     builder3 = builder2.route(start2, ProcessedEvent, transform)
 
     # Create one flow ending at start2 with ErrorEvent

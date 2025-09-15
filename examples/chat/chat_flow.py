@@ -1,6 +1,6 @@
 """Chat flow - natural back-and-forth conversation between user and assistant."""
 
-from clearflow import Node, flow
+from clearflow import Node, create_flow
 from examples.chat.messages import (
     AssistantMessageReceived,
     ChatEnded,
@@ -34,7 +34,7 @@ def create_chat_flow() -> Node[StartChat, ChatEnded]:
 
     # Build the natural alternating flow
     return (
-        flow("Chat", user)
+        create_flow("Chat", user)
         .route(user, UserMessageReceived, assistant)
         .route(assistant, AssistantMessageReceived, user)
         .end(user, ChatEnded)

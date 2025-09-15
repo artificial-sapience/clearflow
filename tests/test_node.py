@@ -10,8 +10,8 @@ from typing import override
 import pytest
 from pydantic import ValidationError
 
-from clearflow import Node as Node
-from tests.conftest_message import (
+from clearflow import Node
+from tests.conftest import (
     AnalysisCompleteEvent,
     AnalyzeCommand,
     ErrorEvent,
@@ -20,15 +20,13 @@ from tests.conftest_message import (
     ValidateCommand,
     ValidationFailedEvent,
     ValidationPassedEvent,
-    create_flow_id,
+    create_run_id,
 )
 
 
 # Test node implementations
 class ProcessorNode(Node[ProcessCommand, ProcessedEvent]):
     """Node that processes commands into events."""
-
-    name: str = "processor"
 
     @override
     async def process(self, message: ProcessCommand) -> ProcessedEvent:
@@ -112,7 +110,7 @@ def _create_test_command(data: str = "test data") -> ProcessCommand:
         ProcessCommand with the specified data.
 
     """
-    return ProcessCommand(data=data, triggered_by_id=None, run_id=create_flow_id())
+    return ProcessCommand(data=data, triggered_by_id=None, run_id=create_run_id())
 
 
 def _assert_processed_event_correct(output: ProcessedEvent, input_msg: ProcessCommand, expected_result: str) -> None:
@@ -149,7 +147,7 @@ def test_node_immutability() -> None:
 async def test_node_union_return_types() -> None:
     """Test nodes that return union types."""
     node = ValidatorNode(name="validator")
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     # Test validation success
     valid_cmd = ValidateCommand(
@@ -227,7 +225,7 @@ async def test_node_message_chaining() -> None:
 async def test_node_error_handling() -> None:
     """Test node error event generation."""
     analyzer = AnalyzerNode(name="analyzer", fail_on_empty=True)
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     # Empty input should trigger error
     cmd = AnalyzeCommand(
@@ -245,7 +243,7 @@ async def test_node_error_handling() -> None:
 async def test_node_causality_preservation() -> None:
     """Test that nodes preserve message causality."""
     node = ProcessorNode(name="processor")
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     cmd = ProcessCommand(
         data="test",
@@ -276,7 +274,7 @@ async def test_node_with_configuration() -> None:
     # Configurable analyzer
     strict_analyzer = AnalyzerNode(name="strict", fail_on_empty=True)
     lenient_analyzer = AnalyzerNode(name="lenient", fail_on_empty=False)
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     empty_cmd = AnalyzeCommand(
         input_data="",
@@ -297,7 +295,7 @@ async def test_node_type_safety() -> None:
     """Test that nodes maintain type safety."""
     processor = ProcessorNode(name="processor")
     validator = ValidatorNode(name="validator")
-    run_id = create_flow_id()
+    run_id = create_run_id()
 
     # Processor expects ProcessCommand
     process_cmd = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
@@ -312,10 +310,10 @@ async def test_node_type_safety() -> None:
 
 def test_node_name_validation() -> None:
     """Test that nodes validate their names during initialization."""
-    # Empty name should raise ValueError
-    with pytest.raises(ValueError, match="Node name must be a non-empty string"):
+    # Empty name should raise ValidationError
+    with pytest.raises(ValidationError, match="String should have at least 1 character"):
         ProcessorNode(name="")
 
-    # Whitespace-only name should raise ValueError
-    with pytest.raises(ValueError, match="Node name must be a non-empty string"):
+    # Whitespace-only name should raise ValidationError (gets stripped then validated)
+    with pytest.raises(ValidationError, match="String should have at least 1 character"):
         ProcessorNode(name="   ")
