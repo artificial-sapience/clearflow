@@ -1,93 +1,87 @@
-# Session Context: Message Routing Validation & API Symmetry
+# Session Context: Type Safety Vulnerability in Terminal Type Pattern
 
-## Previous Session Accomplishments
+## Session Summary
 
-### Completed: Message Routing Type Validation
-Successfully implemented runtime type validation for ClearFlow's message routing system with 100% test coverage:
+Completed documentation for terminal type pattern, then discovered a **CRITICAL type safety issue** where PEP 695's variance inference undermines the pattern's guarantees.
 
-1. **Added comprehensive test coverage** for validation error paths:
-   - `test_flow_invalid_output_type_validation` - validates node output types
-   - `test_flow_invalid_input_type_validation` - validates node input types
-   - `test_flow_union_type_compatibility` - handles union type routing
+## Completed Work
 
-2. **Refactored validation code** to Grade A complexity:
-   - Split `_validate_route_types()` into focused helper functions
-   - Extracted `_validate_output_type()`, `_validate_input_type()`, `_is_type_compatible()`
-   - Made helper methods generic to handle any message types
-   - Achieved Grade A complexity for all functions
+### Documentation Updates
+-  Added Terminal Type Pattern section to README.md
+-  Added Migration Guide (v2.0) to README.md
+-  Updated CLAUDE.md with correct API patterns and examples
+-  Fixed all "zero dependencies" claims ’ "minimal dependencies"
+-  Regenerated llms.txt files with updated information
+-  All quality checks pass at 100% coverage
 
-3. **Fixed all quality issues**:
-   - 100% test coverage achieved
-   - All linting checks pass
-   - Pyright type checking passes
-   - Code complexity Grade A
-   - Deep immutability requirements met
+### CLAUDE.md Corrections
+- Fixed Core Concepts: Nodes use `process()` not `exec()`
+- Removed non-existent lifecycle hooks (`prep()`, `post()`)
+- Updated to Pydantic models, not frozen dataclasses
+- Corrected code size: ~1000 lines (not ~250)
+- Fixed public API exports in examples
+- Removed duplicate sections (DRY principle)
 
-## Current Focus: API Symmetry Enhancement
+## Critical Discovery: PEP 695 Variance Issue
 
-### Key Discovery
-During the session, we identified an opportunity to improve the `complete_flow` API:
+### The Problem
 
-**Current asymmetry**:
-- `create_flow("name", starting_node)` - takes a node, infers TStartIn
-- `complete_flow(from_node, final_outcome)` - takes node + outcome type
+User noticed that `create_chat_flow()` has incorrect return type:
+```python
+def create_chat_flow() -> Node[StartChat, UserMessageReceived | ChatCompleted]:
+    # But end_flow(ChatCompleted) returns Node[StartChat, ChatCompleted]!
+```
 
-**Proposed improvement**:
-- Rename `from_node` â†’ `ending_node` for symmetry
-- Support union terminal types (e.g., `SuccessEvent | ErrorEvent`)
+Type checkers (pyright 1.1.405, mypy 1.18.1) don't catch this error!
 
-### Rationale
-1. **Flows are nodes**: `_Flow extends Node[TStartIn, TEnd]`
-2. **Nodes support unions**: Both input and output can be union types
-3. **Terminal flexibility**: Flows should be able to terminate on multiple outcomes
+### Root Cause Analysis
 
-### Implementation Strategy
-See `plan.md` for detailed 8-task implementation plan. Key points:
-- Non-breaking enhancement (backward compatible)
-- Create multiple terminal routes for union types
-- Maintain 100% test coverage throughout
-- Each task must pass `./quality-check.sh` before proceeding
+PEP 695's automatic variance inference based on usage:
+```python
+class Node[TMessageIn: Message, TMessageOut: Message]:
+    async def process(self, message: TMessageIn) -> TMessageOut: ...
+```
 
-## Technical Context
+Because:
+- `TMessageIn` only appears in **input position** ’ inferred as **contravariant**
+- `TMessageOut` only appears in **output position** ’ inferred as **covariant**
 
-### Current Architecture
-- **RouteKey**: `tuple[NodeInterface, type[Message]]` - identifies a route
-- **RouteEntry**: `tuple[RouteKey, NodeInterface | None]` - route with destination
-- **Routes stored as**: Immutable `tuple[RouteEntry, ...]` (linear search is fine for <10 routes)
-- **Termination**: Routes with `destination = None` are terminal
+This makes `Node[StartChat, ChatCompleted]` assignable to `Node[StartChat, UserMessageReceived | ChatCompleted]`!
 
-### Type Validation System
-- `_get_node_output_types()` - extracts valid outputs from node type hints
-- `_get_node_input_types()` - extracts valid inputs from node type hints
-- Handles Python 3.10+ union syntax (`X | Y`) via `types.UnionType`
-- Skips validation for TypeVars (generic parameters)
+### Test Cases Created
 
-### Quality Standards
-- 100% test coverage required (no exceptions)
-- Grade A complexity for all production code
-- Zero linter suppressions without user approval
-- Full type safety with pyright strict mode
-- Deep immutability (frozen dataclasses, tuples not lists)
+1. `/tmp/test_type_issue.py` - Demonstrates the problem with chat flow
+2. `/tmp/test_covariance.py` - Tests covariance behavior
+3. `/tmp/variance_bug_demo.py` - Simple demonstration
+4. `/tmp/two_params.py` - Shows issue specific to two-parameter generics
+5. `/tmp/variance_inference.py` - Confirms variance is being inferred
 
-## Git Status
-- Branch: `message-driven`
-- Modified files:
-  - `clearflow/_internal/flow_impl.py` - validation implementation
-  - `tests/test_flow.py` - new validation tests
-- All changes tested and quality-checked
+### Key Finding
 
-## Next Session Tasks
-The next session should implement the API symmetry enhancement following the plan in `plan.md`.
+**This is NOT a bug** in type checkers - it's correct PEP 695 behavior! The issue is we need **invariant** type parameters for type safety, but PEP 695 infers them as covariant/contravariant based on usage.
 
-Priority order:
-1. Update abstract interface (non-breaking)
-2. Add union type support infrastructure
-3. Update implementation to handle unions
-4. Comprehensive testing
-5. Documentation updates
+Traditional TypeVars DO catch this:
+```python
+TOut = TypeVar('TOut', bound=Message)  # Invariant by default
+# This WOULD be caught as an error
+```
 
-Success metrics:
-- Maintain 100% test coverage
-- All quality checks pass
-- No breaking changes
-- Clear migration path for users
+## Implications
+
+1. **Type safety compromised**: Functions can claim incorrect union return types
+2. **Terminal type pattern undermined**: Can't enforce single terminal type at type-check time
+3. **All examples potentially affected**: Need to audit all flow return types
+
+## Tools and Versions
+
+- **pyright**: 1.1.405 (latest)
+- **mypy**: 1.18.1 (installed during session)
+- **Python**: 3.13.3 (using PEP 695 syntax)
+- **pydantic**: 2.11.0+ (only dependency)
+
+## Next Steps
+
+See `plan.md` for prioritized tasks. Critical decision: How to fix variance issue?
+- Switch to traditional TypeVars?
+- Force invariance through usage patterns?
+- Document limitation and fix annotations?

@@ -13,7 +13,7 @@ ClearFlow provides mission-critical AI orchestration with verifiable correctness
 - **Type safety** - Full static typing with pyright strict mode
 - **100% test coverage** - Every path tested, no exceptions
 - **Explicit routing** - Given an outcome, the next step is always the same
-- **Zero dependencies** - Stdlib only for maximum reliability
+- **Minimal dependencies** - Only Pydantic for validation and immutability
 
 Target audience: Python engineers building mission-critical AI systems who require verifiable orchestration with explicit control flow.
 
@@ -45,74 +45,103 @@ uv run pytest --cov=clearflow --cov-report=term-missing --cov-fail-under=100
 
 ## Architecture Overview
 
-ClearFlow is a minimal orchestration framework with functional patterns and **zero third-party dependencies**. It implements a **message-driven architecture** for managing workflows that include language model calls and other async operations.
+ClearFlow is a minimal orchestration framework with functional patterns and **minimal dependencies** (only Pydantic). It implements a **message-driven architecture** for managing workflows that include language model calls and other async operations.
 
 ### Core Concepts
 
-1. **Nodes**: Async functions that transform state
-   - Inherit from `Node[T]` or `Node[TIn, TOut]` and override `exec()` method
-   - Nodes are frozen dataclasses with a `name` field
-   - Input: state of type `T` (any type: dict, TypedDict, dataclass, primitives)
-   - Output: Message (Event or Command)
-   - Designed for explicit transformations
-   - Lifecycle hooks: `prep()`, `exec()`, `post()`
+1. **Nodes**: Message processing units
+   - Inherit from `Node[TIn, TOut]` and override `process()` method
+   - Nodes are Pydantic models with a required `name` field
+   - Input: Message of type `TIn` (Command or Event)
+   - Output: Message of type `TOut` (Command or Event)
+   - Support union types for flexible message handling
 
-2. **State**: Unconstrained - use any type T
-   - Type-safe with `T` where T is any Python type
-   - Natural Python operations: `{**state, "key": "value"}`
-   - Encourages immutable patterns
-   - Works with dict, TypedDict, dataclass, primitives
+2. **Messages**: Immutable data carriers
+   - `Command`: Imperative requests with optional trigger
+   - `Event`: Past-tense facts with required trigger
+   - Auto-generated IDs and timestamps
+   - Causality tracking via `triggered_by_id` and `run_id`
+   - Inherit from `StrictBaseModel` for validation
 
 3. **Flow**: Type-safe workflow builder
-   - Create with `flow("name", starting_node)` function
-   - Chain with `.route(from_node, outcome, to_node)`
-   - End with `.end(final_node, outcome)` for single termination
-   - Single termination rule: exactly one route to `None`
+   - Create with `create_flow("name", starting_node)` function
+   - Chain with `.route(from_node, MessageType, to_node)`
+   - End with `.end_flow(TerminalType)` for single termination
+   - Terminal type enforces single responsibility principle
    - Full generic support with type inference
 
 ### Key Facts
 
-- **Code size**: ~250 lines total, ~185 non-comment lines
+- **Code size**: ~1000 lines total, ~700 non-comment lines
 - **Test coverage**: 100% required
 - **Type safety**: No unnecessary `Any` (required for metaclass patterns)
-- **Immutability**: All dataclasses frozen
+- **Immutability**: All models are immutable via Pydantic
 - **Routing**: Explicit (NOT deterministic execution)
-- **Single termination**: Exactly one route to `None` per flow
+- **Single termination**: Exactly one terminal message type per flow
 
 ### Common Patterns
 
 ```python
-from dataclasses import dataclass
 from typing import override
-from clearflow import MessageNode, Message, Event, Command, message_flow
+from clearflow import Node, Event, Command, create_flow
 
-# Creating nodes - Node is a frozen dataclass
-@dataclass(frozen=True)
-class DocumentLoader(Node[DocumentState]):
+# Creating nodes - Node is a Pydantic model
+class DocumentLoader(Node[LoadCommand, DocumentLoadedEvent | ErrorEvent]):
     name: str = "loader"
-    
-    @override
-    async def process(self, message: LoadCommand) -> DocumentLoadedEvent:
-        content = await load_document(message.path)
-        return DocumentLoadedEvent(
-            content=content,
-            run_id=message.run_id,
-            triggered_by_id=message.id
-        )
 
-# Building a flow with single termination
+    @override
+    async def process(self, message: LoadCommand) -> DocumentLoadedEvent | ErrorEvent:
+        try:
+            content = await load_document(message.path)
+            return DocumentLoadedEvent(
+                content=content,
+                run_id=message.run_id,
+                triggered_by_id=message.id
+            )
+        except Exception as e:
+            return ErrorEvent(
+                error_message=str(e),
+                run_id=message.run_id,
+                triggered_by_id=message.id
+            )
+
+# Building a flow with terminal type pattern
 loader = DocumentLoader()
 processor = ProcessorNode()
-complete = CompleteNode()
+finalizer = FinalizerNode()
 
 flow_instance = (
-    flow("Pipeline", loader)
-    .route(loader, "loaded", processor)
-    .route(loader, "error", complete)
-    .route(processor, "processed", complete)
-    .end(complete, "done")  # Single termination
+    create_flow("Pipeline", loader)
+    .route(loader, DocumentLoadedEvent, processor)
+    .route(loader, ErrorEvent, finalizer)
+    .route(processor, ProcessedEvent, finalizer)
+    .end_flow(PipelineCompleteEvent)  # Terminal type defines goal
 )
 ```
+
+### Terminal Type Pattern
+
+Each flow has **exactly ONE goal** defined by its terminal message type:
+
+```python
+# WRONG: String-based routing (old pattern)
+flow = create_flow("Old", start)
+    .route(node_a, "success", node_b)  # NO LONGER SUPPORTED
+    .route(node_b, "done", node_c)  # NO LONGER SUPPORTED
+
+# RIGHT: Message type routing (current pattern)
+flow = create_flow("Current", start)
+    .route(node_a, ProcessedEvent, node_b)
+    .route(node_b, ValidatedEvent, node_c)
+    .end_flow(WorkflowCompleteEvent)  # Terminal type defines goal
+```
+
+**Single Responsibility Principle**: Each flow should do ONE thing well:
+
+- **Chat flow**: Goal is `ChatCompleted` - end conversation
+- **RAG indexing**: Goal is `IndexCreatedEvent` - create index
+- **RAG query**: Goal is `AnswerGeneratedEvent` - generate answer
+- **Analysis flow**: Goal is `AnalysisComplete` - complete analysis
 
 ### Testing Requirements
 
@@ -130,10 +159,11 @@ flow_instance = (
 - All linting rules must pass without suppression
 - Pyright must pass in strict mode (sole type checker)
 - Minimal `# pyright: ignore` comments (only for documented limitations)
-- No `Any` types except where required (e.g., metaclass patterns)
+- No `Any` types
 - Prefer boring, obvious code over clever solutions
 
 **UNIVERSAL REQUIREMENT**: Every single line of code in this project must meet mission-critical quality standards:
+
 - Core modules
 - Test files
 - Example code
@@ -143,17 +173,20 @@ flow_instance = (
 - ALL Python code
 
 **No Exceptions Policy**:
+
 - Examples are production templates - they MUST demonstrate best practices
 - Tests are production code - they MUST be maintainable and clear
 - Documentation code blocks MUST be executable and correct
 - Even utility scripts MUST pass all quality checks
 
 **Import Standards (Universal)**:
+
 - **Absolute imports only** - No relative imports anywhere in the codebase
 - **Import from public APIs** - `from clearflow import ...` not `from clearflow.internal import ...`
 - **Explicit is better** - Full paths provide clarity and refactoring safety
 
 **Example Compliance**:
+
 ```python
 # WRONG - relative import in example
 from .messages import Command
@@ -162,7 +195,7 @@ from .messages import Command
 from examples.chat_message_driven.messages import Command
 
 # CORRECT - importing from public API
-from clearflow import MessageNode, message_flow
+from clearflow import Node, create_flow
 ```
 
 **Rationale**: In mission-critical systems, there are no "throwaway" files. Every file could be copied, referenced, or used as a template. Maintaining uniform quality prevents bad patterns from propagating into production systems.
@@ -365,28 +398,35 @@ import subprocess  # noqa: S404  # Required for running uv/mcpdoc commands in de
 ### Public API Design Patterns
 
 **Pattern**: When adding new API components, always export through `__init__.py`
-**Example**: Message API requires all components in `__all__` list:
+**Example**: Public API exports all components in `__all__` list:
+
 ```python
 __all__ = [
-    # Original API  
-    "Node", "flow",
-    # Message API
-    "Message", "Event", "Command", "MessageFlow", "MessageNode", "message_flow", "Observer", "ObservableFlow",
+    "Command",
+    "Event",
+    "FlowBuilder",
+    "Message",
+    "Node",
+    "NodeInterface",
+    "Observer",
+    "StrictBaseModel",
+    "create_flow",
 ]
 ```
 
 **Architecture Rule**: Tests must import from public API only
 **Implementation**: Added ARCH011 linter rule to detect `from clearflow.submodule import ...` in tests
-**Enforcement**: Tests use `from clearflow import MessageNode, message_flow` instead of submodule imports
+**Enforcement**: Tests use `from clearflow import Node, create_flow` instead of submodule imports
 
 **Critical Rule**: Public functions should only accept and return public types
-**Discovered**: If `message_flow().end()` returns `_Flow`, then `MessageFlow` must be public
-**Solution**: Remove underscore prefix and export in `__all__` rather than using `Any` type suppressions
+**Discovered**: If `create_flow().end_flow()` returns an internal `_Flow`, it's returned as public `Node` interface
+**Solution**: Return type is `Node[TStartIn, TEnd]` which is a public interface
 
 ### Coverage Gap Patterns
 
 **Pattern**: Missing coverage often indicates missing validation tests
 **Example**: Node name validation (lines 41-42) required test with empty/whitespace names:
+
 ```python
 async def test_node_name_validation() -> None:
     with pytest.raises(ValueError, match="Node name must be a non-empty string"):
@@ -399,7 +439,8 @@ async def test_node_name_validation() -> None:
 
 **Decision**: Convert test methods to standalone functions when they don't use `self`
 **Rationale**: Aligns with "fix root cause" principle, improves clarity, follows pylint best practice
-**Pattern**: 
+**Pattern**:
+
 ```python
 # Instead of:
 class TestMessage:
@@ -416,6 +457,7 @@ async def test_message_type_property() -> None:
 **Principle**: Tests ARE production code in mission-critical systems with small teams
 **Pattern**: Extract helper functions when test complexity reaches Grade B
 **Example**: Break complex assertions into focused helper functions:
+
 ```python
 def _assert_processed_event_correct(output: ProcessedEvent, input_msg: ProcessCommand, expected_result: str) -> None:
     assert isinstance(output, ProcessedEvent)
@@ -432,10 +474,10 @@ def _assert_event_metadata_correct(output: ProcessedEvent, input_msg: ProcessCom
 
 **Pattern**: Extend linter for new architectural requirements
 **Example**: Added ARCH011 to prevent tests accessing non-public modules:
+
 ```python
 non_public_modules = [
-    "clearflow.message", "clearflow.message_node", 
-    "clearflow.message_flow", "clearflow.observer"
+    "clearflow._internal.flow_impl", "clearflow._internal.callback_handler"
 ]
 if node.module in non_public_modules and is_test_file:
     # Violation: test importing from non-public API
@@ -445,23 +487,24 @@ if node.module in non_public_modules and is_test_file:
 
 **Critical Discovery**: Both quality-check.sh and CLAUDE.md explicitly require user approval for ALL suppressions
 **Violation Pattern**: Adding `# noqa`, `# type: ignore`, or `clearflow: ignore` without asking first
-**Correct Process**: 
+**Correct Process**:
+
 1. Identify need for suppression
 2. Ask user for explicit approval with justification
 3. Only proceed if approved
 4. Always include justification comment in suppression
 
-## Message-Driven Architecture
-
-### Example Organization
+## Example Organization
 
 **Mission-Critical Example Standards**:
+
 - Examples MUST use absolute imports only (no relative imports)
 - Examples MUST pass ALL quality checks with zero violations
 - Examples MUST demonstrate production best practices
 - Examples MUST be treated as production code, not demos
 
 **Directory Structure**:
+
 ```
 examples/
 ├── chat/                    # Chat example
@@ -469,76 +512,6 @@ examples/
 ├── rag/                     # RAG example
 └── README.md                # Examples overview
 ```
-
-**Critical Design Rule**: Avoid god-objects in events
-**Implementation**: Each message should have single responsibility, focused data
-```python
-# Bad: God-object event
-@dataclass(frozen=True, kw_only=True)
-class AnalysisCompleteEvent(Event):
-    full_market_data: MarketData      # Too much data
-    all_analysis_results: dict       # Multiple concerns
-    trading_recommendations: list    # Different responsibility
-
-# Good: Focused events  
-@dataclass(frozen=True, kw_only=True)
-class MarketDataAnalyzedEvent(Event):
-    asset_symbol: str
-    analysis_score: float
-    
-@dataclass(frozen=True, kw_only=True)
-class RecommendationGeneratedEvent(Event):
-    asset_symbol: str
-    recommendation: str
-    confidence: float
-```
-
-### Message-Driven Flow Construction Patterns
-
-**Standard Pattern**: Chain message transformations with explicit routing
-```python
-flow = (
-    message_flow("ProcessName", starting_node)
-    .from_node(starting_node)
-    .route(OutputEvent, transform_node)
-    .from_node(transform_node)
-    .route(TransformedEvent, end_node)
-    .from_node(end_node)
-    .end(FinalEvent)
-)
-```
-
-**Two-Phase Pattern**: Separate flows for different lifecycle phases
-```python
-# Phase 1: Setup/Indexing
-indexing_flow = create_indexing_flow()
-index_result = await indexing_flow.process(setup_command)
-
-# Phase 2: Runtime/Query  
-query_flow = create_query_flow()
-query_result = await query_flow.process(QueryCommand(
-    data=index_result.prepared_data,
-    query=user_input
-))
-```
-
-### Message Design Principles
-
-**Causality Tracking**: All messages must include flow tracking
-```python
-@dataclass(frozen=True, kw_only=True)
-class MyCommand(Command):
-    # Business data
-    data: str
-    
-    # Required causality (inherited from Message base)
-    # triggered_by_id: MessageId | None
-    # run_id: FlowId
-```
-
-**Message Lifecycle**: Commands trigger work, Events represent outcomes
-- **Commands**: Imperative requests ("ProcessDocument", "GenerateResponse")
-- **Events**: Past-tense facts ("DocumentProcessed", "ResponseGenerated")
 
 ### Alpha Release Classification
 
@@ -551,13 +524,14 @@ class MyCommand(Command):
 - **Avoid vague claims** - "Full transparency" misleads about features we don't have
 - **Use active voice** - "Compose flows" not "Composing flows"
 - **Acknowledge AI nature** - "emergent AI" not "unpredictable AI" (less adversarial)
-- **Be specific** - "Type-safe", "Zero dependencies" are verifiable features
+- **Be specific** - "Type-safe", "Minimal dependencies" are verifiable features
 
 ## Session Learnings: 2025-01-15
 
 ### Observer Pattern Refactoring
 
 **Completed**: Renamed callback system to Observer pattern for clarity
+
 - `CallbackHandler` → internal implementation detail
 - `Observer` → public base class with no-op defaults
 - `.with_callbacks()` → `.observe()` method
@@ -565,9 +539,9 @@ class MyCommand(Command):
 
 ### API Naming Decisions
 
-**Renamed**: `flow()` → `create_flow()` for self-documentation
-**Rationale**: Even our own tests renamed it, follows stdlib patterns like `asyncio.create_task()`
-**Implementation**: Changed at source in `flow_impl.py`, not just aliased
+**Function**: `create_flow()` creates flows explicitly
+**Rationale**: Self-documenting name follows stdlib patterns like `asyncio.create_task()`
+**Implementation**: Defined in `flow_impl.py`, exported through `__init__.py`
 
 ### StrictBaseModel Documentation
 
@@ -584,6 +558,7 @@ class MyCommand(Command):
 ### Documentation Best Practices
 
 **Config documentation pattern**:
+
 ```python
 model_config = ConfigDict(
     # Category name
@@ -593,6 +568,7 @@ model_config = ConfigDict(
 ```
 
 **Class docstring structure**:
+
 1. One-line purpose statement
 2. "Why use this" section with bullets
 3. Realistic code example with >>> prompts

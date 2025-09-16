@@ -55,19 +55,24 @@ class FlowBuilder[TStartIn: Message, TStartOut: Message](ABC):
         ...
 
     @abstractmethod
-    def complete_flow[TFromIn: Message, TFromOut: Message, TEnd: Message](
+    def end_flow[TEnd: Message](
         self,
-        from_node: Node[TFromIn, TFromOut],
-        final_outcome: type[TEnd],
+        terminal_type: type[TEnd],
     ) -> Node[TStartIn, TEnd]:
-        """Mark message type as terminal from source node.
+        """Declare the message type that completes this flow.
+
+        When any node in the flow produces an instance of the terminal type,
+        the flow immediately terminates and returns that message. The terminal
+        type cannot be routed between nodes - it always ends the flow.
+
+        This enforces single responsibility: each flow has exactly one
+        completion condition defined by its terminal type.
 
         Args:
-            from_node: Source node that emits the terminal message type
-            final_outcome: The message type that completes the flow
+            terminal_type: The message type that completes the flow
 
         Returns:
-            A Node that represents the complete flow
+            A Node that represents the complete flow with single terminal type
 
         """
         ...

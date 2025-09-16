@@ -8,7 +8,7 @@ import sys
 from dotenv import load_dotenv
 
 from examples.chat.chat_flow import create_chat_flow
-from examples.chat.messages import StartChat
+from examples.chat.messages import ChatCompleted, StartChat
 from tests.conftest import create_run_id
 
 
@@ -40,7 +40,12 @@ async def main() -> None:
     try:
         # Run the flow - it will handle the entire conversation
         result = await flow.process(start_command)
-        print(f"\nChat ended: {result.reason}")
+        # Check if it's ChatCompleted (flow can also terminate with UserMessageReceived)
+        if isinstance(result, ChatCompleted):
+            print(f"\nChat ended: {result.reason}")
+        else:
+            # UserMessageReceived - shouldn't happen in normal flow but handle gracefully
+            print("\nChat ended unexpectedly")
 
     except (KeyboardInterrupt, EOFError):
         print("\nChat interrupted by user")

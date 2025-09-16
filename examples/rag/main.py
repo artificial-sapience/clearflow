@@ -22,7 +22,7 @@ def get_sample_documents() -> tuple[str, ...]:
     return (
         # ClearFlow framework
         """ClearFlow is a type-safe workflow orchestration framework for Python.
-        It provides 100% test coverage and zero dependencies.
+        It provides 100% test coverage and minimal dependencies.
         Nodes transform immutable state through explicit routing.
         Single termination enforcement ensures no ambiguous endings.
         To install: pip install clearflow""",

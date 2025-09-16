@@ -7,14 +7,14 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
-Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.
+Compose type-safe flows for emergent AI. 100% test coverage, minimal dependencies.
 
 ## Why ClearFlow?
 
 - **100% test coverage** – Every path proven to work
 - **Type-safe transformations** – Errors caught at development time, not runtime
 - **Immutable state** – No hidden mutations
-- **Zero dependencies** – No hidden failure modes
+- **Minimal dependencies** – Only Pydantic for validation and immutability
 - **Single exit enforcement** – No ambiguous endings
 - **AI-Ready Documentation** – llms.txt for optimal coding assistant integration
 
@@ -80,14 +80,55 @@ A function that creates a flow with **explicit routing**:
 
 ```python
 flow("Name", starting_node)
-  .route(starting_node, "outcome1", next_node)
-  .route(next_node, "outcome2", final_node)
-  .end(final_node, "done")  # exactly one termination
+  .route(starting_node, ProcessedEvent, next_node)
+  .route(next_node, TransformedEvent, final_node)
+  .end_flow(CompletedEvent)  # Terminal type defines flow's goal
 ```
 
-**Routing**: Routes are `(node, outcome)` pairs. Each outcome must have exactly one route.  
-**Type inference**: The flow infers types from start to end, supporting transformations.  
+**Routing**: Routes are `(node, MessageType)` pairs. Each message type must have exactly one route.
+**Type inference**: The flow infers types from start to end, supporting transformations.
 **Composability**: A flow is itself a `Node` – compose flows within flows.
+
+## Terminal Type Pattern
+
+Each flow has **exactly ONE goal** defined by its terminal message type. This enforces single responsibility principle – a flow completes when ANY node produces the terminal type.
+
+### Key Rules
+
+1. **Single Terminal Type**: Declare one message type that completes the flow via `end_flow(MessageType)`
+2. **Immediate Termination**: Flow ends as soon as any node produces the terminal type
+3. **No Terminal Routing**: Terminal types cannot be routed between nodes – they always end the flow
+4. **Build-Time Validation**: Terminal type conflicts are caught during flow construction
+
+### Example
+
+```python
+from clearflow import Event, Command, Node, flow
+
+# Define your terminal event
+class AnalysisComplete(Event):
+    """Flow goal: Complete the analysis."""
+    result: str
+    confidence: float
+
+# Build flow with single terminal type
+analysis_flow = (
+    flow("Analysis", input_node)
+    .route(input_node, DataValidated, analyzer)
+    .route(analyzer, NeedsReview, reviewer)
+    .route(reviewer, Approved, finalizer)
+    .end_flow(AnalysisComplete)  # ONE goal: produce AnalysisComplete
+)
+```
+
+When ANY node (`analyzer`, `reviewer`, or `finalizer`) produces `AnalysisComplete`, the flow terminates immediately with that result.
+
+### Benefits
+
+- **Clear Intent**: Each flow's purpose is explicit in its terminal type
+- **Simplified Testing**: Test that flows produce correct terminal type
+- **Better Composition**: Flows with clear goals compose naturally
+- **Type Safety**: Terminal type mismatches caught at build time
 
 ## ClearFlow vs PocketFlow
 
@@ -99,6 +140,43 @@ flow("Name", starting_node)
 | **Type safety** | Full Python 3.13+ generics | Dynamic (no annotations) |
 
 ClearFlow emphasizes **robust, type-safe orchestration** with validation and guardrails. PocketFlow emphasizes **brevity and flexibility** with minimal overhead.
+
+## Migration Guide (v2.0)
+
+The terminal type pattern is a breaking change from node-based termination. Here's how to update your flows:
+
+### Before (v1.x)
+```python
+flow = (
+    flow("Process", start_node)
+    .route(start_node, "success", process_node)
+    .route(process_node, "done", end_node)
+    .end(end_node, "complete")  # Node-based termination
+)
+```
+
+### After (v2.0)
+```python
+flow = (
+    flow("Process", start_node)
+    .route(start_node, StartedEvent, process_node)
+    .route(process_node, ProcessedEvent, end_node)
+    .end_flow(CompletedEvent)  # Terminal type termination
+)
+```
+
+### Key Changes
+
+1. **Replace outcome strings with Message types**: Routes now use concrete message types instead of strings
+2. **Replace `end(node, outcome)` with `end_flow(MessageType)`**: Declare the terminal type, not a node
+3. **Remove routes to None**: Terminal types automatically end the flow – no explicit None routing
+
+### Why This Change?
+
+- **Single Responsibility**: Each flow has ONE clear goal
+- **Type Safety**: Message types provide compile-time checking
+- **Simplified Logic**: No need to track which nodes can terminate
+- **Better Testing**: Test flows by their terminal output type
 
 ## Development
 

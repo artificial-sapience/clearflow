@@ -8,7 +8,7 @@ from openai.types.chat import ChatCompletionMessageParam
 from clearflow import Node
 from examples.chat.messages import (
     AssistantMessageReceived,
-    ChatEnded,
+    ChatCompleted,
     ChatMessage,
     StartChat,
     UserMessageReceived,
@@ -55,15 +55,17 @@ def _setup_chat_history(message: StartChat | AssistantMessageReceived) -> tuple[
     return message.conversation_history
 
 
-def _create_chat_ended(message: StartChat | AssistantMessageReceived, history: tuple[ChatMessage, ...]) -> ChatEnded:
-    """Create ChatEnded event.
+def _create_chat_ended(
+    message: StartChat | AssistantMessageReceived, history: tuple[ChatMessage, ...]
+) -> ChatCompleted:
+    """Create ChatCompleted event.
 
     Returns:
-        ChatEnded event with proper metadata.
+        ChatCompleted event with proper metadata.
 
     """
     print("\nGoodbye!")
-    return ChatEnded(
+    return ChatCompleted(
         triggered_by_id=message.id,
         run_id=message.run_id,
         final_history=history,
@@ -71,17 +73,17 @@ def _create_chat_ended(message: StartChat | AssistantMessageReceived, history: t
     )
 
 
-class UserNode(Node[StartChat | AssistantMessageReceived, UserMessageReceived | ChatEnded]):
+class UserNode(Node[StartChat | AssistantMessageReceived, UserMessageReceived | ChatCompleted]):
     """Proxy for the user."""
 
     name: str = "user"
 
     @override
-    async def process(self, message: StartChat | AssistantMessageReceived) -> UserMessageReceived | ChatEnded:
+    async def process(self, message: StartChat | AssistantMessageReceived) -> UserMessageReceived | ChatCompleted:
         """Handle user interaction.
 
         Returns:
-            UserMessageReceived with user's message or ChatEnded if quitting.
+            UserMessageReceived with user's message or ChatCompleted if quitting.
 
         """
         history = _setup_chat_history(message)

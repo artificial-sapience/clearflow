@@ -1,44 +1,62 @@
-# Continue Session: Implement API Symmetry Enhancement
-
-Please help me implement the API symmetry enhancement for ClearFlow's `complete_flow` method.
+# Continue Session: Fix Critical Type Safety Issue
 
 ## Context
 
-See `session-context.md` for:
-- Previous accomplishments (message routing validation with 100% coverage)
-- Current focus (API symmetry and union terminal types)
-- Technical architecture details
-- Quality standards to maintain
+See `session-context.md` for the full discovery of the PEP 695 variance issue that undermines our terminal type pattern.
 
-## Task
+## The Problem
 
-See `plan.md` for the detailed 8-task implementation plan.
+PEP 695's automatic variance inference makes our `Node[TIn, TOut]` type parameters:
+- `TIn`: contravariant (input only)
+- `TOut`: **covariant** (output only)
 
-## Starting Point
+This allows unsafe assignments like:
+```python
+concrete: Node[StartChat, ChatCompleted] = ...
+wider: Node[StartChat, ChatCompleted | UserMessageReceived] = concrete  # ALLOWED (bad!)
+```
 
-We need to implement Task 1 from the plan: Update the FlowBuilder abstract interface.
+## Your Mission
 
-Specifically:
-1. Update `complete_flow` signature in `clearflow/flow.py`
-2. Rename `from_node` → `ending_node` for symmetry
-3. Keep backward compatibility
-4. Run `./quality-check.sh clearflow/flow.py` to ensure it passes 100%
+Help me fix this critical type safety issue. See `plan.md` for the full task list.
 
-## Important Requirements
+## Primary Options to Explore
 
-- Maintain 100% test coverage at all times
-- Each task must pass `./quality-check.sh` before moving to the next
-- No linter suppressions without explicit approval
-- All code must achieve Grade A complexity
-- Use frozen dataclasses and tuples (not lists) for immutability
+### Option 1: Switch to Traditional TypeVars
+```python
+from typing import TypeVar, Generic
+
+TMessageIn = TypeVar('TMessageIn', bound=Message)  # Invariant
+TMessageOut = TypeVar('TMessageOut', bound=Message)  # Invariant
+
+class NodeInterface(Generic[TMessageIn, TMessageOut], ABC):
+    ...
+```
+
+### Option 2: Force Invariance Through Usage
+Add dummy usage to make type parameters appear in both positions:
+```python
+class NodeInterface[TMessageIn, TMessageOut]:
+    _phantom_in: TMessageOut | None = None  # Force TMessageOut in input position
+    _phantom_out: type[TMessageIn] | None = None  # Force TMessageIn in output position
+```
+
+### Option 3: Runtime Validation
+Keep current code but add runtime checks and better documentation.
 
 ## Success Criteria
 
-After completing all tasks in `plan.md`:
-- Union terminal types are fully supported
-- API is symmetric between `create_flow` and `complete_flow`
-- All existing tests still pass (backward compatible)
-- New tests demonstrate union terminal functionality
-- Full quality check passes with 100% coverage
+1. Type checkers catch incorrect union return types
+2. `create_chat_flow()` correctly typed as `-> Node[StartChat, ChatCompleted]`
+3. All examples pass type checking with correct annotations
+4. Solution maintains clean API and good developer experience
 
-Let's start with Task 1 from the plan.
+## Start By
+
+1. Test which option works best for enforcing invariance
+2. Implement the fix across the codebase
+3. Update all example type annotations
+4. Ensure 100% test coverage still passes
+5. Document the solution and any limitations
+
+Please think carefully about the trade-offs of each approach before proceeding.

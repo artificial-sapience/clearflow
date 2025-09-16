@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 RouteKey = tuple[NodeInterface[Message, Message], type[Message]]  # (from_node, outcome)
-RouteEntry = tuple[RouteKey, NodeInterface[Message, Message] | None]  # (key, destination)
+RouteEntry = tuple[RouteKey, NodeInterface[Message, Message]]  # (key, destination node)
 
 
 def _get_node_output_types(node: NodeInterface[Message, Message]) -> tuple[type[Message], ...]:
@@ -135,6 +135,26 @@ def _validate_route_types(
     _validate_input_type(to_node, outcome)
 
 
+def _validate_terminal_type_not_routed(
+    routes: tuple[RouteEntry, ...],
+    terminal_type: type[Message],
+) -> None:
+    """Ensure terminal type isn't already routed.
+
+    Args:
+        routes: Existing routes in the flow
+        terminal_type: The terminal type to validate
+
+    Raises:
+        ValueError: If terminal type is already routed
+
+    """
+    for (_, outcome_type), _ in routes:
+        if outcome_type == terminal_type:
+            msg = f"Cannot use {terminal_type.__name__} as terminal type - it's already routed between nodes"
+            raise ValueError(msg)
+
+
 @final
 class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
     """Module private flow that routes messages based on their types.
@@ -149,6 +169,7 @@ class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
 
     starting_node: NodeInterface[Message, Message]
     routes: tuple[RouteEntry, ...]
+    terminal_type: type[Message]  # The message type that completes the flow
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
 
     async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
@@ -201,7 +222,7 @@ class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
 
     def _get_next_node(
         self, message: Message, current_node: NodeInterface[Message, Message]
-    ) -> NodeInterface[Message, Message] | None:
+    ) -> NodeInterface[Message, Message]:
         """Get the next node for routing based on message type.
 
         Args:
@@ -209,7 +230,7 @@ class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
             current_node: The current node
 
         Returns:
-            The next node or None if terminal
+            The next node to route to
 
         Raises:
             ValueError: If no route is defined for the message type
@@ -222,7 +243,7 @@ class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
             if key == route_key:
                 return destination
 
-        # Route not found
+        # Route not found - create descriptive error
         node_name = type(current_node).__name__
         msg = f"No route defined for message type '{message.__class__.__name__}' from node '{node_name}'"
         raise ValueError(msg)
@@ -249,15 +270,16 @@ class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
                 # Execute node with callbacks
                 output_message = await self._execute_node(current_node, current_message)
 
-                # Get next node
-                next_node = self._get_next_node(output_message, current_node)
-
-                if next_node is None:
+                # Check if output is the terminal type - flow ends immediately
+                if isinstance(output_message, self.terminal_type):
                     # REQ-010: Invoke on_flow_end at termination
                     await self._safe_callback("on_flow_end", self.name, output_message, None)
                     return cast("TEnd", output_message)
 
-                # Continue
+                # Get next node for routing
+                next_node = self._get_next_node(output_message, current_node)
+
+                # Continue with next node
                 current_node = next_node
                 current_message = output_message
         except Exception as error:
@@ -282,7 +304,7 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
     The builder maintains stable type parameters throughout the chain, unlike tracking
     current message types, because type erasure makes intermediate types meaningless.
 
-    Call end() to specify where the flow terminates and get the completed flow.
+    Call end_flow() to specify where the flow terminates and get the completed flow.
     """
 
     name: str
@@ -291,9 +313,7 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
     reachable_nodes: frozenset[str]  # Node names that are reachable from start
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks
 
-    def _check_node_reachability[TIn: Message, TOut: Message](
-        self, from_node: Node[TIn, TOut], *, is_termination: bool
-    ) -> None:
+    def _check_node_reachability[TIn: Message, TOut: Message](self, from_node: Node[TIn, TOut]) -> None:
         """Check if a node is reachable from the start node.
 
         Raises:
@@ -302,8 +322,7 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
         """
         from_node_name = getattr(from_node, "name", type(from_node).__name__)
         if from_node_name not in self.reachable_nodes:
-            action = "end at" if is_termination else "route from"
-            msg = f"Cannot {action} node '{from_node_name}' - not reachable from start"
+            msg = f"Cannot route from node '{from_node_name}' - not reachable from start"
             raise ValueError(msg)
 
     def _check_duplicate_route[TIn: Message, TOut: Message](
@@ -325,24 +344,21 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
         self,
         from_node: Node[TFromIn, TFromOut],
         outcome: type[Message],
-        to_node: Node[TToIn, TToOut] | None = None,
-        *,
-        is_termination: bool = False,
+        to_node: Node[TToIn, TToOut],
     ) -> RouteKey:
         """Validate that a route can be added with type checking.
 
         Args:
             from_node: The node this route originates from
             outcome: The message type that triggers this route
-            to_node: The destination node (None for termination)
-            is_termination: Whether this is a termination route
+            to_node: The destination node
 
         Returns:
             The route key for this route
 
         """
         # Check reachability
-        self._check_node_reachability(from_node, is_termination=is_termination)
+        self._check_node_reachability(from_node)
 
         # Create route key
         route_key: RouteKey = (cast("NodeInterface[Message, Message]", from_node), outcome)
@@ -350,13 +366,12 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
         # Check for duplicate routes
         self._check_duplicate_route(route_key, from_node, outcome)
 
-        # Type validation for non-termination routes
-        if not is_termination and to_node:
-            _validate_route_types(
-                cast("NodeInterface[Message, Message]", from_node),
-                outcome,
-                cast("NodeInterface[Message, Message]", to_node),
-            )
+        # Validate route types
+        _validate_route_types(
+            cast("NodeInterface[Message, Message]", from_node),
+            outcome,
+            cast("NodeInterface[Message, Message]", to_node),
+        )
 
         return route_key
 
@@ -431,31 +446,31 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
         )
 
     @override
-    def complete_flow[TFromIn: Message, TFromOut: Message, TEnd: Message](
+    def end_flow[TEnd: Message](
         self,
-        from_node: Node[TFromIn, TFromOut],
-        final_outcome: type[TEnd],
+        terminal_type: type[TEnd],
     ) -> Node[TStartIn, TEnd]:
-        """Mark message type as terminal from source node.
+        """Declare the message type that completes this flow.
+
+        When any node in the flow produces an instance of the terminal type,
+        the flow immediately terminates and returns that message. The terminal
+        type cannot be routed between nodes - it always ends the flow.
 
         Args:
-            from_node: Source node that emits the terminal message type
-            final_outcome: The message type that completes the flow
+            terminal_type: The message type that completes the flow
 
         Returns:
-            A Node that represents the complete flow
+            A Node that represents the complete flow with single terminal type
 
         """
-        route_key = self._validate_and_create_route(from_node, final_outcome, is_termination=True)
-
-        # Add termination route
-        new_route_entry: RouteEntry = (route_key, None)
-        new_routes = (*self.routes, new_route_entry)
+        # Validate that terminal type is not already routed
+        _validate_terminal_type_not_routed(self.routes, terminal_type)
 
         return _Flow[TStartIn, TEnd](
             name=self.name,
             starting_node=cast("NodeInterface[Message, Message]", self.starting_node),
-            routes=new_routes,
+            routes=self.routes,  # Routes remain unchanged - terminal type is not routed
+            terminal_type=terminal_type,
             callbacks=self.callbacks,  # REQ-009: Pass callbacks to MessageFlow
         )
 

@@ -73,6 +73,6 @@ def create_portfolio_analysis_flow() -> Node[StartAnalysisCommand, DecisionMadeE
         # Compliance review outcomes
         .route(compliance, ComplianceReviewedEvent, decision)  # Success → Final decision
         .route(compliance, AnalysisFailedEvent, decision)  # Failure → Conservative decision
-        # Final decision (terminal node)
-        .complete_flow(decision, DecisionMadeEvent)  # Flow terminates with decision
+        # Final decision (terminal type)
+        .end_flow(DecisionMadeEvent)  # Flow terminates with DecisionMadeEvent
     )

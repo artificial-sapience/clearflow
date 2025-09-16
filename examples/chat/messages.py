@@ -46,7 +46,7 @@ class AssistantMessageReceived(Event):
     conversation_history: tuple[ChatMessage, ...]
 
 
-class ChatEnded(Event):
+class ChatCompleted(Event):
     """Chat conversation ended."""
 
     final_history: tuple[ChatMessage, ...]
