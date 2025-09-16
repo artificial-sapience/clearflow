@@ -78,6 +78,46 @@ def _get_node_input_types(node: NodeInterface[Message, Message]) -> tuple[type[M
     return (input_type,)
 
 
+def _validate_output_type(from_node: NodeInterface[Message, Message], outcome: type[Message]) -> None:
+    """Validate that outcome is a valid output from source node.
+
+    Raises:
+        TypeError: If outcome is not a valid output type for the node.
+
+    """
+    valid_outputs = _get_node_output_types(from_node)
+    if valid_outputs and outcome not in valid_outputs:
+        valid_names = ", ".join(t.__name__ for t in valid_outputs if hasattr(t, "__name__"))
+        from_node_name = type(from_node).__name__
+        msg = f"Node '{from_node_name}' cannot output {outcome.__name__}. Valid outputs: {valid_names}"
+        raise TypeError(msg)
+
+
+def _is_type_compatible(outcome: type[Message], valid_inputs: tuple[type[Message], ...]) -> bool:
+    """Check if outcome is compatible with any of the valid input types.
+
+    Returns:
+        True if outcome is compatible with any valid input type, False otherwise.
+
+    """
+    return any(issubclass(outcome, input_t) for input_t in valid_inputs)
+
+
+def _validate_input_type(to_node: NodeInterface[Message, Message], outcome: type[Message]) -> None:
+    """Validate that outcome is acceptable input to destination node.
+
+    Raises:
+        TypeError: If outcome is not an acceptable input type for the node.
+
+    """
+    valid_inputs = _get_node_input_types(to_node)
+    if valid_inputs and not _is_type_compatible(outcome, valid_inputs):
+        to_node_name = type(to_node).__name__
+        valid_names = ", ".join(t.__name__ for t in valid_inputs if hasattr(t, "__name__"))
+        msg = f"Node '{to_node_name}' cannot accept {outcome.__name__} (expects {valid_names})"
+        raise TypeError(msg)
+
+
 def _validate_route_types(
     from_node: NodeInterface[Message, Message],
     outcome: type[Message],
@@ -90,34 +130,9 @@ def _validate_route_types(
         outcome: Message type being routed
         to_node: Destination node
 
-    Raises:
-        TypeError: If types are incompatible
-
     """
-    # Validate outcome is a valid output from source node
-    valid_outputs = _get_node_output_types(from_node)
-    if valid_outputs and outcome not in valid_outputs:
-        valid_names = ", ".join(t.__name__ for t in valid_outputs if hasattr(t, "__name__"))
-        from_node_name = type(from_node).__name__
-        msg = f"Node '{from_node_name}' cannot output {outcome.__name__}. Valid outputs: {valid_names}"
-        raise TypeError(msg)
-
-    # Validate outcome is acceptable input to destination node
-    valid_inputs = _get_node_input_types(to_node)
-    if valid_inputs:
-        # Check if outcome is compatible with any of the valid input types
-        is_valid = False
-        for input_t in valid_inputs:
-            # Both outcome and input_t are already type[Message], so we can use issubclass directly
-            if issubclass(outcome, input_t):
-                is_valid = True
-                break
-
-        if not is_valid:
-            to_node_name = type(to_node).__name__
-            valid_names = ", ".join(t.__name__ for t in valid_inputs if hasattr(t, "__name__"))
-            msg = f"Node '{to_node_name}' cannot accept {outcome.__name__} (expects {valid_names})"
-            raise TypeError(msg)
+    _validate_output_type(from_node, outcome)
+    _validate_input_type(to_node, outcome)
 
 
 @final
@@ -276,6 +291,36 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
     reachable_nodes: frozenset[str]  # Node names that are reachable from start
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks
 
+    def _check_node_reachability[TIn: Message, TOut: Message](
+        self, from_node: Node[TIn, TOut], *, is_termination: bool
+    ) -> None:
+        """Check if a node is reachable from the start node.
+
+        Raises:
+            ValueError: If the node is not reachable from the start node.
+
+        """
+        from_node_name = getattr(from_node, "name", type(from_node).__name__)
+        if from_node_name not in self.reachable_nodes:
+            action = "end at" if is_termination else "route from"
+            msg = f"Cannot {action} node '{from_node_name}' - not reachable from start"
+            raise ValueError(msg)
+
+    def _check_duplicate_route[TIn: Message, TOut: Message](
+        self, route_key: RouteKey, from_node: Node[TIn, TOut], outcome: type[Message]
+    ) -> None:
+        """Check if a route already exists.
+
+        Raises:
+            ValueError: If the route already exists.
+
+        """
+        for existing_key, _ in self.routes:
+            if existing_key == route_key:
+                from_node_name = type(from_node).__name__
+                msg = f"Route already defined for message type '{outcome.__name__}' from node '{from_node_name}'"
+                raise ValueError(msg)
+
     def _validate_and_create_route[TFromIn: Message, TFromOut: Message, TToIn: Message, TToOut: Message](
         self,
         from_node: Node[TFromIn, TFromOut],
@@ -295,26 +340,15 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
         Returns:
             The route key for this route
 
-        Raises:
-            ValueError: If from_node is not reachable or route already exists
-
         """
         # Check reachability
-        # For flows used as nodes, use their name property
-        from_node_name = getattr(from_node, "name", type(from_node).__name__)
-        if from_node_name not in self.reachable_nodes:
-            action = "end at" if is_termination else "route from"
-            msg = f"Cannot {action} node '{from_node_name}' - not reachable from start"
-            raise ValueError(msg)
+        self._check_node_reachability(from_node, is_termination=is_termination)
+
+        # Create route key
+        route_key: RouteKey = (cast("NodeInterface[Message, Message]", from_node), outcome)
 
         # Check for duplicate routes
-        route_key: RouteKey = (cast("NodeInterface[Message, Message]", from_node), outcome)
-        # Linear search through existing routes
-        for existing_key, _ in self.routes:
-            if existing_key == route_key:
-                from_node_name = type(from_node).__name__
-                msg = f"Route already defined for message type '{outcome.__name__}' from node '{from_node_name}'"
-                raise ValueError(msg)
+        self._check_duplicate_route(route_key, from_node, outcome)
 
         # Type validation for non-termination routes
         if not is_termination and to_node:
