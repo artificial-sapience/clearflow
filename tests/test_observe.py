@@ -196,7 +196,9 @@ async def test_callback_error_handling() -> None:
     processor = ProcessorNode(name="processor")
 
     # Add handler that raises errors
-    flow_with_error = create_flow("test_flow", processor).observe(ErrorHandler()).complete_flow(processor, ProcessedEvent)
+    flow_with_error = (
+        create_flow("test_flow", processor).observe(ErrorHandler()).complete_flow(processor, ProcessedEvent)
+    )
 
     # Flow should complete successfully despite callback errors
     command = StartCommand(value="test", run_id=uuid4())
@@ -305,7 +307,9 @@ async def test_observer_error_isolation() -> None:
     # Create flow
     processor = ProcessorNode(name="processor")
     test_flow = (
-        create_flow("test_flow", processor).observe(error_handler, tracking_handler).complete_flow(processor, ProcessedEvent)
+        create_flow("test_flow", processor)
+        .observe(error_handler, tracking_handler)
+        .complete_flow(processor, ProcessedEvent)
     )
 
     # Process message

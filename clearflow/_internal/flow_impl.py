@@ -108,13 +108,10 @@ def _validate_route_types(
         # Check if outcome is compatible with any of the valid input types
         is_valid = False
         for input_t in valid_inputs:
-            try:
-                if issubclass(outcome, input_t):
-                    is_valid = True
-                    break
-            except TypeError:
-                # input_t might be a generic or other non-class type
-                pass
+            # Both outcome and input_t are already type[Message], so we can use issubclass directly
+            if issubclass(outcome, input_t):
+                is_valid = True
+                break
 
         if not is_valid:
             to_node_name = type(to_node).__name__

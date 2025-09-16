@@ -16,6 +16,7 @@ from tests.conftest import (
     ErrorEvent,
     ProcessCommand,
     ProcessedEvent,
+    SecurityAlertEvent,
     ValidateCommand,
     ValidationFailedEvent,
     ValidationPassedEvent,
@@ -157,7 +158,9 @@ async def test_flow_with_error_handling() -> None:
     start = FailingStartNode(name="start")
     transform = TransformNode(name="transform")
 
-    test_flow = create_flow("error_handling", start).route(start, ProcessedEvent, transform).complete_flow(start, ErrorEvent)
+    test_flow = (
+        create_flow("error_handling", start).route(start, ProcessedEvent, transform).complete_flow(start, ErrorEvent)
+    )
 
     run_id = create_run_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
@@ -196,7 +199,9 @@ async def test_flow_missing_route_error() -> None:
 
     # Build flow missing route for ValidateCommand
     # Only route ProcessedEvent to transform, but don't handle ValidateCommand output
-    test_flow = create_flow("incomplete", start).route(start, ProcessedEvent, transform).complete_flow(start, ErrorEvent)
+    test_flow = (
+        create_flow("incomplete", start).route(start, ProcessedEvent, transform).complete_flow(start, ErrorEvent)
+    )
 
     run_id = create_run_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
@@ -239,6 +244,78 @@ async def test_flow_composability() -> None:
 
     assert isinstance(result, AnalysisCompleteEvent)
     assert "started: composite test" in result.findings
+
+
+def test_flow_invalid_output_type_validation() -> None:
+    """Test that flow builder validates output types match node signatures."""
+    # Create a node that outputs ProcessedEvent | ErrorEvent
+    start = StartNode(name="start")
+    # Create a node that expects ValidateCommand
+    validate = ValidateNode(name="validate")
+
+    # Try to route ValidationPassedEvent from start (which can't output that type)
+    builder = create_flow("test", start)
+
+    # This should raise TypeError because StartNode can't output ValidationPassedEvent
+    with pytest.raises(TypeError, match="cannot output ValidationPassedEvent"):
+        builder.route(start, ValidationPassedEvent, validate)
+
+
+def test_flow_invalid_input_type_validation() -> None:
+    """Test that flow builder validates input types match node signatures."""
+    # StartNode outputs ProcessedEvent | ErrorEvent
+    start = StartNode(name="start")
+    # ValidateNode expects ValidateCommand, not ProcessedEvent
+    validate = ValidateNode(name="validate")
+
+    builder = create_flow("test", start)
+
+    # This should raise TypeError because ValidateNode can't accept ProcessedEvent
+    with pytest.raises(TypeError, match="cannot accept ProcessedEvent"):
+        builder.route(start, ProcessedEvent, validate)
+
+
+def test_flow_union_type_compatibility() -> None:
+    """Test flow validation handles union types correctly."""
+
+    # Node that outputs union of multiple event types
+    class MultiOutputNode(Node[ProcessCommand, ProcessedEvent | ValidationPassedEvent | ErrorEvent]):
+        @override
+        async def process(self, message: ProcessCommand) -> ProcessedEvent | ValidationPassedEvent | ErrorEvent:
+            return ProcessedEvent(
+                result="test", processing_time_ms=10.0, triggered_by_id=message.id, run_id=message.run_id
+            )
+
+    # Node that accepts one of the union members
+    class ProcessedOnlyNode(Node[ProcessedEvent, AnalysisCompleteEvent]):
+        @override
+        async def process(self, message: ProcessedEvent) -> AnalysisCompleteEvent:
+            return AnalysisCompleteEvent(
+                findings=message.result, confidence=0.9, triggered_by_id=message.id, run_id=message.run_id
+            )
+
+    multi = MultiOutputNode(name="multi")
+    single = ProcessedOnlyNode(name="single")
+
+    # This should work - ProcessedEvent is in the union output and matches input
+    flow = create_flow("union_test", multi).route(multi, ProcessedEvent, single)
+
+    # Ensure it works (no exception)
+    assert flow is not None
+
+    # Now test incompatible types
+    class SecurityNode(Node[SecurityAlertEvent, AnalysisCompleteEvent]):
+        @override
+        async def process(self, message: SecurityAlertEvent) -> AnalysisCompleteEvent:
+            return AnalysisCompleteEvent(
+                findings="security", confidence=0.9, triggered_by_id=message.id, run_id=message.run_id
+            )
+
+    security_node = SecurityNode(name="security")
+
+    # This should fail - SecurityAlertEvent is not in the union
+    with pytest.raises(TypeError, match="cannot output SecurityAlertEvent"):
+        create_flow("bad_union", multi).route(multi, SecurityAlertEvent, security_node)
 
 
 def test_flow_reachability_validation() -> None:
