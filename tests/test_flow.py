@@ -115,7 +115,7 @@ async def test_simple_flow() -> None:
     """Test a simple linear flow."""
     start = StartNode(name="start")
 
-    test_flow = create_flow("simple", start).end(start, ProcessedEvent)
+    test_flow = create_flow("simple", start).complete_flow(start, ProcessedEvent)
 
     # Execute flow
     run_id = create_run_id()
@@ -139,7 +139,7 @@ async def test_flow_with_routing() -> None:
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
         .route(validate, ValidationPassedEvent, finalize)
-        .end(finalize, AnalysisCompleteEvent)
+        .complete_flow(finalize, AnalysisCompleteEvent)
     )
 
     # Execute successful path
@@ -157,7 +157,7 @@ async def test_flow_with_error_handling() -> None:
     start = FailingStartNode(name="start")
     transform = TransformNode(name="transform")
 
-    test_flow = create_flow("error_handling", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
+    test_flow = create_flow("error_handling", start).route(start, ProcessedEvent, transform).complete_flow(start, ErrorEvent)
 
     run_id = create_run_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
@@ -178,7 +178,7 @@ async def test_flow_with_branching() -> None:
         create_flow("branching", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
-        .end(validate, ValidationFailedEvent)  # Only test failure path
+        .complete_flow(validate, ValidationFailedEvent)  # Only test failure path
     )
 
     run_id = create_run_id()
@@ -196,7 +196,7 @@ async def test_flow_missing_route_error() -> None:
 
     # Build flow missing route for ValidateCommand
     # Only route ProcessedEvent to transform, but don't handle ValidateCommand output
-    test_flow = create_flow("incomplete", start).route(start, ProcessedEvent, transform).end(start, ErrorEvent)
+    test_flow = create_flow("incomplete", start).route(start, ProcessedEvent, transform).complete_flow(start, ErrorEvent)
 
     run_id = create_run_id()
     input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
@@ -218,7 +218,7 @@ async def test_flow_composability() -> None:
     inner_flow = (
         create_flow("inner", validate)
         .route(validate, ValidationPassedEvent, finalize)
-        .end(finalize, AnalysisCompleteEvent)
+        .complete_flow(finalize, AnalysisCompleteEvent)
     )
 
     # Create outer flow using inner flow as a node
@@ -229,7 +229,7 @@ async def test_flow_composability() -> None:
         create_flow("outer", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, inner_flow)  # Inner flow as node!
-        .end(inner_flow, AnalysisCompleteEvent)
+        .complete_flow(inner_flow, AnalysisCompleteEvent)
     )
 
     run_id = create_run_id()
@@ -274,7 +274,7 @@ def test_flow_duplicate_route_error() -> None:
 def test_flow_name_property() -> None:
     """Test flow name is preserved."""
     start = StartNode(name="start")
-    test_flow = create_flow("my_flow", start).end(start, ProcessedEvent)
+    test_flow = create_flow("my_flow", start).complete_flow(start, ProcessedEvent)
 
     assert test_flow.name == "my_flow"
 
@@ -282,7 +282,7 @@ def test_flow_name_property() -> None:
 def test_flow_immutability() -> None:
     """Test that flows are immutable."""
     start = StartNode(name="start")
-    test_flow = create_flow("immutable", start).end(start, ProcessedEvent)
+    test_flow = create_flow("immutable", start).complete_flow(start, ProcessedEvent)
 
     # Should not be able to modify flow
     with pytest.raises(ValidationError, match="frozen"):
@@ -309,7 +309,7 @@ def test_flow_builder_chaining() -> None:
         create_flow("fluent", start)
         .route(start, ProcessedEvent, transform)
         .route(transform, ValidateCommand, validate)
-        .end(validate, ValidationPassedEvent)
+        .complete_flow(validate, ValidationPassedEvent)
     )
 
     assert flow.name == "fluent"
@@ -321,7 +321,7 @@ def test_single_termination_enforcement() -> None:
 
     # First create a flow with one termination
     builder = create_flow("test", start)
-    test_flow2 = builder.end(start, ProcessedEvent)
+    test_flow2 = builder.complete_flow(start, ProcessedEvent)
 
     # Verify flow works
     assert test_flow2.name == "test"
@@ -334,12 +334,12 @@ def test_single_termination_enforcement() -> None:
     builder3 = builder2.route(start2, ProcessedEvent, transform)
 
     # Create one flow ending at start2 with ErrorEvent
-    flow1 = builder3.end(start2, ErrorEvent)
+    flow1 = builder3.complete_flow(start2, ErrorEvent)
     assert flow1.name == "multi_end"
 
     # Create another flow ending at transform with ValidateCommand - this is OK
     # because it's a different flow instance
-    flow2 = builder3.end(transform, ValidateCommand)
+    flow2 = builder3.complete_flow(transform, ValidateCommand)
     assert flow2.name == "multi_end"
 
     # The single termination rule means you can't have multiple terminations

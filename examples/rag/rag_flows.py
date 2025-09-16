@@ -41,7 +41,7 @@ def create_indexing_flow() -> Node[IndexDocumentsCommand, IndexCreatedEvent]:
         create_flow("DocumentIndexing", chunker)
         .route(chunker, DocumentsChunkedEvent, embedder)
         .route(embedder, ChunksEmbeddedEvent, indexer)
-        .end(indexer, IndexCreatedEvent)
+        .complete_flow(indexer, IndexCreatedEvent)
     )
 
 
@@ -65,5 +65,5 @@ def create_query_flow() -> Node[QueryCommand, AnswerGeneratedEvent]:
         create_flow("QueryProcessing", query_embedder)
         .route(query_embedder, QueryEmbeddedEvent, retriever)
         .route(retriever, DocumentsRetrievedEvent, generator)
-        .end(generator, AnswerGeneratedEvent)
+        .complete_flow(generator, AnswerGeneratedEvent)
     )

@@ -400,22 +400,22 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
         )
 
     @override
-    def end[TFromIn: Message, TFromOut: Message, TEnd: Message](
+    def complete_flow[TFromIn: Message, TFromOut: Message, TEnd: Message](
         self,
         from_node: Node[TFromIn, TFromOut],
-        outcome: type[TEnd],
+        final_outcome: type[TEnd],
     ) -> Node[TStartIn, TEnd]:
         """Mark message type as terminal from source node.
 
         Args:
             from_node: Source node that emits the terminal message type
-            outcome: The message type that completes the flow
+            final_outcome: The message type that completes the flow
 
         Returns:
             A Node that represents the complete flow
 
         """
-        route_key = self._validate_and_create_route(from_node, outcome, is_termination=True)
+        route_key = self._validate_and_create_route(from_node, final_outcome, is_termination=True)
 
         # Add termination route
         new_route_entry: RouteEntry = (route_key, None)

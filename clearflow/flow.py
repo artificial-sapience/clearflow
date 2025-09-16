@@ -55,16 +55,16 @@ class FlowBuilder[TStartIn: Message, TStartOut: Message](ABC):
         ...
 
     @abstractmethod
-    def end[TFromIn: Message, TFromOut: Message, TEnd: Message](
+    def complete_flow[TFromIn: Message, TFromOut: Message, TEnd: Message](
         self,
         from_node: Node[TFromIn, TFromOut],
-        outcome: type[TEnd],
+        final_outcome: type[TEnd],
     ) -> Node[TStartIn, TEnd]:
         """Mark message type as terminal from source node.
 
         Args:
             from_node: Source node that emits the terminal message type
-            outcome: The message type that completes the flow
+            final_outcome: The message type that completes the flow
 
         Returns:
             A Node that represents the complete flow

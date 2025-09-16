@@ -37,5 +37,5 @@ def create_chat_flow() -> Node[StartChat, ChatEnded]:
         create_flow("Chat", user)
         .route(user, UserMessageReceived, assistant)
         .route(assistant, AssistantMessageReceived, user)
-        .end(user, ChatEnded)
+        .complete_flow(user, ChatEnded)
     )
