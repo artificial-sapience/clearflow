@@ -9,6 +9,16 @@
 
 Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.
 
+## Version Policy
+
+**Alpha Phase (0.x.y)**: ClearFlow is in active development. Breaking changes may occur in any release. Pin exact versions in production:
+
+```bash
+pip install clearflow==0.1.0  # Pin to exact version
+```
+
+After 1.0.0, we'll follow strict [Semantic Versioning](https://semver.org/).
+
 ## Why ClearFlow?
 
 - **100% test coverage** – Every path proven to work
