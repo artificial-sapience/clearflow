@@ -6,9 +6,9 @@ routing boundaries to handle union types while maintaining type safety at
 flow input/output boundaries.
 """
 
-from collections.abc import Mapping
+import types
 from dataclasses import dataclass
-from typing import cast, final, override
+from typing import TypeVar, cast, final, get_args, get_type_hints, override
 
 from clearflow._internal.callback_handler import CallbackHandler
 from clearflow.flow import FlowBuilder
@@ -20,7 +20,107 @@ __all__ = [
     "create_flow",
 ]
 
-RouteKey = tuple[type[Message], str]  # (outcome, node_name)
+RouteKey = tuple[NodeInterface[Message, Message], type[Message]]  # (from_node, outcome)
+RouteEntry = tuple[RouteKey, NodeInterface[Message, Message] | None]  # (key, destination)
+
+
+def _get_node_output_types(node: NodeInterface[Message, Message]) -> tuple[type[Message], ...]:
+    """Get valid output types for a node.
+
+    Returns:
+        Tuple of valid output message types, empty if not determinable.
+
+    """
+    try:
+        hints = get_type_hints(node.process)
+    except (NameError, AttributeError):
+        return ()
+
+    if "return" not in hints:
+        return ()
+
+    return_type = hints["return"]
+
+    # Skip validation for TypeVars (generic parameters)
+    if isinstance(return_type, TypeVar):
+        return ()
+
+    # Python 3.10+ union syntax (X | Y) creates types.UnionType
+    if isinstance(return_type, types.UnionType):
+        return get_args(return_type)
+    return (return_type,)
+
+
+def _get_node_input_types(node: NodeInterface[Message, Message]) -> tuple[type[Message], ...]:
+    """Get expected input types for a node.
+
+    Returns:
+        Tuple of valid input message types, empty if not determinable.
+
+    """
+    try:
+        hints = get_type_hints(node.process)
+    except (NameError, AttributeError):
+        return ()
+
+    if "message" not in hints:
+        return ()
+
+    input_type = hints["message"]
+
+    # Skip validation for TypeVars (generic parameters)
+    if isinstance(input_type, TypeVar):
+        return ()
+
+    # Python 3.10+ union syntax (X | Y) creates types.UnionType
+    if isinstance(input_type, types.UnionType):
+        return get_args(input_type)
+    return (input_type,)
+
+
+def _validate_route_types(
+    from_node: NodeInterface[Message, Message],
+    outcome: type[Message],
+    to_node: NodeInterface[Message, Message],
+) -> None:
+    """Validate message type compatibility between nodes.
+
+    Args:
+        from_node: Source node
+        outcome: Message type being routed
+        to_node: Destination node
+
+    Raises:
+        TypeError: If types are incompatible
+
+    """
+    # Validate outcome is a valid output from source node
+    valid_outputs = _get_node_output_types(from_node)
+    if valid_outputs and outcome not in valid_outputs:
+        valid_names = ", ".join(t.__name__ for t in valid_outputs if hasattr(t, "__name__"))
+        from_node_name = type(from_node).__name__
+        msg = f"Node '{from_node_name}' cannot output {outcome.__name__}. Valid outputs: {valid_names}"
+        raise TypeError(msg)
+
+    # Validate outcome is acceptable input to destination node
+    valid_inputs = _get_node_input_types(to_node)
+    if valid_inputs:
+        # Check if outcome is compatible with any of the valid input types
+        is_valid = False
+        for input_t in valid_inputs:
+            try:
+                if issubclass(outcome, input_t):
+                    is_valid = True
+                    break
+            except TypeError:
+                # input_t might be a generic or other non-class type
+                pass
+
+        if not is_valid:
+            to_node_name = type(to_node).__name__
+            valid_names = ", ".join(t.__name__ for t in valid_inputs if hasattr(t, "__name__"))
+            msg = f"Node '{to_node_name}' cannot accept {outcome.__name__} (expects {valid_names})"
+            raise TypeError(msg)
 
 
 @final
@@ -36,7 +136,7 @@ class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
     """
 
     starting_node: NodeInterface[Message, Message]
-    routes: Mapping[RouteKey, NodeInterface[Message, Message] | None]
+    routes: tuple[RouteEntry, ...]
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
 
     async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
@@ -103,13 +203,17 @@ class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
             ValueError: If no route is defined for the message type
 
         """
-        # Cast to Node since all our nodes are Node instances with a name field
-        node_name = cast("Node[Message, Message]", current_node).name
-        route_key = (type(message), node_name)
-        if route_key not in self.routes:
-            msg = f"No route defined for message type '{message.__class__.__name__}' from node '{node_name}'"
-            raise ValueError(msg)
-        return self.routes[route_key]
+        route_key = (current_node, type(message))
+
+        # Linear search is fine for small route tables (typically <10 routes)
+        for key, destination in self.routes:
+            if key == route_key:
+                return destination
+
+        # Route not found
+        node_name = type(current_node).__name__
+        msg = f"No route defined for message type '{message.__class__.__name__}' from node '{node_name}'"
+        raise ValueError(msg)
 
     @override
     async def process(self, message: TStartIn) -> TEnd:
@@ -171,18 +275,24 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
 
     name: str
     starting_node: Node[TStartIn, TStartOut]
-    routes: Mapping[RouteKey, NodeInterface[Message, Message] | None]
+    routes: tuple[RouteEntry, ...]
     reachable_nodes: frozenset[str]  # Node names that are reachable from start
     callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks
 
-    def _validate_and_create_route(
-        self, from_node_name: str, outcome: type[Message], *, is_termination: bool = False
+    def _validate_and_create_route[TFromIn: Message, TFromOut: Message, TToIn: Message, TToOut: Message](
+        self,
+        from_node: Node[TFromIn, TFromOut],
+        outcome: type[Message],
+        to_node: Node[TToIn, TToOut] | None = None,
+        *,
+        is_termination: bool = False,
     ) -> RouteKey:
-        """Validate that a route can be added.
+        """Validate that a route can be added with type checking.
 
         Args:
-            from_node_name: The name of the node this route originates from
+            from_node: The node this route originates from
             outcome: The message type that triggers this route
+            to_node: The destination node (None for termination)
             is_termination: Whether this is a termination route
 
         Returns:
@@ -193,16 +303,29 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
 
         """
         # Check reachability
+        # For flows used as nodes, use their name property
+        from_node_name = getattr(from_node, "name", type(from_node).__name__)
         if from_node_name not in self.reachable_nodes:
             action = "end at" if is_termination else "route from"
             msg = f"Cannot {action} node '{from_node_name}' - not reachable from start"
             raise ValueError(msg)
 
         # Check for duplicate routes
-        route_key: RouteKey = (outcome, from_node_name)
-        if route_key in self.routes:
-            msg = f"Route already defined for message type '{outcome.__name__}' from node '{from_node_name}'"
-            raise ValueError(msg)
+        route_key: RouteKey = (cast("NodeInterface[Message, Message]", from_node), outcome)
+        # Linear search through existing routes
+        for existing_key, _ in self.routes:
+            if existing_key == route_key:
+                from_node_name = type(from_node).__name__
+                msg = f"Route already defined for message type '{outcome.__name__}' from node '{from_node_name}'"
+                raise ValueError(msg)
+
+        # Type validation for non-termination routes
+        if not is_termination and to_node:
+            _validate_route_types(
+                cast("NodeInterface[Message, Message]", from_node),
+                outcome,
+                cast("NodeInterface[Message, Message]", to_node),
+            )
 
         return route_key
 
@@ -259,11 +382,14 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
             Builder for continued route definition
 
         """
-        route_key = self._validate_and_create_route(from_node.name, outcome)
+        route_key = self._validate_and_create_route(from_node, outcome, to_node)
 
         # Add route and mark to_node as reachable
-        new_routes = {**self.routes, route_key: cast("NodeInterface[Message, Message]", to_node)}
-        new_reachable = self.reachable_nodes | {to_node.name}
+        new_route_entry: RouteEntry = (route_key, cast("NodeInterface[Message, Message]", to_node))
+        new_routes = (*self.routes, new_route_entry)
+        # For flows used as nodes, use their name property
+        to_node_name = getattr(to_node, "name", type(to_node).__name__)
+        new_reachable = self.reachable_nodes | {to_node_name}
 
         return _FlowBuilder[TStartIn, TStartOut](
             name=self.name,
@@ -289,10 +415,11 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
             A Node that represents the complete flow
 
         """
-        route_key = self._validate_and_create_route(from_node.name, outcome, is_termination=True)
+        route_key = self._validate_and_create_route(from_node, outcome, is_termination=True)
 
         # Add termination route
-        new_routes = {**self.routes, route_key: None}
+        new_route_entry: RouteEntry = (route_key, None)
+        new_routes = (*self.routes, new_route_entry)
 
         return _Flow[TStartIn, TEnd](
             name=self.name,
@@ -322,7 +449,7 @@ def create_flow[TStartIn: Message, TStartOut: Message](
     return _FlowBuilder[TStartIn, TStartOut](
         name=name,
         starting_node=starting_node,
-        routes={},
+        routes=(),  # Empty tuple of routes
         reachable_nodes=frozenset({starting_node.name}),
         callbacks=None,  # REQ-016: Zero overhead when no callbacks attached
     )
