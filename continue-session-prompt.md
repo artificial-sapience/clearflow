@@ -1,41 +1,44 @@
-# Continue Session: Complete Message Routing Type Validation
+# Continue Session: Implement API Symmetry Enhancement
 
-Please help me complete the message routing type validation implementation for ClearFlow.
+Please help me implement the API symmetry enhancement for ClearFlow's `complete_flow` method.
 
 ## Context
 
-See `session-context.md` for full session history and architectural decisions made.
-See `plan.md` for the current task list and progress.
+See `session-context.md` for:
+- Previous accomplishments (message routing validation with 100% coverage)
+- Current focus (API symmetry and union terminal types)
+- Technical architecture details
+- Quality standards to maintain
 
-## Current Status
+## Task
 
-We've successfully implemented runtime type validation for message routing with significant architectural improvements:
+See `plan.md` for the detailed 8-task implementation plan.
 
-- Changed RouteKey to use node instances instead of names
-- Replaced dict-based routing with immutable tuple storage
-- Added type validation functions that handle Python 3.13+ union syntax
+## Starting Point
 
-## Immediate Task
+We need to implement Task 1 from the plan: Update the FlowBuilder abstract interface.
 
-**Add test coverage for validation code** - We need to reach 100% coverage by testing the error paths in the validation functions.
+Specifically:
+1. Update `complete_flow` signature in `clearflow/flow.py`
+2. Rename `from_node` → `ending_node` for symmetry
+3. Keep backward compatibility
+4. Run `./quality-check.sh clearflow/flow.py` to ensure it passes 100%
 
-The uncovered lines are in `clearflow/_internal/flow_impl.py`:
+## Important Requirements
 
-- Lines 91-94: Invalid output type error
-- Lines 106-108: Generic type handling
-- Lines 111-114: Invalid input type error
-
-## Steps to Complete
-
-1. Add test cases for invalid routing scenarios
-2. Run `./quality-check.sh` to verify 100% coverage
-3. Fix any remaining linting issues
-4. Verify all tests pass
+- Maintain 100% test coverage at all times
+- Each task must pass `./quality-check.sh` before moving to the next
+- No linter suppressions without explicit approval
+- All code must achieve Grade A complexity
+- Use frozen dataclasses and tuples (not lists) for immutability
 
 ## Success Criteria
 
-- 100% test coverage
-- All quality checks pass
-- Ready to commit the changes
+After completing all tasks in `plan.md`:
+- Union terminal types are fully supported
+- API is symmetric between `create_flow` and `complete_flow`
+- All existing tests still pass (backward compatible)
+- New tests demonstrate union terminal functionality
+- Full quality check passes with 100% coverage
 
-Let's start by adding the missing test cases to achieve full coverage.
+Let's start with Task 1 from the plan.
