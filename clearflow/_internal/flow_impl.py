@@ -10,6 +10,8 @@ import types
 from dataclasses import dataclass
 from typing import TypeVar, cast, final, get_args, get_type_hints, override
 
+from pydantic import Field
+
 from clearflow._internal.callback_handler import CallbackHandler
 from clearflow.flow import FlowBuilder
 from clearflow.message import Message
@@ -157,20 +159,38 @@ def _validate_terminal_type_not_routed(
 
 @final
 class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
-    """Module private flow that routes messages based on their types.
+    """Executable AI workflow that routes messages through nodes based on their types.
 
-    Executes flows by routing messages through nodes based on their runtime types.
+    Orchestrates message flow through a graph of AI operations, routing based on
+    message types. Each node performs a specific AI task (LLM calls, vector search,
+    validation) and produces typed outputs that determine the next step.
 
-    The flow uses type erasure internally at routing boundaries to handle complex
-    type patterns like union types, while maintaining type safety at the flow's
-    external boundaries (input/output).
+    Why _Flow is internal:
+    - Complex type erasure patterns needed for union type routing
+    - Internal optimization strategies for message dispatch
+    - Separation of builder API from execution mechanics
+    - Maintains simpler public API surface
+
+    The flow provides:
+    - Type-safe message routing at runtime
+    - Automatic causality chain preservation
+    - Observer hooks for monitoring AI decisions
+    - Single termination enforcement for clear workflow completion
 
     """
 
-    starting_node: NodeInterface[Message, Message]
-    routes: tuple[RouteEntry, ...]
-    terminal_type: type[Message]  # The message type that completes the flow
-    callbacks: CallbackHandler | None = None  # REQ-009: Optional callbacks parameter
+    starting_node: NodeInterface[Message, Message] = Field(
+        description="First node to process incoming messages, typically parsing or validation"
+    )
+    routes: tuple[RouteEntry, ...] = Field(
+        description="Routing table mapping (source_node, message_type) pairs to destination nodes"
+    )
+    terminal_type: type[Message] = Field(
+        description="Message type that immediately completes the flow when produced by any node"
+    )
+    callbacks: CallbackHandler | None = Field(
+        default=None, description="Optional handler for observer callbacks to monitor flow execution events"
+    )
 
     async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
         """Execute callback safely without affecting flow.

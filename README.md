@@ -24,6 +24,8 @@ Compose type-safe flows for emergent AI. 100% test coverage, minimal dependencie
 pip install clearflow
 ```
 
+**Note**: ClearFlow is in alpha. Pin your version in production (`clearflow==0.x.y`) as breaking changes may occur in minor releases.
+
 ## AI Assistant Integration
 
 ClearFlow provides comprehensive documentation in [llms.txt](https://llmstxt.org/) format for optimal AI assistant support.

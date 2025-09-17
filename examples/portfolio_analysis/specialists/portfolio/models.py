@@ -27,5 +27,7 @@ class PortfolioRecommendations:
     execution_timeline: Literal["immediate", "gradual", "conditional"] = Field(
         description="Recommended execution approach"
     )
-    expected_outcomes: Mapping[str, str] = Field(description="Expected returns, risks, and other outcomes")
+    expected_outcomes: Mapping[str, str] = Field(
+        description="Projected outcomes by metric, e.g., {'expected_return': '12.5%', 'sharpe_ratio': '1.8', 'max_drawdown': '8%'}"
+    )
     manager_summary: str = Field(max_length=500, description="Portfolio manager summary")
