@@ -3,7 +3,6 @@
 # Using 0.x.y versioning during alpha phase
 
 mode: ContinuousDeployment
-next-version: 0.1.0  # Reset to 0.x.y after yanking 1.x releases (continuing from 0.0.6)
 
 branches:
   main:
