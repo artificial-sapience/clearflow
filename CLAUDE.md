@@ -526,6 +526,72 @@ examples/
 - **Acknowledge AI nature** - "emergent AI" not "unpredictable AI" (less adversarial)
 - **Be specific** - "Type-safe", "Minimal dependencies" are verifiable features
 
+## Session Learnings: 2025-01-17
+
+### Quality Check Standards
+
+**Critical Rule**: ALL quality check warnings are errors - zero tolerance
+**Discovered**: PLR6301 warnings about methods that could be static must be fixed
+**Solution**: Make methods static when they don't use instance state
+
+### LLM Integration Patterns
+
+**Pattern**: LLM-powered linters using ClearFlow's message-driven architecture
+**Implementation**: Created type_safety_analyzer_claude demonstrating:
+- AST parsing in CodeParserNode (no LLM needed)
+- DSPy signatures for structured LLM analysis
+- Observer pattern for progress visibility during LLM calls
+- Single terminal type (not unions) per ClearFlow requirement
+
+**Key Learning**: ClearFlow flows ARE nodes - use `.process()` not `.run()`
+
+### Observer Integration
+
+**Pattern**: Add observers before calling `.end_flow()`:
+```python
+flow_builder = create_flow("Name", start_node)
+    .route(node_a, EventA, node_b)
+
+if verbose:
+    flow_builder = flow_builder.observe(observer)
+
+return flow_builder.end_flow(TerminalEvent)
+```
+
+### Architecture Compliance
+
+**Rule**: Private methods accessed via class name violate ARCH006
+**Solution**: Make methods public (remove underscore) when accessed as static
+
+### Immutability Requirements
+
+**Enforced by linters**:
+- No `dict` or `list` in type annotations (use `Mapping`, `tuple`)
+- Frozen dataclasses required
+- No mutable default arguments
+
+**Exception**: Building lists with `.append()` allowed within functions
+
+### DSPy Configuration
+
+**Required for OpenAI integration**:
+```python
+# Load .env from multiple locations
+env_locations = [Path(".env"), Path("../.env"), Path("../../.env")]
+for env_path in env_locations:
+    if env_path.exists():
+        load_dotenv(env_path)
+        break
+
+# Configure DSPy with proper settings
+lm = dspy.LM(
+    model=f"openai/{model}",
+    api_key=api_key,
+    temperature=1.0,  # Required for gpt-5-nano
+    max_tokens=16000  # Required for reasoning models
+)
+```
+
 ## Session Learnings: 2025-01-15
 
 ### Observer Pattern Refactoring
