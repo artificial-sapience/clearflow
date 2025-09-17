@@ -5,6 +5,23 @@ from typing import Literal
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
+# Type aliases for consistent validation
+NodeName = Literal[
+    "QuantAnalystNode",
+    "RiskAnalystNode",
+    "PortfolioManagerNode",
+    "ComplianceOfficerNode",
+    "DecisionMakerNode",
+]
+
+ErrorType = Literal[
+    "ValidationError",
+    "APIError",
+    "TimeoutError",
+    "DataError",
+    "LimitExceeded",
+]
+
 
 @dataclass(frozen=True)
 class AssetData:
@@ -32,11 +49,7 @@ class MarketData:
 class AnalysisError:
     """Error state when analysis fails."""
 
-    error_type: str = Field(
-        description="Type of error encountered (e.g., 'ValidationError', 'APIError', 'TimeoutError')"
-    )
+    error_type: ErrorType = Field(description="Type of error encountered (validated against ErrorType literal)")
     error_message: str = Field(description="Detailed error message for debugging")
-    failed_stage: str = Field(
-        description="Node name where error occurred (e.g., 'QuantAnalystNode', 'RiskAnalystNode')"
-    )
+    failed_stage: NodeName = Field(description="Node name where error occurred (validated against NodeName literal)")
     market_data: MarketData | None = Field(default=None, description="Original input for retry")

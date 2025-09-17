@@ -62,8 +62,8 @@ class QuantAnalystNode(Node[StartAnalysisCommand, MarketAnalyzedEvent | Analysis
 
         except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             return AnalysisFailedEvent(
-                failed_stage="quant_analyst",
-                error_type=type(exc).__name__,
+                failed_stage="QuantAnalystNode",
+                error_type="APIError" if "API" in str(exc) else "DataError",
                 error_message=str(exc),
                 partial_results=None,
                 can_retry=isinstance(exc, openai.OpenAIError),
@@ -112,8 +112,8 @@ class RiskAnalystNode(Node[MarketAnalyzedEvent, RiskAssessedEvent | AnalysisFail
 
         except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             return AnalysisFailedEvent(
-                failed_stage="risk_analyst",
-                error_type=type(exc).__name__,
+                failed_stage="RiskAnalystNode",
+                error_type="LimitExceeded" if "limit" in str(exc).lower() else "ValidationError",
                 error_message=str(exc),
                 partial_results={"opportunities_count": len(message.insights.opportunities)},
                 can_retry=isinstance(exc, openai.OpenAIError),
@@ -163,8 +163,8 @@ class PortfolioManagerNode(Node[RiskAssessedEvent, RecommendationsGeneratedEvent
 
         except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             return AnalysisFailedEvent(
-                failed_stage="portfolio_manager",
-                error_type=type(exc).__name__,
+                failed_stage="PortfolioManagerNode",
+                error_type="ValidationError" if "validation" in str(exc).lower() else "DataError",
                 error_message=str(exc),
                 partial_results={"risk_level": message.assessment.risk_level},
                 can_retry=isinstance(exc, openai.OpenAIError),
@@ -212,8 +212,8 @@ class ComplianceOfficerNode(Node[RecommendationsGeneratedEvent, ComplianceReview
 
         except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             return AnalysisFailedEvent(
-                failed_stage="compliance_officer",
-                error_type=type(exc).__name__,
+                failed_stage="ComplianceOfficerNode",
+                error_type="ValidationError" if "compliance" in str(exc).lower() else "DataError",
                 error_message=str(exc),
                 partial_results={"recommendations_available": bool(message.recommendations)},
                 can_retry=isinstance(exc, openai.OpenAIError),

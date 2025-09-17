@@ -10,7 +10,7 @@ from typing import Literal
 from pydantic import Field
 
 from clearflow import Command, Event, StrictBaseModel
-from examples.portfolio_analysis.shared.models import MarketData
+from examples.portfolio_analysis.shared.models import ErrorType, MarketData, NodeName
 from examples.portfolio_analysis.specialists.compliance.models import ComplianceReview
 from examples.portfolio_analysis.specialists.decision.models import TradingDecision
 from examples.portfolio_analysis.specialists.portfolio.models import PortfolioRecommendations
@@ -234,12 +234,10 @@ class AnalysisFailedEvent(Event):
     - Maintains audit trail for compliance
     """
 
-    failed_stage: str = Field(
-        description="Specialist node name: 'QuantAnalystNode', 'RiskAnalystNode', 'PortfolioManagerNode', 'ComplianceOfficerNode', or 'DecisionMakerNode'"
+    failed_stage: NodeName = Field(
+        description="Specialist node name where failure occurred (validated against NodeName literal)"
     )
-    error_type: str = Field(
-        description="Error classification: 'ValidationError', 'APIError', 'TimeoutError', 'DataError', or 'LimitExceeded'"
-    )
+    error_type: ErrorType = Field(description="Error classification (validated against ErrorType literal)")
     error_message: str = Field(description="Detailed error description for logging and potential recovery")
     partial_results: Mapping[str, float | str | int] | None = Field(
         description="Partial metrics before failure, e.g., {'var': 1500000.0, 'max_drawdown': 0.15, 'positions_analyzed': 5}"

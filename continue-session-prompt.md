@@ -1,62 +1,65 @@
-# Continue Session: Fix Critical Type Safety Issue
+# Continue Session: Magic String Detection & Type Safety
 
 ## Context
+See `session-context.md` for the full details of our type safety improvements and documentation enhancements.
 
-See `session-context.md` for the full discovery of the PEP 695 variance issue that undermines our terminal type pattern.
+## Summary of Completed Work
+- ✅ Added alpha version warning to README.md with pinning recommendation
+- ✅ Enhanced all Pydantic models with LLM-friendly field descriptions
+- ✅ Implemented Literal types for compile-time validation in portfolio analysis
+- ✅ Researched existing linter solutions for magic string detection
 
-## The Problem
+## Your Next Mission
+Help implement automated detection of magic strings and hardcoded literals that should use Literal types or constants. See `plan.md` for the current task list.
 
-PEP 695's automatic variance inference makes our `Node[TIn, TOut]` type parameters:
-- `TIn`: contravariant (input only)
-- `TOut`: **covariant** (output only)
+## Primary Implementation Options
 
-This allows unsafe assignments like:
-```python
-concrete: Node[StartChat, ChatCompleted] = ...
-wider: Node[StartChat, ChatCompleted | UserMessageReceived] = concrete  # ALLOWED (bad!)
-```
+### Option 1: Configure Existing Linters
+Enable and configure ruff's PLR2004 (magic-value-comparison) rule:
+- Add to pyproject.toml ruff configuration
+- Configure allowed magic values
+- Test on existing codebase
 
-## Your Mission
+### Option 2: Create Custom ClearFlow Linter
+Build a specialized linter for ClearFlow-specific patterns:
+- Detect fields that should use NodeName/ErrorType literals
+- Check for string assignments to known enumerated fields
+- Integrate with quality-check.sh pipeline
 
-Help me fix this critical type safety issue. See `plan.md` for the full task list.
+### Option 3: Hybrid Approach
+Combine both for maximum coverage:
+- Use ruff PLR2004 for general magic string detection
+- Add custom linter for domain-specific rules
+- Document when to use each approach
 
-## Primary Options to Explore
+## Specific Tasks
 
-### Option 1: Switch to Traditional TypeVars
-```python
-from typing import TypeVar, Generic
+1. **Implement Magic String Detection**
+   - Choose implementation approach
+   - Configure or create linter
+   - Add to quality-check.sh pipeline
+   - Test on portfolio analysis example
 
-TMessageIn = TypeVar('TMessageIn', bound=Message)  # Invariant
-TMessageOut = TypeVar('TMessageOut', bound=Message)  # Invariant
+2. **Expand Literal Type Usage**
+   - Review other examples for string literal usage
+   - Identify additional candidates for Literal types
+   - Create type aliases where appropriate
 
-class NodeInterface(Generic[TMessageIn, TMessageOut], ABC):
-    ...
-```
-
-### Option 2: Force Invariance Through Usage
-Add dummy usage to make type parameters appear in both positions:
-```python
-class NodeInterface[TMessageIn, TMessageOut]:
-    _phantom_in: TMessageOut | None = None  # Force TMessageOut in input position
-    _phantom_out: type[TMessageIn] | None = None  # Force TMessageIn in output position
-```
-
-### Option 3: Runtime Validation
-Keep current code but add runtime checks and better documentation.
+3. **Documentation Updates**
+   - Update contributing guidelines with type safety rules
+   - Document how to add new Literal types
+   - Create migration guide for existing code
 
 ## Success Criteria
-
-1. Type checkers catch incorrect union return types
-2. `create_chat_flow()` correctly typed as `-> Node[StartChat, ChatCompleted]`
-3. All examples pass type checking with correct annotations
-4. Solution maintains clean API and good developer experience
+- [ ] Magic strings are automatically detected in CI/CD
+- [ ] All examples use appropriate Literal types
+- [ ] Type safety patterns are well-documented
+- [ ] Quality checks include type safety validation
 
 ## Start By
+1. Review the existing linter architecture in `linters/` directory
+2. Test ruff's PLR2004 rule on the codebase
+3. Identify ClearFlow-specific patterns that need custom detection
+4. Implement chosen solution with tests
 
-1. Test which option works best for enforcing invariance
-2. Implement the fix across the codebase
-3. Update all example type annotations
-4. Ensure 100% test coverage still passes
-5. Document the solution and any limitations
-
-Please think carefully about the trade-offs of each approach before proceeding.
+Please consider the trade-offs between simplicity (using existing tools) and specificity (custom linter) before proceeding.

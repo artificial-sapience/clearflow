@@ -1,51 +1,49 @@
-# Plan: Critical Type Safety Fix for Terminal Type Pattern
+# ClearFlow Development Plan
 
-## CRITICAL ISSUE: PEP 695 Variance Inference Breaks Type Safety
+## Recently Completed (This Session)
+✅ Added alpha version warning and pinning recommendation to README.md
+✅ Added comprehensive field descriptions to all Pydantic models for LLM understanding
+✅ Fixed portfolio analysis example with proper Literal types for type safety
+✅ Researched existing Python linters for magic string detection
 
-The terminal type pattern's type safety is compromised because PEP 695 automatically infers:
-- `TMessageIn` as **contravariant** (only in input position)
-- `TMessageOut` as **covariant** (only in output position)
+## In Progress Tasks
 
-This allows `Node[StartChat, ChatCompleted]` to be assignable to `Node[StartChat, UserMessageReceived | ChatCompleted]`, which breaks our single terminal type guarantee.
+### Task 1: Implement Magic String Detection
+**Status**: Research complete, implementation pending
 
-## Priority Tasks
+Findings:
+- Pylint has `magic-value-comparison` rule (R2004)
+- Ruff supports PLR2004 (same rule, faster)
+- Can be generalized beyond just our specific Literal types
 
-### Task 1: Fix Variance Issue (CRITICAL)
-**Status**: Investigation complete, solution needed
+Options:
+1. **Enable existing rules** in ruff/pylint configuration
+2. **Create custom linter** for ClearFlow-specific patterns
+3. **Hybrid approach**: Use ruff PLR2004 + custom linter for domain rules
 
-Options to explore:
-1. **Switch to traditional TypeVars** with explicit invariance
-2. **Add dummy usage** to force invariance inference
-3. **Restructure Node interface** to prevent covariance
-4. **Document the limitation** and fix incorrect type annotations
+### Task 2: Version and Release Strategy
+**Status**: Planning needed
 
-### Task 2: Fix Incorrect Type Annotations
-**Status**: Pending
+Since we're in alpha (0.x.y):
+- Document breaking changes are expected
+- Consider semantic versioning within alpha
+- Update pyproject.toml classifiers if needed
 
-Files with incorrect union return types:
-- `examples/chat/chat_flow.py`: Should return `Node[StartChat, ChatCompleted]` not union
-- Review all other examples for similar issues
+## Future Tasks
 
-### Task 3: Add Type Safety Tests
-**Status**: Not started
+### Documentation Enhancement
+- Update llms.txt with new field descriptions
+- Add migration guide for Literal type usage
+- Document linter configuration for type safety
 
-Create tests that would catch variance issues:
-- Test that flow return types match their terminal types
-- Test that union types are not allowed where single types are expected
-- Consider adding a custom linter rule
-
-### Task 4: Version and Release
-**Status**: Not started
-
-After fixing type safety:
-1. Decide version bump (2.0.1 for bugfix or 2.1.0 for API change)
-2. Update changelog with variance fix
-3. Document breaking changes if API changes
+### Type Safety Improvements
+- Review all examples for string literal usage
+- Consider adding more Literal types for other enums
+- Add type safety tests to prevent regressions
 
 ## Success Criteria
-
-1.  Terminal type pattern fully documented
-2.  All "zero dependencies" claims updated to "minimal dependencies"
-3. �  Type system enforces single terminal types (BLOCKED by variance issue)
-4. � All examples use correct type annotations
-5. � Type safety tests prevent future regressions
+✅ All Pydantic models have LLM-friendly descriptions
+✅ Portfolio analysis uses type-safe Literal types
+- [ ] Magic string detection automated via linter
+- [ ] All examples pass type safety checks
+- [ ] Documentation updated for type safety patterns
