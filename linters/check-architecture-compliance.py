@@ -16,7 +16,7 @@ import ast
 import re
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 
 class Violation(NamedTuple):
@@ -40,7 +40,7 @@ def _check_line_for_suppression(line: str, pattern: str) -> bool:
     return bool(re.search(pattern, line, re.IGNORECASE))
 
 
-def _get_lines_to_check(lines: list[str], line_num: int) -> list[str]:
+def _get_lines_to_check(lines: tuple[str, ...], line_num: int) -> tuple[str, ...]:
     """Get the current line and next 2 lines for suppression checking.
 
     Returns:
@@ -48,7 +48,7 @@ def _get_lines_to_check(lines: list[str], line_num: int) -> list[str]:
 
     """
     if line_num <= 0 or line_num > len(lines):
-        return []
+        return ()
     # Get current line and up to 2 following lines
     start_idx = line_num - 1
     end_idx = min(start_idx + 3, len(lines))
@@ -70,7 +70,7 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
         # clearflow: ignore[ARCH001]  - Specific code suppression
 
     """
-    lines = content.splitlines()
+    lines = tuple(content.splitlines())
     lines_to_check = _get_lines_to_check(lines, line_num)
     if not lines_to_check:
         return False
@@ -87,21 +87,21 @@ def _check_private_imports(node: ast.ImportFrom, file_path: Path, *, is_internal
         Tuple of violations found.
 
     """
-    violations: list[Violation] = []
+    violations = ()
     if not node.module:
         return tuple(violations)
 
     # Check for _internal module imports
     violation = _check_internal_imports(node, file_path, is_internal=is_internal)
     if violation:
-        violations.append(violation)
+        violations = (*violations, violation)
 
     # Check for test files importing from non-public API modules
     violation = _check_test_imports(node, file_path)
     if violation:
-        violations.append(violation)
+        violations = (*violations, violation)
 
-    return tuple(violations)
+    return violations
 
 
 def _check_internal_imports(node: ast.ImportFrom, file_path: Path, *, is_internal: bool) -> Violation | None:
@@ -169,12 +169,13 @@ def _check_mock_imports(node: ast.ImportFrom, file_path: Path) -> tuple[Violatio
         Tuple of violations found.
 
     """
-    violations: list[Violation] = []
+    violations = ()
     if node.module == "unittest.mock":
         for alias in node.names:
             name = alias.name
             if name in {"patch", "Mock", "MagicMock"}:
-                violations.append(
+                violations = (
+                    *violations,
                     Violation(
                         file=file_path,
                         line=node.lineno,
@@ -184,7 +185,7 @@ def _check_mock_imports(node: ast.ImportFrom, file_path: Path) -> tuple[Violatio
                         requirement="REQ-ARCH-002",
                     ),
                 )
-    return tuple(violations)
+    return violations
 
 
 def _check_typing_imports(node: ast.ImportFrom, file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -194,14 +195,15 @@ def _check_typing_imports(node: ast.ImportFrom, file_path: Path, content: str) -
         Tuple of violations found.
 
     """
-    violations: list[Violation] = []
+    violations = ()
     if not node.module:
         return tuple(violations)
 
     if node.module == "typing" or node.module.startswith("typing"):
         for alias in node.names:
             if alias.name == "TYPE_CHECKING" and not has_suppression(content, node.lineno, "ARCH008"):
-                violations.append(
+                violations = (
+                    *violations,
                     Violation(
                         file=file_path,
                         line=node.lineno,
@@ -212,7 +214,8 @@ def _check_typing_imports(node: ast.ImportFrom, file_path: Path, content: str) -
                     ),
                 )
             elif alias.name == "Any" and not has_suppression(content, node.lineno, "ARCH010"):
-                violations.append(
+                violations = (
+                    *violations,
                     Violation(
                         file=file_path,
                         line=node.lineno,
@@ -222,7 +225,7 @@ def _check_typing_imports(node: ast.ImportFrom, file_path: Path, content: str) -
                         requirement="REQ-ARCH-010",
                     ),
                 )
-    return tuple(violations)
+    return violations
 
 
 def _check_type_checking_block(node: ast.If, file_path: Path, content: str) -> Violation | None:
@@ -257,7 +260,7 @@ def _check_object_in_params(
         Tuple of violations found.
 
     """
-    violations = [
+    return tuple(
         Violation(
             file=file_path,
             line=arg.annotation.lineno,
@@ -273,8 +276,7 @@ def _check_object_in_params(
             and arg.annotation.id == "object"
             and not has_suppression(content, arg.annotation.lineno, "ARCH009")
         )
-    ]
-    return tuple(violations)
+    )
 
 
 def _check_object_type_usage(node: ast.Name, file_path: Path, content: str) -> Violation | None:
@@ -353,18 +355,16 @@ def _check_import_from_node(
         Tuple of violations found.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     # Check private imports
-    violations.extend(_check_private_imports(node, file_path, is_internal=is_internal))
+    violations = (*violations, *_check_private_imports(node, file_path, is_internal=is_internal))
 
     # Check mock imports
-    violations.extend(_check_mock_imports(node, file_path))
+    violations = (*violations, *_check_mock_imports(node, file_path))
 
     # Check typing imports
-    violations.extend(_check_typing_imports(node, file_path, content))
-
-    return tuple(violations)
+    return (*violations, *_check_typing_imports(node, file_path, content))
 
 
 def _check_name_node(node: ast.Name, file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -374,19 +374,19 @@ def _check_name_node(node: ast.Name, file_path: Path, content: str) -> tuple[Vio
         Tuple of violations found.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     # Check object type usage
     violation = _check_object_type_usage(node, file_path, content)
     if violation:
-        violations.append(violation)
+        violations = (*violations, violation)
 
     # Check Any type usage
     violation = _check_any_type_usage(node, file_path, content)
     if violation:
-        violations.append(violation)
+        violations = (*violations, violation)
 
-    return tuple(violations)
+    return violations
 
 
 def _check_if_node(node: ast.If, file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -446,11 +446,11 @@ def check_file_imports(file_path: Path, content: str) -> tuple[Violation, ...]:
     # Check if this file is inside _internal (internal modules can import from each other)
     is_internal = "_internal" in str(file_path)
 
-    violations: list[Violation] = []
+    violations = ()
     for node in ast.walk(tree):
-        violations.extend(_process_node(node, file_path, content, is_internal=is_internal))
+        violations = (*violations, *_process_node(node, file_path, content, is_internal=is_internal))
 
-    return tuple(violations)
+    return violations
 
 
 def check_patch_decorators(file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -460,8 +460,8 @@ def check_patch_decorators(file_path: Path, content: str) -> tuple[Violation, ..
         List of violations for improper @patch usage.
 
     """
-    violations: list[Violation] = []
-    lines = content.splitlines()
+    violations = ()
+    lines = tuple(content.splitlines())
 
     # Regex for @patch decorators
     patch_pattern = re.compile(r'@patch\(["\']([^"\']+)["\']\)')
@@ -471,7 +471,8 @@ def check_patch_decorators(file_path: Path, content: str) -> tuple[Violation, ..
         if match:
             target = match.group(1)
             if "clearflow" in target:
-                violations.append(
+                violations = (
+                    *violations,
                     Violation(
                         file=file_path,
                         line=line_num,
@@ -482,7 +483,7 @@ def check_patch_decorators(file_path: Path, content: str) -> tuple[Violation, ..
                     ),
                 )
 
-    return tuple(violations)
+    return violations
 
 
 def check_private_access(file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -492,8 +493,8 @@ def check_private_access(file_path: Path, content: str) -> tuple[Violation, ...]
         List of violations for accessing private attributes.
 
     """
-    violations: list[Violation] = []
-    lines = content.splitlines()
+    violations = ()
+    lines = tuple(content.splitlines())
 
     # Check if this file is inside _internal (internal modules can access each other)
     is_internal = "_internal" in str(file_path)
@@ -537,7 +538,8 @@ def check_private_access(file_path: Path, content: str) -> tuple[Violation, ...]
                     # _FlowBuilder's methods is valid Python convention
                     continue
 
-                violations.append(
+                violations = (
+                    *violations,
                     Violation(
                         file=file_path,
                         line=line_num,
@@ -548,7 +550,7 @@ def check_private_access(file_path: Path, content: str) -> tuple[Violation, ...]
                     ),
                 )
 
-    return tuple(violations)
+    return violations
 
 
 def check_file(file_path: Path) -> tuple[Violation, ...]:
@@ -558,7 +560,7 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         List of all architecture violations found in the file.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     try:
         content = file_path.read_text(encoding="utf-8")
@@ -571,11 +573,9 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         return tuple(violations)
 
     # Run all checks
-    violations.extend(check_file_imports(file_path, content))
-    violations.extend(check_patch_decorators(file_path, content))
-    violations.extend(check_private_access(file_path, content))
-
-    return tuple(violations)
+    violations = (*violations, *check_file_imports(file_path, content))
+    violations = (*violations, *check_patch_decorators(file_path, content))
+    return (*violations, *check_private_access(file_path, content))
 
 
 def scan_directory(directory: Path) -> tuple[Violation, ...]:
@@ -585,7 +585,7 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
         List of all violations found in Python files within the directory.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     if not directory.exists():
         return tuple(violations)
@@ -597,9 +597,9 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
         # Skip files in excluded directories
         if any(part in excluded_dirs for part in file_path.parts):
             continue
-        violations.extend(check_file(file_path))
+        violations = (*violations, *check_file(file_path))
 
-    return tuple(violations)
+    return violations
 
 
 def print_report(violations: tuple[Violation, ...]) -> None:
@@ -612,11 +612,11 @@ def print_report(violations: tuple[Violation, ...]) -> None:
     print("=" * 70)
 
     # Group by requirement
-    by_requirement: dict[str, list[Violation]] = {}
+    by_requirement = cast("dict[str, tuple[Violation, ...]]", {})
     for v in violations:
         if v.requirement not in by_requirement:
-            by_requirement[v.requirement] = []
-        by_requirement[v.requirement].append(v)
+            by_requirement[v.requirement] = ()
+        by_requirement[v.requirement] = (*by_requirement[v.requirement], v)
 
     for req, req_violations in sorted(by_requirement.items()):
         print(f"\n{req}: {len(req_violations)} violations")
@@ -649,23 +649,23 @@ def main() -> None:
     # Get items from command line arguments, or use defaults
     items = sys.argv[1:] if len(sys.argv) > 1 else ["clearflow", "tests", "examples"]
 
-    all_violations: list[Violation] = []
+    all_violations = ()
     for item in items:
         path = Path(item)
         if path.is_file() and path.suffix == ".py":
             # Single Python file
             violations = check_file(path)
-            all_violations.extend(violations)
+            all_violations = (*all_violations, *violations)
         elif path.is_dir():
             # Directory - scan recursively
             violations = scan_directory(path)
-            all_violations.extend(violations)
+            all_violations = (*all_violations, *violations)
         else:
             print(f"Warning: {item} is not a Python file or directory, skipping")
             continue
 
     # Print report
-    print_report(tuple(all_violations))
+    print_report(all_violations)
 
     # Exit with appropriate code
     if all_violations:

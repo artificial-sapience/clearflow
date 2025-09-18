@@ -6,7 +6,7 @@ import sys
 import time
 import weakref
 from io import StringIO
-from typing import override
+from typing import cast, override
 from uuid import uuid4
 
 import pytest
@@ -142,8 +142,8 @@ class TrackingHandler(Observer):
 
     def __init__(self) -> None:
         """Initialize tracking lists."""
-        self.calls: list[str] = []
-        self.errors: list[Exception] = []
+        self.calls = cast("list[str]", [])
+        self.errors = cast("list[Exception]", [])
 
     @override
     async def on_flow_start(self, flow_name: str, message: Message) -> None:
@@ -538,7 +538,7 @@ async def test_callback_async_execution() -> None:
 
         def __init__(self) -> None:
             """Initialize handler."""
-            self.events: list[str] = []
+            self.events = cast("list[str]", [])
 
         @override
         async def on_flow_start(self, flow_name: str, message: Message) -> None:
@@ -576,7 +576,7 @@ async def test_callback_no_retention() -> None:
 
         def __init__(self) -> None:
             """Initialize handler."""
-            self.message_refs: list[weakref.ref[Message]] = []
+            self.message_refs = cast("list[weakref.ref[Message]]", [])
 
         @override
         async def on_flow_start(self, flow_name: str, message: Message) -> None:

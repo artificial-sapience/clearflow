@@ -20,7 +20,7 @@ Why these matter:
 import ast
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 
 class Violation(NamedTuple):
@@ -57,7 +57,7 @@ def check_asyncio_run(file_path: Path, content: str) -> tuple[Violation, ...]:
         List of violations for asyncio.run() usage.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     if not is_test_file(file_path):
         return tuple(violations)
@@ -67,26 +67,27 @@ def check_asyncio_run(file_path: Path, content: str) -> tuple[Violation, ...]:
     except SyntaxError:
         return tuple(violations)
 
-    violations.extend(
-        Violation(
-            file=file_path,
-            line=node.lineno,
-            column=node.col_offset,
-            code="TEST001",
-            message="Using asyncio.run() in tests causes resource leaks",
-            suggestion="Use @pytest.mark.asyncio and await instead",
-        )
-        for node in ast.walk(tree)
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and isinstance(node.func.value, ast.Name)
-            and node.func.value.id == "asyncio"
-            and node.func.attr == "run"
-        )
+    return (
+        *violations,
+        *tuple(
+            Violation(
+                file=file_path,
+                line=node.lineno,
+                column=node.col_offset,
+                code="TEST001",
+                message="Using asyncio.run() in tests causes resource leaks",
+                suggestion="Use @pytest.mark.asyncio and await instead",
+            )
+            for node in ast.walk(tree)
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "asyncio"
+                and node.func.attr == "run"
+            )
+        ),
     )
-
-    return tuple(violations)
 
 
 def _check_new_event_loop(node: ast.Call, tree: ast.Module, file_path: Path) -> Violation | None:
@@ -132,11 +133,11 @@ def _has_cleanup_in_try_finally(node: ast.Call, tree: ast.Module) -> bool:
             for stmt in ast.walk(other_node):
                 if stmt == node:
                     # Check if finally block has close()
-                    return _has_close_in_finally(other_node.finalbody)
+                    return _has_close_in_finally(tuple(other_node.finalbody))
     return False
 
 
-def _has_close_in_finally(finalbody: list[ast.stmt]) -> bool:
+def _has_close_in_finally(finalbody: tuple[ast.stmt, ...]) -> bool:
     """Check if finally block contains a close() call.
 
     Returns:
@@ -185,29 +186,29 @@ def check_event_loop_creation(file_path: Path, content: str) -> tuple[Violation,
         List of violations for event loop creation.
 
     """
-    violations: list[Violation] = []
+    violations: tuple[Violation, ...] = ()
 
     if not is_test_file(file_path):
-        return tuple(violations)
+        return violations
 
     try:
         tree = ast.parse(content, filename=str(file_path))
     except SyntaxError:
-        return tuple(violations)
+        return violations
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             # Check for new_event_loop() calls
             violation = _check_new_event_loop(node, tree, file_path)
             if violation:
-                violations.append(violation)
+                violations = (*violations, violation)
 
             # Check for get_event_loop() calls
             violation = _check_get_event_loop(node, file_path)
             if violation:
-                violations.append(violation)
+                violations = (*violations, violation)
 
-    return tuple(violations)
+    return violations
 
 
 # TEST004 check removed - we use asyncio_mode="auto" in pyproject.toml
@@ -255,7 +256,7 @@ def check_resource_management(file_path: Path, content: str) -> tuple[Violation,
         List of violations for resource management issues.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     if not is_test_file(file_path):
         return tuple(violations)
@@ -270,9 +271,9 @@ def check_resource_management(file_path: Path, content: str) -> tuple[Violation,
         if isinstance(node, ast.Call):
             violation = _check_open_without_context(node, tree, file_path)
             if violation:
-                violations.append(violation)
+                violations = (*violations, violation)
 
-    return tuple(violations)
+    return violations
 
 
 def check_file(file_path: Path) -> tuple[Violation, ...]:
@@ -282,7 +283,7 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         List of all violations found in the file.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     # Only check Python test files
     if file_path.suffix != ".py":
@@ -302,12 +303,12 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         return tuple(violations)
 
     # Run all checks
-    violations.extend(check_asyncio_run(file_path, content))
-    violations.extend(check_event_loop_creation(file_path, content))
-    # TEST004 removed - asyncio_mode="auto" handles this
-    violations.extend(check_resource_management(file_path, content))
-
-    return tuple(violations)
+    return (
+        *check_asyncio_run(file_path, content),
+        *check_event_loop_creation(file_path, content),
+        # TEST004 removed - asyncio_mode="auto" handles this
+        *check_resource_management(file_path, content),
+    )
 
 
 def scan_directory(directory: Path) -> tuple[Violation, ...]:
@@ -317,7 +318,7 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
         List of all violations found in test files within the directory.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     if not directory.exists():
         return tuple(violations)
@@ -330,9 +331,9 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
         if any(part in excluded_dirs for part in file_path.parts):
             continue
         if is_test_file(file_path):
-            violations.extend(check_file(file_path))
+            violations = (*violations, *check_file(file_path))
 
-    return tuple(violations)
+    return violations
 
 
 def print_report(violations: tuple[Violation, ...]) -> None:
@@ -345,11 +346,11 @@ def print_report(violations: tuple[Violation, ...]) -> None:
     print("=" * 70)
 
     # Group by code
-    by_code: dict[str, list[Violation]] = {}
+    by_code = cast("dict[str, tuple[Violation, ...]]", {})
     for v in violations:
         if v.code not in by_code:
-            by_code[v.code] = []
-        by_code[v.code].append(v)
+            by_code[v.code] = ()
+        by_code[v.code] = (*by_code[v.code], v)
 
     code_descriptions = {
         "TEST001": "asyncio.run() in tests (causes resource leaks)",
@@ -397,23 +398,23 @@ def main() -> None:
     # Get items from command line arguments, or use default
     items = sys.argv[1:] if len(sys.argv) > 1 else ["tests"]
 
-    all_violations: list[Violation] = []
+    all_violations = ()
     for item in items:
         path = Path(item)
         if path.is_file() and path.suffix == ".py":
             # Single Python file
             violations = check_file(path)
-            all_violations.extend(violations)
+            all_violations = (*all_violations, *violations)
         elif path.is_dir():
             # Directory - scan recursively
             violations = scan_directory(path)
-            all_violations.extend(violations)
+            all_violations = (*all_violations, *violations)
         else:
             print(f"Warning: {item} is not a Python file or directory, skipping")
             continue
 
     # Print report
-    print_report(tuple(all_violations))
+    print_report(all_violations)
 
     # Exit with appropriate code
     if all_violations:
