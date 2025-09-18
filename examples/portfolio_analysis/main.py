@@ -122,7 +122,8 @@ def print_menu() -> None:
 async def main() -> None:
     """Run the main entry point with menu."""
     print_menu()
-    choice = input("\nEnter choice (1-3, default=1): ").strip()
+    choice = await asyncio.to_thread(input, "\nEnter choice (1-3, default=1): ")
+    choice = choice.strip()
 
     scenarios = {
         "1": "normal",

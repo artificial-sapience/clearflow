@@ -1,5 +1,6 @@
 """Chat nodes - just the two participants: User and Assistant."""
 
+import asyncio
 from typing import override
 
 from openai import AsyncOpenAI
@@ -90,7 +91,7 @@ class UserNode(Node[StartChat | AssistantMessageReceived, UserMessageReceived | 
 
         # Get user input
         try:
-            user_input = input("You: ")
+            user_input = await asyncio.to_thread(input, "You: ")
 
             # Check for quit commands
             if user_input.lower() in {"quit", "exit", "bye"}:
