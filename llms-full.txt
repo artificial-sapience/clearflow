@@ -1,91 +1,2039 @@
 <project title="ClearFlow">> Message-driven workflows with observable flows for emergent AI.<quick start><doc title="Install from PyPI" desc="pip install clearflow"><!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' data:; media-src 'self' data:; object-src 'none'; style-src 'self' 'sha256-o4vzfmmUENEg4chMjjRP9EuW9ucGnGIGVdbl8d0SHQQ='; script-src 'self' 'sha256-KXex2o39zxtnzVWK4H5rW07g2+BlwSPtn+aguzsWkNg=';"
-    />
-    <link
-      href="/_fs-ch-1T1wmsGaOgGaSxcX/assets/inter-var.woff2"
-      rel="preload"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link href="/_fs-ch-1T1wmsGaOgGaSxcX/assets/styles.css" rel="stylesheet" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Client Challenge</title>
-    <style>
-      #loading-error {
-        font-size: 16px;
-        font-family: 'Inter', sans-serif;
-        margin-top: 10px;
-        margin-left: 10px;
-        display: none;
-      }
-    </style>
-  </head>
-  <body>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="defaultLanguage" content="en">
+    <meta name="availableLanguages"
+          content="en, es, fr, ja, pt_BR, uk, el, de, zh_Hans, zh_Hant, ru, he, eo, ko">
+    <title>clearflow · PyPI</title>
+    <meta name="description"
+          content="Compose type-safe flows for emergent AI">
+    <link rel="stylesheet"
+          href="/static/css/warehouse-ltr.9c2acdac.css">
+    <link rel="stylesheet"
+          href="/static/css/fontawesome.080e1050.css">
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css?family=Source+Sans+3:400,400italic,600,600italic,700,700italic%7CSource+Code+Pro:500">
     <noscript>
-      <div class="noscript-container">
-        <div class="noscript-content">
-          <img
-            src="/_fs-ch-1T1wmsGaOgGaSxcX/assets/errorIcon.svg"
-            alt=""
-            role="presentation"
-            class="error-icon"
-          />
-          <span class="noscript-span"
-            >JavaScript is disabled in your browser.</span
-          >
-          <p>Please enable JavaScript to proceed.</p>
+      <link rel="stylesheet"
+            href="/static/css/noscript.0673c9ea.css">
+    </noscript>
+    <link rel="icon"
+          href="/static/images/favicon.35549fe8.ico"
+          type="image/x-icon">
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS: 40 latest updates"
+          href="/rss/updates.xml">
+    <link rel="alternate"
+          type="application/rss+xml"
+          title="RSS: 40 newest packages"
+          href="/rss/packages.xml">
+<link rel="alternate"
+        type="application/rss+xml"
+        title="RSS: latest releases for clearflow"
+        href="/rss/project/clearflow/releases.xml">      <link rel="canonical" href="https://pypi.org/project/clearflow/">
+    <meta property="og:url"
+          content="https://pypi.org/project/clearflow/">
+    <meta property="og:site_name" content="PyPI">
+    <meta property="og:type" content="website">
+    <meta property="og:image"
+          content="https://pypi.org/static/images/twitter.abaf4b19.webp">
+    <meta property="og:title"
+          content="clearflow">
+    <meta property="og:description" content="Compose type-safe flows for emergent AI">
+    <link rel="search"
+          type="application/opensearchdescription+xml"
+          title="PyPI"
+          href="/opensearch.xml">
+    <script async src="/static/js/warehouse.10ad6916.js">
+    </script>
+  <script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+  },
+};
+  </script>
+  <script async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"
+          integrity="sha256-1CldwzdEg2k1wTmf7s5RWVd7NMXI/7nxxjJM2C4DqII="
+          crossorigin="anonymous"></script>
+      <script defer
+              data-domain="pypi.org"
+              src="https://analytics.python.org/js/script.js"></script>
+    <script defer
+            src="https://www.fastly-insights.com/insights.js?k=6a52360a-f306-421e-8ed5-7417d0d4a4e9&dnt=true"></script>
+    <script async
+            src="https://media.ethicalads.io/media/client/v1.4.0/ethicalads.min.js"
+            integrity="sha256-U3hKDidudIaxBDEzwGJApJgPEf2mWk6cfMWghrAa6i0= sha384-UcmsCqcNRSLW/dV3Lo1oCi2/VaurXbib6p4HyUEOeIa/4OpsrnucrugAefzVZJfI sha512-q4t1L4xEjGV2R4hzqCa41P8jrgFUS8xTb8rdNv4FGvw7FpydVj/kkxBJHOiaoxHa8olCcx1Slk9K+3sNbsM4ug=="
+            crossorigin="anonymous"></script>
+  </head>
+  <body data-controller="viewport-toggle"
+        data-allowed-domains="50656ed7e985b28a101b1fac21ad085156fab2b239e559b3c6f9f9efb9e2e655,d2cbffbb6852fbad4a659fb57ceb48a81a82ec1293b8d18489913841289c9060,cd523947dccf7e21ec31e3c91b6be912fe58afbe5abe96fb7022c811d359d83c,eff495e662931cffb81dd305495125bbed45cc66ab4a053484afefdea71dc726,f60d0c9361755fea6c9a996e3c2fe1a481d7f8777a5c7f3d89d0bb510b1970d3"
+        data-request-nonce="xXqmhEKDi0l1NO9Deygf2g5-zkImi_MpBq4mwJWrnek">
+      <!-- Accessibility: this link should always be the first piece of content inside the body-->
+      <a href="#content" class="skip-to-content">Skip to main content</a>
+      <button type="button"
+              class="button button--primary button--switch-to-mobile hidden"
+              data-viewport-toggle-target="switchToMobile"
+              data-action="viewport-toggle#switchToMobile">Switch to mobile version</button>
+      <div id="sticky-notifications" class="stick-to-top js-stick-to-top">
+        <!-- Add browser warning. Will show for ie9 and below -->
+        <!--[if IE]>
+      <div class="notification-bar notification-bar--warning" role="status">
+        <span class="notification-bar__icon">
+          <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+          <span class="sr-only">Warning</span>
+        </span>
+        <span class="notification-bar__message">You are using an unsupported browser, upgrade to a newer version.</span>
+      </div>
+      <![endif]-->
+        <noscript>
+          <div class="notification-bar notification-bar--warning" role="status">
+            <span class="notification-bar__icon">
+              <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+              <span class="sr-only">Warning</span>
+            </span>
+            <span class="notification-bar__message">Some features may not work without JavaScript. Please try enabling it if you encounter problems.</span>
+          </div>
+        </noscript>
+<div data-html-include="/_includes/unauthed/notification-banners/"></div>    </div>
+<div data-html-include="/_includes/unauthed/flash-messages/"></div><div data-html-include="/_includes/authed/session-notifications/"></div><header class="site-header ">
+  <div class="site-container">
+    <div class="split-layout">
+        <div class="split-layout">
+          <div>
+            <a class="site-header__logo" href="/">
+              <img alt="PyPI"
+                   src="/static/images/logo-small.8998e9d1.svg">
+            </a>
+          </div>
+          <form class="search-form search-form--primary"
+                action="/search/"
+                role="search">
+            <label for="search" class="sr-only">Search PyPI</label>
+            <input id="search"
+                   class="search-form__search"
+                   type="text"
+                   name="q"
+                   placeholder="Type '/' to search projects"
+                   value=""
+                   autocomplete="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   data-controller="search-focus"
+                   data-action="keydown@window->search-focus#focusSearchField"
+                   data-search-focus-target="searchField">
+            <button type="submit" class="search-form__button">
+              <i class="fa fa-search" aria-hidden="true"></i>
+              <span class="sr-only">Search</span>
+            </button>
+          </form>
+        </div>
+<div data-html-include="/_includes/authed/current-user-indicator/">      <div id="user-indicator"
+       class="horizontal-menu horizontal-menu--light horizontal-menu--tall">
+    <nav class="horizontal-menu horizontal-menu--light horizontal-menu--tall hide-on-tablet"
+         aria-label="Main navigation">
+      <ul>
+        <li class="horizontal-menu__item">
+          <a href="/help/" class="horizontal-menu__link">Help</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="https://docs.pypi.org/" class="horizontal-menu__link">Docs</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="/sponsors/"
+             class="horizontal-menu__link">Sponsors</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="/account/login/?next=https%3A%2F%2Fpypi.org%2Fproject%2Fclearflow%2F"
+             class="horizontal-menu__link">Log in</a>
+        </li>
+        <li class="horizontal-menu__item">
+          <a href="/account/register/"
+             class="horizontal-menu__link">Register</a>
+        </li>
+      </ul>
+    </nav>
+    <nav class="dropdown dropdown--on-menu hidden show-on-tablet"
+         aria-label="Main navigation">
+      <button type="button"
+              class="horizontal-menu__link dropdown__trigger"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="View menu">
+Menu        <span class="dropdown__trigger-caret">
+          <i class="fa fa-caret-down" aria-hidden="true"></i>
+        </span>
+      </button>
+      <ul class="dropdown__content"
+          aria-hidden="true"
+          aria-label="Main menu">
+        <li>
+          <a class="dropdown__link" href="/help/">Help</a>
+        </li>
+        <li>
+          <a class="dropdown__link" href="https://docs.pypi.org/">Docs</a>
+        </li>
+        <li>
+          <a class="dropdown__link" href="/sponsors/">Sponsors</a>
+        </li>
+        <li>
+          <a class="dropdown__link"
+             href="/account/login/">Log in</a>
+        </li>
+        <li>
+          <a class="dropdown__link"
+             href="/account/register/">Register</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</div>  </div>
+</div>
+</header>
+  <div class="mobile-search">
+    <form class="search-form search-form--fullwidth"
+          action="/search/"
+          role="search">
+      <label for="mobile-search" class="sr-only">Search PyPI</label>
+      <input id="mobile-search"
+             class="search-form__search"
+             type="text"
+             name="q"
+             placeholder="Search projects"
+             value=""
+             autocomplete="off"
+             autocapitalize="off"
+             spellcheck="false">
+      
+      <button type="submit" class="search-form__button">
+        <i class="fa fa-search" aria-hidden="true"></i>
+        <span class="sr-only">Search</span>
+      </button>
+    </form>
+  </div>
+<main id="content">
+    <div class="hidden"
+         data-controller="github-repo-stats"
+         data-github-repo-stats-github-repo-info-outlet=".github-repo-info"
+         data-github-repo-stats-url-value="https://api.github.com/repos/artificial-sapience/clearflow"
+         data-github-repo-stats-issue-url-value="https://api.github.com/search/issues?q=repo:artificial-sapience/clearflow+type:issue+state:open&amp;per_page=1"></div>
+  <div class="banner">
+    <div class="package-header">
+      <div class="package-header__left">
+        <h1 class="package-header__name">clearflow 0.1.0</h1>
+          <div data-controller="clipboard">
+            <p class="package-header__pip-instructions">
+              <span id="pip-command" data-clipboard-target="source">pip install clearflow</span>
+              <button type="button"
+                      class="copy-tooltip copy-tooltip-s"
+                      data-action="clipboard#copy"
+                      data-clipboard-target="tooltip"
+                      data-clipboard-tooltip-value="Copy to clipboard">
+                <i class="fa fa-copy" aria-hidden="true"></i>
+                <span class="sr-only">Copy PIP instructions</span>
+              </button>
+            </p>
+          </div>
+      </div>
+      <div class="package-header__right">
+            <a class="status-badge status-badge--good"
+               href="/project/clearflow/">
+              <span>Latest version</span>
+            </a>
+        <p class="package-header__date">
+Released: <time datetime="2025-09-17T01:32:05+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 17, 2025
+  </time>        </p>
+      </div>
+    </div>
+  </div>
+  <div class="horizontal-section horizontal-section--grey horizontal-section--thin">
+    <div class="site-container">
+<div data-html-include="/_includes/authed/administer-project-include/clearflow"></div>    <div class="split-layout split-layout--middle package-description">
+        <p class="package-description__summary">Compose type-safe flows for emergent AI</p>
+<div data-html-include="/_includes/authed/edit-project-button/clearflow"></div>  </div>
+</div>
+</div>
+<div data-controller="project-tabs">
+  <div class="tabs-container">
+    <div class="vertical-tabs">
+      <div class="vertical-tabs__tabs">
+        <div class="sidebar-section">
+          <h3 class="sidebar-section__title">Navigation</h3>
+          <nav aria-label="Navigation for clearflow">
+            <ul class="vertical-tabs__list" role="tablist">
+              <li role="tab">
+                <a id="description-tab"
+                   href="#description"
+                   data-project-tabs-target="tab"
+                   data-action="project-tabs#onTabClick"
+                   class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--is-active"
+                   aria-selected="true"
+                   aria-label="Project description. Focus will be moved to the description.">
+                  <i class="fa fa-align-left" aria-hidden="true"></i>
+Project description                </a>
+              </li>
+              <li role="tab">
+                <a id="history-tab"
+                   href="#history"
+                   data-project-tabs-target="tab"
+                   data-action="project-tabs#onTabClick"
+                   class="vertical-tabs__tab vertical-tabs__tab--with-icon"
+                   aria-label="Release history. Focus will be moved to the history panel.">
+                  <i class="fa fa-history" aria-hidden="true"></i>
+Release history                </a>
+              </li>
+                <li role="tab">
+                  <a id="files-tab"
+                     href="#files"
+                     data-project-tabs-target="tab"
+                     data-action="project-tabs#onTabClick"
+                     class="vertical-tabs__tab vertical-tabs__tab--with-icon"
+                     aria-label="Download files. Focus will be moved to the project files.">
+                    <i class="fa fa-download" aria-hidden="true"></i>
+Download files                  </a>
+                </li>
+            </ul>
+          </nav>
+        </div>
+<div class="sidebar-section verified">
+  <h3 class="sidebar-section__title">
+Verified details    <i class="fa fa-circle-check check"
+       title="Verified by PyPI on 2025-09-17"></i>
+  </h3>
+  <small><i>These details have been <a href="https://docs.pypi.org/project_metadata/#verified-details">verified by PyPI</a></i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow/tree/main/examples"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Examples</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow"
+               rel="nofollow">  <i class="fas fa-home" aria-hidden="true"></i>Homepage</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow/issues"
+               rel="nofollow">  <i class="fas fa-bug" aria-hidden="true"></i>Issues</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow.git"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Repository</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Source</a>
+          </li>
+    </ul>
+    <h6>GitHub Statistics</h6>
+    <div class="hidden github-repo-info" data-controller="github-repo-info">
+      <ul class="vertical-tabs__list">
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             rel="noopener"
+             href="https://github.com/artificial-sapience/clearflow">
+            <i class="fab fa-github" aria-hidden="true"></i>
+            <strong>Repository</strong>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="stargazersUrl"
+             rel="noopener">
+            <i class="fa fa-star" aria-hidden="true"></i>
+            <strong>Stars:</strong>
+            <span data-github-repo-info-target="stargazersCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="forksUrl"
+             rel="noopener">
+            <i class="fa fa-code-branch" aria-hidden="true"></i>
+            <strong>Forks:</strong>
+            <span data-github-repo-info-target="forksCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="openIssuesUrl"
+             rel="noopener">
+            <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+            <strong>Open issues:</strong>
+            <span data-github-repo-info-target="openIssuesCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="openPRsUrl"
+             rel="noopener">
+            <i class="fa fa-code-pull-request" aria-hidden="true"></i>
+            <strong>Open PRs:</strong>
+            <span data-github-repo-info-target="openPRsCount"></span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <h6>Maintainers</h6>
+      <span class="sidebar-section__maintainer">
+        <a href="/user/rbeauchamp/"
+           aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="https://pypi-camo.freetls.fastly.net/6d644abf80dbf1937e29724d2a076f043b1ee68d/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f61376238336463633932613437623261633334353161626462623065366135643f73697a653d3530"
+                 height="50"
+                 width="50"
+                 alt="Avatar for rbeauchamp from gravatar.com"
+                 title="Avatar for rbeauchamp from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">rbeauchamp</span>
+        </a>
+      </span>
+</div>
+<div class="sidebar-section unverified">
+  <h3 class="sidebar-section__title">Unverified details</h3>
+  <small><i>These details have <b>not</b> been verified by PyPI</i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/The-Pocket/PocketFlow"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Inspiration</a>
+          </li>
+    </ul>
+    <div class="sidebar-section unverified">
+      <h6>Meta</h6>
+      <ul>
+          <li>
+            <span>
+              <strong>License Expression:</strong> MIT
+              <br>
+              <small>
+                <i>
+                  <a target="_blank" href="https://spdx.org/licenses/">SPDX</a>
+                  <a target="_blank"
+                     href="https://spdx.github.io/spdx-spec/v2-draft/SPDX-license-expressions/">License Expression</a>
+                </i>
+              </small>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Author:</strong> <a href="mailto:rbeauchamp@users.noreply.github.com">Richard Beauchamp</a>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Maintainer:</strong> ClearFlow Contributors
+            </span>
+          </li>
+          <li class="tags">
+            <span>
+              <i class="fa fa-tags" aria-hidden="true"></i>
+              <span class="sr-only">Tags</span>
+                <span class="package-keyword">
+                  agents
+,                </span>
+                <span class="package-keyword">
+                  ai-agents
+,                </span>
+                <span class="package-keyword">
+                  async
+,                </span>
+                <span class="package-keyword">
+                  language-models
+,                </span>
+                <span class="package-keyword">
+                  orchestration
+,                </span>
+                <span class="package-keyword">
+                  reliable
+,                </span>
+                <span class="package-keyword">
+                  type-safe
+,                </span>
+                <span class="package-keyword">
+                  zero-dependencies
+                </span>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Requires:</strong> Python &gt;=3.13
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Provides-Extra:</strong>
+                <code>dev</code>
+,                <code>examples</code>
+            </span>
+          </li>
+      </ul>
+    </div>
+    <div class="sidebar-section unverified">
+      <h6 class="sidebar-section__title">Classifiers</h6>
+      <ul class="sidebar-section__classifiers">
+          <li>
+            <strong>Development Status</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Development+Status+%3A%3A+3+-+Alpha">
+                    3 - Alpha
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Intended Audience</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Intended+Audience+%3A%3A+Developers">
+                    Developers
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>License</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=License+%3A%3A+OSI+Approved+%3A%3A+MIT+License">
+                    OSI Approved :: MIT License
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Operating System</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Operating+System+%3A%3A+OS+Independent">
+                    OS Independent
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Programming Language</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3">
+                    Python :: 3
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3.13">
+                    Python :: 3.13
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Topic</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Scientific%2FEngineering+%3A%3A+Artificial+Intelligence">
+                    Scientific/Engineering :: Artificial Intelligence
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Scientific%2FEngineering+%3A%3A+Information+Analysis">
+                    Scientific/Engineering :: Information Analysis
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Libraries+%3A%3A+Application+Frameworks">
+                    Software Development :: Libraries :: Application Frameworks
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Libraries+%3A%3A+Python+Modules">
+                    Software Development :: Libraries :: Python Modules
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Text+Processing+%3A%3A+Linguistic">
+                    Text Processing :: Linguistic
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Typing</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Typing+%3A%3A+Typed">
+                    Typed
+                  </a>
+                </li>
+            </ul>
+          </li>
+      </ul>
+    </div>
+</div>  <div class="sidebar-section"
+       data-ea-publisher="psf"
+       data-ea-type="psf"
+       data-ea-keywords="pypi-sidebar"></div>
+        <div class="sidebar-section">
+          <a class="button button--full-width button--warning"
+             href="https://pypi.org/project/clearflow/submit-malware-report/"
+             role="button">Report project as malware</a>
         </div>
       </div>
-    </noscript>
-    <div id="loading-error" role="alert" aria-live="polite">
-      A required part of this site couldn’t load. This may be due to a browser
-      extension, network issues, or browser settings. Please check your
-      connection, disable any ad blockers, or try using a different browser.
+      <div class="vertical-tabs__panel">
+        <!-- mobile menu -->
+        <nav aria-label="Navigation for clearflow">
+          <ul class="vertical-tabs__list" role="tablist">
+            <li role="tab">
+              <a id="mobile-description-tab"
+                 href="#description"
+                 data-project-tabs-target="mobileTab"
+                 data-action="project-tabs#onTabClick"
+                 class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile vertical-tabs__tab--no-top-border vertical-tabs__tab--is-active"
+                 aria-selected="true"
+                 aria-label="Project description. Focus will be moved to the description.">
+                <i class="fa fa-align-left" aria-hidden="true"></i>
+Project description              </a>
+            </li>
+            <li role="tab">
+              <a id="mobile-data-tab"
+                 href="#data"
+                 data-project-tabs-target="mobileTab"
+                 data-action="project-tabs#onTabClick"
+                 class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile"
+                 aria-label="Project details. Focus will be moved to the project details.">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+Project details              </a>
+            </li>
+            <li role="tab">
+              <a id="mobile-history-tab"
+                 href="#history"
+                 data-project-tabs-target="mobileTab"
+                 data-action="project-tabs#onTabClick"
+                 class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile"
+                 aria-label="Release history. Focus will be moved to the history panel.">
+                <i class="fa fa-history" aria-hidden="true"></i>
+Release history              </a>
+            </li>
+              <li role="tab">
+                <a id="mobile-files-tab"
+                   href="#files"
+                   data-project-tabs-target="mobileTab"
+                   data-action="project-tabs#onTabClick"
+                   class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--mobile"
+                   aria-label="Download files. Focus will be moved to the project files.">
+                  <i class="fa fa-download" aria-hidden="true"></i>
+Download files                </a>
+              </li>
+          </ul>
+        </nav>
+        <div id="description"
+             data-project-tabs-target="content"
+             class="vertical-tabs__content"
+             role="tabpanel"
+             aria-labelledby="description-tab mobile-description-tab"
+             tabindex="-1">
+    <h2 class="page-title">Project description</h2>
+      <div class="project-description"><h1>ClearFlow</h1>
+<p><a href="https://coveralls.io/github/artificial-sapience/clearflow?branch=main" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/aff773fc128f68de4537a67bc261a5099a7d3e2a/68747470733a2f2f636f766572616c6c732e696f2f7265706f732f6769746875622f6172746966696369616c2d73617069656e63652f636c656172666c6f772f62616467652e7376673f6272616e63683d6d61696e" alt="Coverage Status"></a>
+<a href="https://pypi.org/project/clearflow/" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/8b9a0c496a555d2babbb87aa52e05d0d8ee43b42/68747470733a2f2f62616467652e667572792e696f2f70792f636c656172666c6f772e737667" alt=PyPI></a>
+<a href="https://pepy.tech/projects/clearflow" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/408c6662e1c1aac7706a85699044274f7f2bfb86/68747470733a2f2f7374617469632e706570792e746563682f706572736f6e616c697a65642d62616467652f636c656172666c6f773f706572696f643d746f74616c26756e6974733d494e5445524e4154494f4e414c5f53595354454d266c6566745f636f6c6f723d424c41434b2672696768745f636f6c6f723d475245454e266c6566745f746578743d646f776e6c6f616473" alt="PyPI Downloads"></a>
+<img src="https://pypi-camo.freetls.fastly.net/4221cdcd35e2950e5b055140fb55783195e5d6ee/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f507974686f6e2d332e31332532422d626c7565" alt=Python>
+<img src="https://pypi-camo.freetls.fastly.net/a2a40f4ac4d3b2fd9d23621544b979885fb523c2/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4c6963656e73652d4d49542d79656c6c6f77" alt=License>
+<a href="https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt" rel=nofollow><img src="https://pypi-camo.freetls.fastly.net/e31fd787c7cf4919a2175775e908e1e1c511145f/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f6c6c6d732e7478742d677265656e" alt=llms.txt></a></p>
+<p>Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.</p>
+<h2>Version Policy</h2>
+<p><strong>Alpha Phase (0.x.y)</strong>: ClearFlow is in active development. Breaking changes may occur in any release. Pin exact versions in production:</p>
+<pre lang=bash>pip<span class=w> </span>install<span class=w> </span><span class=nv>clearflow</span><span class=o>==</span><span class=m>0</span>.1.0<span class=w>  </span><span class=c1># Pin to exact version</span>
+</pre>
+<p>After 1.0.0, we'll follow strict <a href="https://semver.org/" rel=nofollow>Semantic Versioning</a>.</p>
+<h2>Why ClearFlow?</h2>
+<ul>
+<li><strong>100% test coverage</strong> – Every path proven to work</li>
+<li><strong>Type-safe transformations</strong> – Errors caught at development time, not runtime</li>
+<li><strong>Immutable state</strong> – No hidden mutations</li>
+<li><strong>Zero dependencies</strong> – No hidden failure modes</li>
+<li><strong>Single exit enforcement</strong> – No ambiguous endings</li>
+<li><strong>AI-Ready Documentation</strong> – llms.txt for optimal coding assistant integration</li>
+</ul>
+<h2>Quick Start</h2>
+<pre lang=bash>pip<span class=w> </span>install<span class=w> </span>clearflow
+</pre>
+<blockquote>
+<p><strong>Upgrading from v0.x?</strong> See the <a href=MIGRATION.md rel=nofollow>Migration Guide</a> for breaking changes.</p>
+</blockquote>
+<h2>AI Assistant Integration</h2>
+<p>ClearFlow provides comprehensive documentation in <a href="https://llmstxt.org/" rel=nofollow>llms.txt</a> format for optimal AI assistant support.</p>
+<h3>Claude Code Setup</h3>
+<p>Add ClearFlow documentation to Claude Code with one command:</p>
+<pre lang=bash>claude<span class=w> </span>mcp<span class=w> </span>add-json<span class=w> </span>clearflow-docs<span class=w> </span><span class=s1>'{</span>
+<span class=s1>    "type":"stdio",</span>
+<span class=s1>    "command":"uvx",</span>
+<span class=s1>    "args":["--from", "mcpdoc", "mcpdoc", "--urls", "ClearFlow:https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt"]</span>
+<span class=s1>}'</span>
+</pre>
+<p>For IDEs (Cursor, Windsurf), see the <a href="https://github.com/langchain-ai/mcpdoc#configuration" rel=nofollow>mcpdoc documentation</a>.</p>
+<h3>Direct URL Access</h3>
+<p>Use these URLs directly in any AI tool that supports llms.txt:</p>
+<ul>
+<li><strong>Minimal index</strong> (~2KB): <a href="https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt" rel=nofollow>https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt</a></li>
+<li><strong>Full documentation</strong> (~63KB): <a href="https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms-full.txt" rel=nofollow>https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms-full.txt</a></li>
+</ul>
+<h2>Examples</h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="examples/chat/" rel=nofollow>Chat</a></td>
+<td>Simple conversational flow with OpenAI</td>
+</tr>
+<tr>
+<td><a href="examples/portfolio_analysis/" rel=nofollow>Portfolio Analysis</a></td>
+<td>Multi-specialist workflow for financial analysis</td>
+</tr>
+<tr>
+<td><a href="examples/rag/" rel=nofollow>RAG</a></td>
+<td>Full retrieval-augmented generation with vector search</td>
+</tr>
+</tbody>
+</table>
+<h2>Core Concepts</h2>
+<h3><code>Node[TIn, TOut]</code></h3>
+<p>A unit that transforms state from <code>TIn</code> to <code>TOut</code> (or <code>Node[T]</code> when types are the same).</p>
+<ul>
+<li><code>prep(state: TIn) -&gt; TIn</code> – optional pre-work/validation</li>
+<li><code>exec(state: TIn) -&gt; NodeResult[TOut]</code> – <strong>required</strong>; return new state + outcome</li>
+<li><code>post(result: NodeResult[TOut]) -&gt; NodeResult[TOut]</code> – optional cleanup/logging</li>
+</ul>
+<p>Nodes are frozen dataclasses that execute async transformations without mutating input state.</p>
+<h3><code>NodeResult[T]</code></h3>
+<p>Holds the <strong>new state</strong> and an <strong>outcome</strong> string used for routing.</p>
+<h3><code>flow()</code></h3>
+<p>A function that creates a flow with <strong>explicit routing</strong>:</p>
+<pre lang=python3><span class=n>flow</span><span class=p>(</span><span class=s2>"Name"</span><span class=p>,</span> <span class=n>start_node</span><span class=p>)</span>
+  <span class=o>.</span><span class=n>route</span><span class=p>(</span><span class=n>start_node</span><span class=p>,</span> <span class=s2>"outcome1"</span><span class=p>,</span> <span class=n>next_node</span><span class=p>)</span>
+  <span class=o>.</span><span class=n>route</span><span class=p>(</span><span class=n>next_node</span><span class=p>,</span> <span class=s2>"outcome2"</span><span class=p>,</span> <span class=n>final_node</span><span class=p>)</span>
+  <span class=o>.</span><span class=n>end</span><span class=p>(</span><span class=n>final_node</span><span class=p>,</span> <span class=s2>"done"</span><span class=p>)</span>  <span class=c1># exactly one termination</span>
+</pre>
+<p><strong>Routing</strong>: Routes are <code>(node, outcome)</code> pairs. Each outcome must have exactly one route.<br>
+<strong>Type inference</strong>: The flow infers types from start to end, supporting transformations.<br>
+<strong>Composability</strong>: A flow is itself a <code>Node</code> – compose flows within flows.</p>
+<h2>ClearFlow vs PocketFlow</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>ClearFlow</th>
+<th>PocketFlow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>State</strong></td>
+<td>Immutable, passed via <code>NodeResult</code></td>
+<td>Mutable, passed via <code>shared</code> param</td>
+</tr>
+<tr>
+<td><strong>Routing</strong></td>
+<td>Outcome-based explicit routes</td>
+<td>Action-based graph edges</td>
+</tr>
+<tr>
+<td><strong>Termination</strong></td>
+<td>Exactly one exit enforced</td>
+<td>Multiple exits allowed</td>
+</tr>
+<tr>
+<td><strong>Type safety</strong></td>
+<td>Full Python 3.13+ generics</td>
+<td>Dynamic (no annotations)</td>
+</tr>
+</tbody>
+</table>
+<p>ClearFlow emphasizes <strong>robust, type-safe orchestration</strong> with validation and guardrails. PocketFlow emphasizes <strong>brevity and flexibility</strong> with minimal overhead.</p>
+<h2>Development</h2>
+<h3>Install uv</h3>
+<ul>
+<li>Please see <a href="https://docs.astral.sh/uv/getting-started/installation/#installation-methods" rel=nofollow>official uv docs</a> for other ways to install uv.</li>
+</ul>
+<pre lang=bash>curl<span class=w> </span>-LsSf<span class=w> </span>https://astral.sh/uv/install.sh<span class=w> </span><span class=p>|</span><span class=w> </span>sh
+</pre>
+<h3>Clone and set up development environment</h3>
+<pre lang=bash>git<span class=w> </span>clone<span class=w> </span>https://github.com/artificial-sapience/clearflow.git
+<span class=nb>cd</span><span class=w> </span>ClearFlow
+uv<span class=w> </span>sync<span class=w> </span>--all-extras<span class=w>     </span><span class=c1># Creates venv and installs deps automatically</span>
+./quality-check.sh<span class=w>       </span><span class=c1># Run all checks</span>
+</pre>
+<h2>License</h2>
+<p><a href=LICENSE rel=nofollow>MIT</a></p>
+<h2>Acknowledgments</h2>
+<p>Inspired by <a href="https://github.com/The-Pocket/PocketFlow" rel=nofollow>PocketFlow</a>'s Node-Flow-State pattern.</p>
+</div>
+  </div>
+  <div id="data"
+       data-project-tabs-target="content"
+       class="vertical-tabs__content"
+       role="tabpanel"
+       aria-labelledby="mobile-data-tab"
+       tabindex="-1">
+    <h2 class="page-title">Project details</h2>
+<div class="sidebar-section verified">
+  <h3 class="sidebar-section__title">
+Verified details    <i class="fa fa-circle-check check"
+       title="Verified by PyPI on 2025-09-17"></i>
+  </h3>
+  <small><i>These details have been <a href="https://docs.pypi.org/project_metadata/#verified-details">verified by PyPI</a></i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow/tree/main/examples"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Examples</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow"
+               rel="nofollow">  <i class="fas fa-home" aria-hidden="true"></i>Homepage</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow/issues"
+               rel="nofollow">  <i class="fas fa-bug" aria-hidden="true"></i>Issues</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow.git"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Repository</a>
+          </li>
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/artificial-sapience/clearflow"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Source</a>
+          </li>
+    </ul>
+    <h6>GitHub Statistics</h6>
+    <div class="hidden github-repo-info" data-controller="github-repo-info">
+      <ul class="vertical-tabs__list">
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             rel="noopener"
+             href="https://github.com/artificial-sapience/clearflow">
+            <i class="fab fa-github" aria-hidden="true"></i>
+            <strong>Repository</strong>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="stargazersUrl"
+             rel="noopener">
+            <i class="fa fa-star" aria-hidden="true"></i>
+            <strong>Stars:</strong>
+            <span data-github-repo-info-target="stargazersCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="forksUrl"
+             rel="noopener">
+            <i class="fa fa-code-branch" aria-hidden="true"></i>
+            <strong>Forks:</strong>
+            <span data-github-repo-info-target="forksCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="openIssuesUrl"
+             rel="noopener">
+            <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+            <strong>Open issues:</strong>
+            <span data-github-repo-info-target="openIssuesCount"></span>
+          </a>
+        </li>
+        <li>
+          <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+             data-github-repo-info-target="openPRsUrl"
+             rel="noopener">
+            <i class="fa fa-code-pull-request" aria-hidden="true"></i>
+            <strong>Open PRs:</strong>
+            <span data-github-repo-info-target="openPRsCount"></span>
+          </a>
+        </li>
+      </ul>
     </div>
-    <script>
-      function loadScript(src) {
-        return new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.onload = resolve;
-          script.onerror = (event) => {
-            console.error('Script load error event:', event);
-            document.getElementById('loading-error').style.display = 'block';
-            loadingError.setAttribute('aria-hidden', 'false');
-            reject(
-              new Error(
-                `Failed to load script: ${src}, Please contact the service administrator.`
-              )
-            );
-          };
-          script.src = src;
-          document.body.appendChild(script);
-        });
-      }
+    <h6>Maintainers</h6>
+      <span class="sidebar-section__maintainer">
+        <a href="/user/rbeauchamp/"
+           aria-label="">
+          <span class="sidebar-section__user-gravatar">
+            <img src="https://pypi-camo.freetls.fastly.net/6d644abf80dbf1937e29724d2a076f043b1ee68d/68747470733a2f2f7365637572652e67726176617461722e636f6d2f6176617461722f61376238336463633932613437623261633334353161626462623065366135643f73697a653d3530"
+                 height="50"
+                 width="50"
+                 alt="Avatar for rbeauchamp from gravatar.com"
+                 title="Avatar for rbeauchamp from gravatar.com">
+          </span>
+          <span class="sidebar-section__user-gravatar-text">rbeauchamp</span>
+        </a>
+      </span>
+</div>
+<div class="sidebar-section unverified">
+  <h3 class="sidebar-section__title">Unverified details</h3>
+  <small><i>These details have <b>not</b> been verified by PyPI</i></small>
+    <h6>Project links</h6>
+    <ul class="vertical-tabs__list">
+          <li>
+            <a class="vertical-tabs__tab vertical-tabs__tab--with-icon vertical-tabs__tab--condensed"
+               href="https://github.com/The-Pocket/PocketFlow"
+               rel="nofollow">  <i class="fab fa-github" aria-hidden="true"></i>Inspiration</a>
+          </li>
+    </ul>
+    <div class="sidebar-section unverified">
+      <h6>Meta</h6>
+      <ul>
+          <li>
+            <span>
+              <strong>License Expression:</strong> MIT
+              <br>
+              <small>
+                <i>
+                  <a target="_blank" href="https://spdx.org/licenses/">SPDX</a>
+                  <a target="_blank"
+                     href="https://spdx.github.io/spdx-spec/v2-draft/SPDX-license-expressions/">License Expression</a>
+                </i>
+              </small>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Author:</strong> <a href="mailto:rbeauchamp@users.noreply.github.com">Richard Beauchamp</a>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Maintainer:</strong> ClearFlow Contributors
+            </span>
+          </li>
+          <li class="tags">
+            <span>
+              <i class="fa fa-tags" aria-hidden="true"></i>
+              <span class="sr-only">Tags</span>
+                <span class="package-keyword">
+                  agents
+,                </span>
+                <span class="package-keyword">
+                  ai-agents
+,                </span>
+                <span class="package-keyword">
+                  async
+,                </span>
+                <span class="package-keyword">
+                  language-models
+,                </span>
+                <span class="package-keyword">
+                  orchestration
+,                </span>
+                <span class="package-keyword">
+                  reliable
+,                </span>
+                <span class="package-keyword">
+                  type-safe
+,                </span>
+                <span class="package-keyword">
+                  zero-dependencies
+                </span>
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Requires:</strong> Python &gt;=3.13
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Provides-Extra:</strong>
+                <code>dev</code>
+,                <code>examples</code>
+            </span>
+          </li>
+      </ul>
+    </div>
+    <div class="sidebar-section unverified">
+      <h6 class="sidebar-section__title">Classifiers</h6>
+      <ul class="sidebar-section__classifiers">
+          <li>
+            <strong>Development Status</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Development+Status+%3A%3A+3+-+Alpha">
+                    3 - Alpha
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Intended Audience</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Intended+Audience+%3A%3A+Developers">
+                    Developers
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>License</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=License+%3A%3A+OSI+Approved+%3A%3A+MIT+License">
+                    OSI Approved :: MIT License
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Operating System</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Operating+System+%3A%3A+OS+Independent">
+                    OS Independent
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Programming Language</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3">
+                    Python :: 3
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Programming+Language+%3A%3A+Python+%3A%3A+3.13">
+                    Python :: 3.13
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Topic</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Scientific%2FEngineering+%3A%3A+Artificial+Intelligence">
+                    Scientific/Engineering :: Artificial Intelligence
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Scientific%2FEngineering+%3A%3A+Information+Analysis">
+                    Scientific/Engineering :: Information Analysis
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Libraries+%3A%3A+Application+Frameworks">
+                    Software Development :: Libraries :: Application Frameworks
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Software+Development+%3A%3A+Libraries+%3A%3A+Python+Modules">
+                    Software Development :: Libraries :: Python Modules
+                  </a>
+                </li>
+                <li>
+                  <a href="/search/?c=Topic+%3A%3A+Text+Processing+%3A%3A+Linguistic">
+                    Text Processing :: Linguistic
+                  </a>
+                </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Typing</strong>
+            <ul>
+                <li>
+                  <a href="/search/?c=Typing+%3A%3A+Typed">
+                    Typed
+                  </a>
+                </li>
+            </ul>
+          </li>
+      </ul>
+    </div>
+</div>    <br>
+  </div>
+  <div id="history"
+       data-project-tabs-target="content"
+       class="vertical-tabs__content"
+       role="tabpanel"
+       aria-labelledby="history-tab mobile-history-tab"
+       tabindex="-1">
+    <h2 class="page-title split-layout">
+      <span>Release history</span>
+      <span class="reset-text margin-top">
+        <a href="/help/#project-release-notifications">Release notifications</a> |
+        <a href="/rss/project/clearflow/releases.xml">RSS feed <i class="fa fa-rss" aria-hidden="true"></i></a>
+      </span>
+    </h2>
+    <div class="release-timeline">
+        <div class="release release--latest">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/1.0.3/">
+            <p class="release__version">
+              1.0.3
+                <span class="badge badge--danger">yanked</span>
+            </p>
+            <p class="release__version-date"><time datetime="2025-09-11T02:51:25+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 11, 2025
+  </time></p>
+              <div class="callout-block callout-block--danger release__yanked-reason">
+                <p>Reason this release was yanked:</p>
+                <p>Version reset to 0.x for alpha phase</p>
+              </div>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/1.0.1/">
+            <p class="release__version">
+              1.0.1
+                <span class="badge badge--danger">yanked</span>
+            </p>
+            <p class="release__version-date"><time datetime="2025-09-11T01:11:39+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 11, 2025
+  </time></p>
+              <div class="callout-block callout-block--danger release__yanked-reason">
+                <p>Reason this release was yanked:</p>
+                <p>Version reset to 0.x for alpha phase</p>
+              </div>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/1.0.0/">
+            <p class="release__version">
+              1.0.0
+                <span class="badge badge--danger">yanked</span>
+            </p>
+            <p class="release__version-date"><time datetime="2025-09-06T20:11:38+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 6, 2025
+  </time></p>
+              <div class="callout-block callout-block--danger release__yanked-reason">
+                <p>Reason this release was yanked:</p>
+                <p>Version reset to 0.x for alpha phase</p>
+              </div>
+          </a>
+        </div>
+        <div class="release release--current">
+          <div class="release__meta">
+              <span class="badge">This version</span>
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/blue-cube.572a5bfb.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.1.0/">
+            <p class="release__version">
+              0.1.0
+            </p>
+            <p class="release__version-date"><time datetime="2025-09-17T01:32:05+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 17, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.6/">
+            <p class="release__version">
+              0.0.6
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-16T22:44:36+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 16, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.5/">
+            <p class="release__version">
+              0.0.5
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-16T21:42:19+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 16, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.4/">
+            <p class="release__version">
+              0.0.4
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-15T14:18:17+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 15, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.3/">
+            <p class="release__version">
+              0.0.3
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-07T14:49:15+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 7, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.2/">
+            <p class="release__version">
+              0.0.2
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-07T14:42:28+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 7, 2025
+  </time></p>
+          </a>
+        </div>
+        <div class="release release--oldest">
+          <div class="release__meta">
+          </div>
+          <div class="release__graphic">
+<div class="release__line"></div>              <img class="release__node" alt="" src="https://pypi.org/static/images/white-cube.2351a86c.svg">
+          </div>
+          <a class="card release__card"
+             href="/project/clearflow/0.0.1/">
+            <p class="release__version">
+              0.0.1
+                <span class="badge badge--danger">yanked</span>
+            </p>
+            <p class="release__version-date"><time datetime="2025-08-07T13:36:48+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Aug 7, 2025
+  </time></p>
+              <div class="callout-block callout-block--danger release__yanked-reason">
+                <p>Reason this release was yanked:</p>
+                <p>documentation was incorrect</p>
+              </div>
+          </a>
+        </div>
+    </div>
+  </div>
+    <div id="files"
+         data-project-tabs-target="content"
+         class="vertical-tabs__content"
+         role="tabpanel"
+         aria-labelledby="files-tab mobile-files-tab"
+         tabindex="-1">
+      <h2 class="page-title">Download files</h2>
+      <p>
+Download the file for your platform. If you're not sure which to choose, learn more about <a href="https://packaging.python.org/tutorials/installing-packages/" title="External link" target="_blank" rel="noopener">installing packages</a>.      </p>
+      <h3>
+Source Distribution    </h3>
+          <div class="file">
+      <div class="file__graphic">
+        <i class="far fa-file" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+        <a href="https://files.pythonhosted.org/packages/40/01/cba7dcfa5092d850bfaa5806e2cddbffb259631e3ef45fd55e949f82cc2d/clearflow-0.1.0.tar.gz">clearflow-0.1.0.tar.gz</a>
+        (55.2 kB
+        <a href="#clearflow-0.1.0.tar.gz"
+           data-project-tabs-target="tab"
+           data-action="project-tabs#onTabClick">view details</a>)
+        <p class="file__meta">
+          Uploaded <time datetime="2025-09-17T01:32:07+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 17, 2025
+  </time>
+<code>Source</code>        </p>
+      </div>
+    </div>
 
-      loadScript('/_fs-ch-1T1wmsGaOgGaSxcX/errors.js')
-        .then(() => {
-          const script = document.createElement('script');
-          script.src = '/_fs-ch-1T1wmsGaOgGaSxcX/script.js?reload=true';
-          script.onerror = (event) => {
-            console.error('Script load error event:', event);
-            const errorMsg = new Error(
-              `Failed to load script: ${script.src}. Please contact the service administrator.`
-            );
-            console.error(errorMsg);
-            handleScriptError();
-          };
-          document.body.appendChild(script);
-        })
-        .catch((error) => {
-          console.error(error);
-        });
-    </script>
-  </body>
+      <h3>
+Built Distribution    </h3>
+        <div class="file">
+      <div class="file__graphic">
+        <i class="far fa-file" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+        <a href="https://files.pythonhosted.org/packages/0f/ce/49be5bdb6e2e119c6f964e7584d224b10b7e5d761de167357f5326ec7ee1/clearflow-0.1.0-py3-none-any.whl">clearflow-0.1.0-py3-none-any.whl</a>
+        (7.7 kB
+        <a href="#clearflow-0.1.0-py3-none-any.whl"
+           data-project-tabs-target="tab"
+           data-action="project-tabs#onTabClick">view details</a>)
+        <p class="file__meta">
+          Uploaded <time datetime="2025-09-17T01:32:05+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 17, 2025
+  </time>
+<code>Python 3</code>        </p>
+      </div>
+    </div>
+
+</div>
+<div id="clearflow-0.1.0.tar.gz"
+     data-project-tabs-target="content"
+     class="vertical-tabs__content"
+     role="tabpanel"
+     aria-labelledby="file-tab mobile-file-tab"
+     tabindex="-1">
+  <h2 class="page-title">File details</h2>
+  <p>
+    Details for the file <code>clearflow-0.1.0.tar.gz</code>.
+  </p>
+  <h3>File metadata</h3>
+  <div>
+    <ul>
+      <li>
+        Download URL: <a href="https://files.pythonhosted.org/packages/40/01/cba7dcfa5092d850bfaa5806e2cddbffb259631e3ef45fd55e949f82cc2d/clearflow-0.1.0.tar.gz">clearflow-0.1.0.tar.gz</a>
+      </li>
+      <li>Upload date: <time datetime="2025-09-17T01:32:07+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 17, 2025
+  </time></li>
+      <li>
+Size: 55.2 kB      </li>
+      <li>Tags: Source</li>
+      <li>
+Uploaded using Trusted Publishing? Yes    </li>
+      <li>Uploaded via: twine/6.1.0 CPython/3.13.7</li>
+  </ul>
+</div>
+<h3>File hashes</h3>
+<div>
+  <table class="table table--hashes">
+    <caption class="sr-only">Hashes for clearflow-0.1.0.tar.gz</caption>
+    <thead>
+      <tr>
+        <th scope="col">Algorithm</th>
+        <th scope="col">Hash digest</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-controller="clipboard">
+        <th scope="row">SHA256</th>
+        <td>
+          <code data-clipboard-target="source">2a45d2f1e334f2765b092f18f5788a80e44a119beb5b25a6bd4d4676c445d5fe</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">MD5</th>
+        <td>
+          <code data-clipboard-target="source">148fee2cca5e0254e1b527b7d263fdfe</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">BLAKE2b-256</th>
+        <td>
+          <code data-clipboard-target="source">4001cba7dcfa5092d850bfaa5806e2cddbffb259631e3ef45fd55e949f82cc2d</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+<a href="https://pip.pypa.io/en/stable/topics/secure-installs/#hash-checking-mode" title="External link" target="_blank" rel="noopener">See more details on using hashes here.</a></p>
+</div>
+  <h3>Provenance</h3>
+  <p>
+    The following attestation bundles were made for <code>clearflow-0.1.0.tar.gz</code>:
+  </p>
+    <div class="file">
+      <div class="file__graphic">
+        <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+            <p>
+      Publisher: <a href="https://github.com/artificial-sapience/clearflow/blob/HEAD/.github/workflows/release.yml">
+      <i class="fa-brands fa-github" aria-hidden="true"></i>
+      <code>release.yml</code> on artificial-sapience/clearflow
+    </a>
+  </p>
+
+        Attestations:
+        <small>
+          <i>Values shown here reflect the state when the release was signed and may no longer be current.</i>
+        </small>
+        <ul>
+            <li>
+              Statement:
+              <ul>
+                <li>
+                  Statement type: <a href="https://in-toto.io/Statement/v1"><code>https://in-toto.io/Statement/v1</code></a>
+                </li>
+                <li>
+                  Predicate type: <a href="https://docs.pypi.org/attestations/publish/v1"><code>https://docs.pypi.org/attestations/publish/v1</code></a>
+                </li>
+                <li>
+                  Subject name: <code>clearflow-0.1.0.tar.gz</code>
+                </li>
+                <li>
+                  Subject digest: <code>2a45d2f1e334f2765b092f18f5788a80e44a119beb5b25a6bd4d4676c445d5fe</code>
+                </li>
+                <li>
+                  Sigstore transparency entry: <a href="https://search.sigstore.dev/?logIndex=527823188">527823188</a>
+                </li>
+                <li>Sigstore integration time: <time datetime="2025-09-17T01:32:04+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="true">
+    Sep 17, 2025
+  </time></li>
+              </ul>
+                Source repository:
+                <ul>
+                  <li>
+                    Permalink: <a href="https://github.com/artificial-sapience/clearflow/tree/b1745e40ca87350a2b08253754bfc47c3a71dc0d">
+                    <code>artificial-sapience/clearflow@b1745e40ca87350a2b08253754bfc47c3a71dc0d</code>
+                  </a>
+                </li>
+                <li>
+                  Branch / Tag: <a href="https://github.com/artificial-sapience/clearflow/tree/refs/heads/main">
+                  <code>refs/heads/main</code>
+                </a>
+              </li>
+              <li>
+                Owner: <a href="https://github.com/artificial-sapience">https://github.com/artificial-sapience</a>
+              </li>
+              <li>
+                Access: <code>public</code>
+              </li>
+            </ul>
+          Publication detail:
+          <ul>
+            <li>
+              Token Issuer: <code>https://token.actions.githubusercontent.com</code>
+            </li>
+              <li>
+                Runner Environment: <code>github-hosted</code>
+              </li>
+              <li>
+                Publication workflow:
+                <a href="https://github.com/artificial-sapience/clearflow/blob/b1745e40ca87350a2b08253754bfc47c3a71dc0d/.github/workflows/release.yml">
+                  <code>release.yml@b1745e40ca87350a2b08253754bfc47c3a71dc0d</code>
+                </a>
+              </li>
+              <li>
+                Trigger Event: <code>workflow_dispatch</code>
+              </li>
+          </ul>
+        </li>
+    </ul>
+  </div>
+</div>
+</div><div id="clearflow-0.1.0-py3-none-any.whl"
+     data-project-tabs-target="content"
+     class="vertical-tabs__content"
+     role="tabpanel"
+     aria-labelledby="file-tab mobile-file-tab"
+     tabindex="-1">
+  <h2 class="page-title">File details</h2>
+  <p>
+    Details for the file <code>clearflow-0.1.0-py3-none-any.whl</code>.
+  </p>
+  <h3>File metadata</h3>
+  <div>
+    <ul>
+      <li>
+        Download URL: <a href="https://files.pythonhosted.org/packages/0f/ce/49be5bdb6e2e119c6f964e7584d224b10b7e5d761de167357f5326ec7ee1/clearflow-0.1.0-py3-none-any.whl">clearflow-0.1.0-py3-none-any.whl</a>
+      </li>
+      <li>Upload date: <time datetime="2025-09-17T01:32:05+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="false">
+    Sep 17, 2025
+  </time></li>
+      <li>
+Size: 7.7 kB      </li>
+      <li>Tags: Python 3</li>
+      <li>
+Uploaded using Trusted Publishing? Yes    </li>
+      <li>Uploaded via: twine/6.1.0 CPython/3.13.7</li>
+  </ul>
+</div>
+<h3>File hashes</h3>
+<div>
+  <table class="table table--hashes">
+    <caption class="sr-only">Hashes for clearflow-0.1.0-py3-none-any.whl</caption>
+    <thead>
+      <tr>
+        <th scope="col">Algorithm</th>
+        <th scope="col">Hash digest</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-controller="clipboard">
+        <th scope="row">SHA256</th>
+        <td>
+          <code data-clipboard-target="source">c489c5a4b5032ce8e4896f72685437c640f1d159f57744c0be4c82171a2a9884</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">MD5</th>
+        <td>
+          <code data-clipboard-target="source">6a660769e9cb1ce944d48869839ba859</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+      <tr data-controller="clipboard">
+        <th scope="row">BLAKE2b-256</th>
+        <td>
+          <code data-clipboard-target="source">0fce49be5bdb6e2e119c6f964e7584d224b10b7e5d761de167357f5326ec7ee1</code>
+        </td>
+        <td class="table__align-right">
+          <button type="button"
+                  class="button button--small copy-tooltip copy-tooltip-w"
+                  data-action="clipboard#copy"
+                  data-clipboard-target="tooltip"
+                  data-clipboard-tooltip-value="Copy to clipboard">
+Copy          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+<a href="https://pip.pypa.io/en/stable/topics/secure-installs/#hash-checking-mode" title="External link" target="_blank" rel="noopener">See more details on using hashes here.</a></p>
+</div>
+  <h3>Provenance</h3>
+  <p>
+    The following attestation bundles were made for <code>clearflow-0.1.0-py3-none-any.whl</code>:
+  </p>
+    <div class="file">
+      <div class="file__graphic">
+        <i class="fa-solid fa-file-circle-check" aria-hidden="true"></i>
+      </div>
+      <div class="card file__card">
+            <p>
+      Publisher: <a href="https://github.com/artificial-sapience/clearflow/blob/HEAD/.github/workflows/release.yml">
+      <i class="fa-brands fa-github" aria-hidden="true"></i>
+      <code>release.yml</code> on artificial-sapience/clearflow
+    </a>
+  </p>
+
+        Attestations:
+        <small>
+          <i>Values shown here reflect the state when the release was signed and may no longer be current.</i>
+        </small>
+        <ul>
+            <li>
+              Statement:
+              <ul>
+                <li>
+                  Statement type: <a href="https://in-toto.io/Statement/v1"><code>https://in-toto.io/Statement/v1</code></a>
+                </li>
+                <li>
+                  Predicate type: <a href="https://docs.pypi.org/attestations/publish/v1"><code>https://docs.pypi.org/attestations/publish/v1</code></a>
+                </li>
+                <li>
+                  Subject name: <code>clearflow-0.1.0-py3-none-any.whl</code>
+                </li>
+                <li>
+                  Subject digest: <code>c489c5a4b5032ce8e4896f72685437c640f1d159f57744c0be4c82171a2a9884</code>
+                </li>
+                <li>
+                  Sigstore transparency entry: <a href="https://search.sigstore.dev/?logIndex=527823213">527823213</a>
+                </li>
+                <li>Sigstore integration time: <time datetime="2025-09-17T01:32:04+0000"
+        data-controller="localized-time"
+        data-localized-time-relative="true"
+        data-localized-time-show-time="true">
+    Sep 17, 2025
+  </time></li>
+              </ul>
+                Source repository:
+                <ul>
+                  <li>
+                    Permalink: <a href="https://github.com/artificial-sapience/clearflow/tree/b1745e40ca87350a2b08253754bfc47c3a71dc0d">
+                    <code>artificial-sapience/clearflow@b1745e40ca87350a2b08253754bfc47c3a71dc0d</code>
+                  </a>
+                </li>
+                <li>
+                  Branch / Tag: <a href="https://github.com/artificial-sapience/clearflow/tree/refs/heads/main">
+                  <code>refs/heads/main</code>
+                </a>
+              </li>
+              <li>
+                Owner: <a href="https://github.com/artificial-sapience">https://github.com/artificial-sapience</a>
+              </li>
+              <li>
+                Access: <code>public</code>
+              </li>
+            </ul>
+          Publication detail:
+          <ul>
+            <li>
+              Token Issuer: <code>https://token.actions.githubusercontent.com</code>
+            </li>
+              <li>
+                Runner Environment: <code>github-hosted</code>
+              </li>
+              <li>
+                Publication workflow:
+                <a href="https://github.com/artificial-sapience/clearflow/blob/b1745e40ca87350a2b08253754bfc47c3a71dc0d/.github/workflows/release.yml">
+                  <code>release.yml@b1745e40ca87350a2b08253754bfc47c3a71dc0d</code>
+                </a>
+              </li>
+              <li>
+                Trigger Event: <code>workflow_dispatch</code>
+              </li>
+          </ul>
+        </li>
+    </ul>
+  </div>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+</main>
+<footer class="footer">
+  <div class="footer__logo">
+    <img src="/static/images/white-cube.2351a86c.svg"
+         alt=""
+         class="-js-white-cube">
+  </div>
+  <div class="footer__menus">
+    <div class="footer__menu">
+      <h2>Help</h2>
+      <nav aria-label="Help navigation">
+        <ul>
+          <li>
+            <a href="https://packaging.python.org/tutorials/installing-packages/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Installing packages</a>
+          </li>
+          <li>
+            <a href="https://packaging.python.org/tutorials/packaging-projects/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Uploading packages</a>
+          </li>
+          <li>
+            <a href="https://packaging.python.org/"
+               title="External link"
+               target="_blank"
+               rel="noopener">User guide</a>
+          </li>
+          <li>
+            <a href="https://www.python.org/dev/peps/pep-0541/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Project name retention</a>
+          </li>
+          <li>
+            <a href="/help/">FAQs</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>About PyPI</h2>
+      <nav aria-label="About PyPI navigation">
+        <ul>
+          <li>
+            <a href="https://blog.pypi.org"
+               title="External link"
+               target="_blank"
+               rel="noopener">PyPI Blog</a>
+          </li>
+          <li>
+            <a href="https://dtdg.co/pypi"
+               title="External link"
+               target="_blank"
+               rel="noopener">Infrastructure dashboard</a>
+          </li>
+          <li>
+            <a href="/stats/">Statistics</a>
+          </li>
+          <li>
+            <a href="/trademarks/">Logos & trademarks</a>
+          </li>
+          <li>
+            <a href="/sponsors/">Our sponsors</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>Contributing to PyPI</h2>
+      <nav aria-label="How to contribute navigation">
+        <ul>
+          <li>
+            <a href="/help/#feedback">Bugs and feedback</a>
+          </li>
+          <li>
+            <a href="https://github.com/pypi/warehouse"
+               title="External link"
+               target="_blank"
+               rel="noopener">Contribute on GitHub</a>
+          </li>
+          <li>
+            <a href="https://hosted.weblate.org/projects/pypa/warehouse/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Translate PyPI</a>
+          </li>
+          <li>
+            <a href="/sponsors/">Sponsor PyPI</a>
+          </li>
+          <li>
+            <a href="https://github.com/pypi/warehouse/graphs/contributors"
+               title="External link"
+               target="_blank"
+               rel="noopener">Development credits</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer__menu">
+      <h2>Using PyPI</h2>
+      <nav aria-label="Using PyPI navigation">
+        <ul>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Terms-of-Service/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Terms of Service</a>
+          </li>
+          <li>
+            <a href="/security/">Report security issue</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/python.org/code-of-conduct/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Code of conduct</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Privacy-Notice/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Privacy Notice</a>
+          </li>
+          <li>
+            <a href="https://policies.python.org/pypi.org/Acceptable-Use-Policy/"
+               title="External link"
+               target="_blank"
+               rel="noopener">Acceptable Use Policy</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+  <hr class="footer__divider">
+  <div class="footer__text">
+      <p>
+Status:<a href="https://status.python.org/"
+   title="External link"
+   target="_blank"
+   rel="noopener">
+        <span data-statuspage-domain="https://2p66nmmycsj3.statuspage.io">all systems operational</span></a>
+    </p>
+  <p>
+Developed and maintained by the Python community, for the Python community.    <br>
+    <a href="https://donate.pypi.org">Donate today!</a>
+  </p>
+  <p>
+    "PyPI", "Python Package Index", and the blocks logos are registered <a href="/trademarks/">trademarks</a> of the <a href="https://www.python.org/psf-landing" target="_blank" rel="noopener">Python Software Foundation</a>.
+    <br>
+  </p>
+  <p>
+    © 2025 <a href="https://www.python.org/psf-landing/"
+    title="External link"
+    target="_blank"
+    rel="noopener">Python Software Foundation</a>
+    <br>
+    <a href="/sitemap/">Site map</a>
+  </p>
+</div>
+<div class="centered hide-on-desktop">
+  <button type="button"
+          class="button button--switch-to-desktop hidden"
+          data-viewport-toggle-target="switchToDesktop"
+          data-action="viewport-toggle#switchToDesktop">Switch to desktop version</button>
+</div>
+</footer>
+<div class="language-switcher">
+  <form action="/locale/">
+    <ul>
+        <li>
+          <button class="language-switcher__selected"                  name="locale_id"
+                  value="en"
+                  type="submit">English</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="es"
+                  type="submit">español</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="fr"
+                  type="submit">français</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="ja"
+                  type="submit">日本語</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="pt_BR"
+                  type="submit">português (Brasil)</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="uk"
+                  type="submit">українська</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="el"
+                  type="submit">Ελληνικά</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="de"
+                  type="submit">Deutsch</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="zh_Hans"
+                  type="submit">中文 (简体)</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="zh_Hant"
+                  type="submit">中文 (繁體)</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="ru"
+                  type="submit">русский</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="he"
+                  type="submit">עברית</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="eo"
+                  type="submit">Esperanto</button>
+        </li>
+        <li>
+          <button                   name="locale_id"
+                  value="ko"
+                  type="submit">한국어</button>
+        </li>
+    </ul>
+  </form>
+</div>
+<div class="sponsors">
+  <p class="sponsors__title">Supported by</p>
+  <div class="sponsors__divider"></div>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://aws.amazon.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/ed7074cadad1a06f56bc520ad9bd3e00d0704c5b/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f6177732d77686974652d6c6f676f2d7443615473387a432e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">AWS</span>
+          <span class="sponsors__service">
+              Cloud computing and Security Sponsor
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://www.datadoghq.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/8855f7c063a3bdb5b0ce8d91bfc50cf851cc5c51/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f64617461646f672d77686974652d6c6f676f2d6668644c4e666c6f2e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Datadog</span>
+          <span class="sponsors__service">
+              Monitoring
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://www.fastly.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/df6fe8829cbff2d7f668d98571df1fd011f36192/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f666173746c792d77686974652d6c6f676f2d65684d3077735f6f2e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Fastly</span>
+          <span class="sponsors__service">
+              CDN
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://careers.google.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/420cc8cf360bac879e24c923b2f50ba7d1314fb0/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f676f6f676c652d77686974652d6c6f676f2d616734424e3774332e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Google</span>
+          <span class="sponsors__service">
+              Download Analytics
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://www.pingdom.com/">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/d01053c02f3a626b73ffcb06b96367fdbbf9e230/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f70696e67646f6d2d77686974652d6c6f676f2d67355831547546362e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Pingdom</span>
+          <span class="sponsors__service">
+              Monitoring
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://getsentry.com/for/python">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/67af7117035e2345bacb5a82e9aa8b5b3e70701d/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f73656e7472792d77686974652d6c6f676f2d4a2d6b64742d706e2e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">Sentry</span>
+          <span class="sponsors__service">
+              Error logging
+          </span>
+        </a>
+        <a class="sponsors__sponsor"
+           target="_blank"
+           rel="noopener"
+           href="https://statuspage.io">
+          <img class=sponsors__image src="https://pypi-camo.freetls.fastly.net/b611884ff90435a0575dbab7d9b0d3e60f136466/68747470733a2f2f73746f726167652e676f6f676c65617069732e636f6d2f707970692d6173736574732f73706f6e736f726c6f676f732f737461747573706167652d77686974652d6c6f676f2d5467476c6a4a2d502e706e67" alt="" loading=lazy>
+          <span class="sponsors__name">StatusPage</span>
+          <span class="sponsors__service">
+              Status page
+          </span>
+        </a>
+</div></body>
 </html></doc></quick start><documentation><doc title="README" desc="Documentation"># ClearFlow
 
 [![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/clearflow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/clearflow?branch=main)
@@ -96,6 +2044,16 @@
 [![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
 Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.
+
+## Version Policy
+
+**Alpha Phase (0.x.y)**: ClearFlow is in active development. Breaking changes may occur in any release. Pin exact versions in production:
+
+```bash
+pip install clearflow==0.1.0  # Pin to exact version
+```
+
+After 1.0.0, we'll follow strict [Semantic Versioning](https://semver.org/).
 
 ## Why ClearFlow?
 

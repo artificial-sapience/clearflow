@@ -7,21 +7,66 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
-Compose type-safe flows for emergent AI. 100% test coverage, minimal dependencies.
+Message-driven orchestration for AI workflows. Type-safe, immutable, 100% coverage.
 
 ## Why ClearFlow?
 
+- **Message-driven architecture** – Commands trigger actions, Events record facts
 - **100% test coverage** – Every path proven to work
-- **Type-safe transformations** – Errors caught at development time, not runtime
-- **Immutable state** – No hidden mutations
+- **Type-safe flows** – Full static typing with pyright strict mode
+- **Deep immutability** – All state transformations create new immutable data
 - **Minimal dependencies** – Only Pydantic for validation and immutability
-- **Single exit enforcement** – No ambiguous endings
+- **Single completion** – Exactly one end message type per flow
 - **AI-Ready Documentation** – llms.txt for optimal coding assistant integration
+
+## How It Works
+
+ClearFlow uses **Messages** to orchestrate AI workflows:
+
+```text
+Command → Node → Event → Node → Event → End
+```
+
+- **Commands** request actions: "analyze this portfolio"
+- **Events** record what happened: "risk assessment completed"
+- **Nodes** process messages and emit new ones
+- **Flows** route messages between nodes based on type
+
+Every message knows where it came from (causality tracking), making complex AI workflows debuggable and testable.
 
 ## Quick Start
 
 ```bash
 pip install clearflow
+```
+
+```python
+from clearflow import Node, Command, Event, create_flow
+
+# Define messages
+class AnalyzeCommand(Command):
+    text: str
+
+class AnalysisComplete(Event):
+    sentiment: str
+    triggered_by_id: str
+
+# Create a node
+class SentimentAnalyzer(Node[AnalyzeCommand, AnalysisComplete]):
+    name: str = "analyzer"
+
+    async def process(self, msg: AnalyzeCommand) -> AnalysisComplete:
+        # Your AI logic here
+        sentiment = "positive" if "good" in msg.text else "negative"
+        return AnalysisComplete(
+            sentiment=sentiment,
+            triggered_by_id=msg.id
+        )
+
+# Build and run flow
+flow = create_flow("sentiment_pipeline", SentimentAnalyzer()).end_flow(AnalysisComplete)
+result = await flow.process(AnalyzeCommand(text="good morning"))
+print(result.sentiment)  # "positive"
 ```
 
 **Note**: ClearFlow is in alpha. Pin your version in production (`clearflow==0.x.y`) as breaking changes may occur in minor releases.
@@ -44,24 +89,25 @@ claude mcp add-json clearflow-docs '{
 
 For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc#configuration).
 
-## Examples
+## Real-World Examples
 
-| Name | Description |
-|------|-------------|
-| [Chat](examples/chat/) | Simple conversational flow with OpenAI |
-| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-specialist workflow for financial analysis |
-| [RAG](examples/rag/) | Full retrieval-augmented generation with vector search |
+| Example | What It Shows |
+|---------|---------------|
+| [Chat](examples/chat/) | Message routing between user and AI |
+| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-agent coordination with Events |
+| [RAG](examples/rag/) | Document processing pipeline with causality tracking |
 
 ## ClearFlow vs PocketFlow
 
 | Aspect | ClearFlow | PocketFlow |
 |--------|-----------|------------|
-| **State** | Immutable, passed via `NodeResult` | Mutable, passed via `shared` param |
-| **Routing** | Outcome-based explicit routes | Action-based graph edges |
-| **Termination** | Exactly one exit enforced | Multiple exits allowed |
-| **Type safety** | Full Python 3.13+ generics | Dynamic (no annotations) |
+| **Architecture** | Message-driven (Commands/Events) | State-based transformations |
+| **State** | Immutable messages with causality tracking | Mutable, passed via `shared` param |
+| **Routing** | Message type-based explicit routes | Action-based graph edges |
+| **Completion** | Single end message type | Multiple exits allowed |
+| **Type safety** | Full static typing with pyright strict | Dynamic (no annotations) |
 
-ClearFlow emphasizes **robust, type-safe orchestration** with validation and guardrails. PocketFlow emphasizes **brevity and flexibility** with minimal overhead.
+ClearFlow provides **message-driven orchestration** with immutable causality tracking and type safety. PocketFlow emphasizes **brevity and flexibility** with minimal overhead.
 
 ## Development
 
