@@ -96,7 +96,8 @@ async def run_query_phase(chunks: tuple[str, ...], embeddings: tuple[tuple[float
 
     while True:
         try:
-            query_text = input("\\nEnter your question: ").strip()
+            query_text = await asyncio.to_thread(input, "\\nEnter your question: ")
+            query_text = query_text.strip()
 
             if query_text.lower() in {"quit", "exit", "bye"}:
                 print("Goodbye!")
