@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
-Message-driven orchestration for AI workflows. Type-safe, immutable, 100% coverage.
+Message-driven orchestration of AI workflows. Type-safe, immutable, 100% coverage.
 
 ## Why ClearFlow?
 
@@ -40,36 +40,15 @@ Every message knows where it came from (causality tracking), making complex AI w
 pip install clearflow
 ```
 
-```python
-from clearflow import Node, Command, Event, create_flow
-
-# Define messages
-class AnalyzeCommand(Command):
-    text: str
-
-class AnalysisComplete(Event):
-    sentiment: str
-    triggered_by_id: str
-
-# Create a node
-class SentimentAnalyzer(Node[AnalyzeCommand, AnalysisComplete]):
-    name: str = "analyzer"
-
-    async def process(self, msg: AnalyzeCommand) -> AnalysisComplete:
-        # Your AI logic here
-        sentiment = "positive" if "good" in msg.text else "negative"
-        return AnalysisComplete(
-            sentiment=sentiment,
-            triggered_by_id=msg.id
-        )
-
-# Build and run flow
-flow = create_flow("sentiment_pipeline", SentimentAnalyzer()).end_flow(AnalysisComplete)
-result = await flow.process(AnalyzeCommand(text="good morning"))
-print(result.sentiment)  # "positive"
-```
-
 **Note**: ClearFlow is in alpha. Pin your version in production (`clearflow==0.x.y`) as breaking changes may occur in minor releases.
+
+## Real-World Examples
+
+| Example | What It Shows |
+|---------|---------------|
+| [Chat](examples/chat/) | Message routing between user and AI |
+| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-language model coordination with Events |
+| [RAG](examples/rag/) | Document processing pipeline with causality tracking |
 
 ## AI Assistant Integration
 
@@ -88,14 +67,6 @@ claude mcp add-json clearflow-docs '{
 ```
 
 For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc#configuration).
-
-## Real-World Examples
-
-| Example | What It Shows |
-|---------|---------------|
-| [Chat](examples/chat/) | Message routing between user and AI |
-| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-agent coordination with Events |
-| [RAG](examples/rag/) | Document processing pipeline with causality tracking |
 
 ## ClearFlow vs PocketFlow
 
@@ -123,7 +94,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```bash
 git clone https://github.com/artificial-sapience/clearflow.git
-cd ClearFlow
+cd clearflow
 uv sync --all-extras     # Creates venv and installs deps automatically
 ./quality-check.sh       # Run all checks
 ```
