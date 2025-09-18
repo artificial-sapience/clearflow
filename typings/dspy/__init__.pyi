@@ -4,11 +4,12 @@ This file contains ONLY the DSPy APIs we actually use.
 
 APIs stubbed (based on actual usage):
 - dspy.LM: Language model configuration
-- dspy.configure: Global DSPy configuration  
+- dspy.configure: Global DSPy configuration
 - dspy.Signature: Base class for prompt signatures
 - dspy.InputField: Input field descriptor
 - dspy.OutputField: Output field descriptor
 - dspy.Predict: Prediction module
+- dspy.ChainOfThought: Chain of thought reasoning module
 
 If you need additional DSPy functionality:
 1. Add it to the examples
@@ -25,6 +26,8 @@ from pydantic._internal._model_construction import ModelMetaclass
 # Language Model Configuration
 class LM:
     """Language model interface for DSPy."""
+    cache: bool  # Controls DSPy caching behavior
+
     def __init__(
         self,
         model: str,
@@ -78,20 +81,33 @@ class Signature(BaseModel, metaclass=SignatureMeta):
     """
     __doc__: str
 
-# Prediction Module
+# Prediction Modules
 class Predict:
     """DSPy prediction module for executing signatures."""
-    
+
     def __init__(
         self,
         signature: type[Signature] | str,
         **kwargs: Any
     ) -> None: ...
-    
+
     def __call__(self, **kwargs: Any) -> Any:
         """Execute the prediction with given inputs."""
         ...
-    
+
     def forward(self, **kwargs: Any) -> Any:
         """Forward pass through the prediction module."""
         ...
+
+class ChainOfThought(Predict):
+    """DSPy chain of thought module for step-by-step reasoning.
+
+    Extends Predict to add reasoning field before output fields,
+    enabling step-by-step thinking for better quality outputs.
+    """
+
+    def __init__(
+        self,
+        signature: type[Signature] | str,
+        **kwargs: Any
+    ) -> None: ...

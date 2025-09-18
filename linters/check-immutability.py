@@ -127,11 +127,7 @@ def check_mutable_collections(file_path: Path, content: str) -> tuple[Violation,
     """
     violations: list[Violation] = []
 
-    # Skip this check for test files and linters - they often need mutable collections
-    # for tracking test state, assertions, and violations
-    path_str = str(file_path)
-    if "tests/" in path_str or path_str.startswith("test_") or "linters/" in path_str:
-        return tuple(violations)
+    # No exclusions - all Python code must pass immutability checks
 
     try:
         tree = ast.parse(content, filename=str(file_path))
@@ -468,17 +464,6 @@ def _should_skip_listcomp(node: ast.ListComp, lines: tuple[str, ...]) -> bool:
     return any(word in context for word in skip_patterns)
 
 
-def _should_skip_file(file_path: Path) -> bool:
-    """Check if file should be skipped for list building checks.
-
-    Returns:
-        True if file should be skipped, False otherwise.
-
-    """
-    path_str = str(file_path)
-    return "tests/" in path_str or "linters/" in path_str
-
-
 def _collect_list_violations(
     tree: ast.Module, lines: tuple[str, ...], file_path: Path, content: str
 ) -> tuple[Violation, ...]:
@@ -519,10 +504,6 @@ def check_list_building(file_path: Path, content: str) -> tuple[Violation, ...]:
         List of violations for mutable list building.
 
     """
-    # Skip this check for test files and scripts
-    if _should_skip_file(file_path):
-        return ()
-
     try:
         tree = ast.parse(content, filename=str(file_path))
     except SyntaxError:

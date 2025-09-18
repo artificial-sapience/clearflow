@@ -422,35 +422,7 @@ __all__ = [
 **Discovered**: If `create_flow().end_flow()` returns an internal `_Flow`, it's returned as public `Node` interface
 **Solution**: Return type is `Node[TStartIn, TEnd]` which is a public interface
 
-### Coverage Gap Patterns
 
-**Pattern**: Missing coverage often indicates missing validation tests
-**Example**: Node name validation (lines 41-42) required test with empty/whitespace names:
-
-```python
-async def test_node_name_validation() -> None:
-    with pytest.raises(ValueError, match="Node name must be a non-empty string"):
-        ProcessorNode(name="")
-    with pytest.raises(ValueError, match="Node name must be a non-empty string"):
-        ProcessorNode(name="   ")
-```
-
-### PLR6301 Handling for Mission-Critical Software
-
-**Decision**: Convert test methods to standalone functions when they don't use `self`
-**Rationale**: Aligns with "fix root cause" principle, improves clarity, follows pylint best practice
-**Pattern**:
-
-```python
-# Instead of:
-class TestMessage:
-    async def test_message_type_property(self) -> None: ...
-
-# Use:
-async def test_message_type_property() -> None:
-    """Test that message_type returns the concrete class type."""
-    ...
-```
 
 ### Complexity Management in Production Tests
 
@@ -489,10 +461,15 @@ if node.module in non_public_modules and is_test_file:
 **Violation Pattern**: Adding `# noqa`, `# type: ignore`, or `clearflow: ignore` without asking first
 **Correct Process**:
 
-1. Identify need for suppression
-2. Ask user for explicit approval with justification
-3. Only proceed if approved
-4. Always include justification comment in suppression
+1. Identify root cause of the issue
+2. FIX THE ROOT CAUSE instead of suppressing:
+   - Update type stubs if library types are missing
+   - Refactor code to eliminate complexity
+   - Add proper type annotations
+3. Only if truly unfixable: Ask user for explicit approval with justification
+4. If approved, always include justification comment in suppression
+
+**Type Stub Management**: When DSPy or other libraries cause type errors, update `typings/` stubs instead of suppressing
 
 ## Example Organization
 
@@ -534,16 +511,44 @@ examples/
 **Discovered**: PLR6301 warnings about methods that could be static must be fixed
 **Solution**: Make methods static when they don't use instance state
 
-### LLM Integration Patterns
+### LLM-Powered Tool Architecture
 
-**Pattern**: LLM-powered linters using ClearFlow's message-driven architecture
-**Implementation**: Created type_safety_analyzer_claude demonstrating:
-- AST parsing in CodeParserNode (no LLM needed)
-- DSPy signatures for structured LLM analysis
-- Observer pattern for progress visibility during LLM calls
-- Single terminal type (not unions) per ClearFlow requirement
+**Pattern**: Direct file analysis without AST parsing - let LLM read files naturally
+**Implementation**: type_safety_analyzer simplified from multi-node to single-node:
+- Removed AST parsing - LLMs understand code better with full context
+- Single DSPy ChainOfThought call analyzes entire file
+- JSON output for structured results from unstructured LLM reasoning
+- Observer pattern for real-time progress feedback
 
-**Key Learning**: ClearFlow flows ARE nodes - use `.process()` not `.run()`
+**Key Discovery**: Over-engineering (AST parsing) reduces LLM effectiveness by removing context
+
+### DSPy Integration Best Practices
+
+**String concatenation in signatures**: Use parentheses to avoid implicit concatenation:
+```python
+desc=("Long description that spans "
+      "multiple lines without concatenation issues")
+```
+
+**JSON output pattern**: Have LLM return JSON strings, then parse:
+```python
+issues: str = dspy.OutputField(desc="JSON array of issues")
+# Then: issues_data = json.loads(result.issues)
+```
+
+### Benchmark Design Without Hints
+
+**Anti-pattern**: Comments like "# This should be a Literal" give away answers
+**Solution**: Write realistic production code without hints
+**Rubric pattern**: Separate rubric file documents expected detections for scoring
+
+### Boolean Parameter Best Practices
+
+**Pattern**: Use keyword-only for boolean parameters to avoid positional confusion:
+```python
+def create_flow(*, verbose: bool = True) -> Node[...]: ...
+# Called as: create_flow(verbose=True) not create_flow(True)
+```
 
 ### Observer Integration
 
@@ -561,7 +566,10 @@ return flow_builder.end_flow(TerminalEvent)
 ### Architecture Compliance
 
 **Rule**: Private methods accessed via class name violate ARCH006
-**Solution**: Make methods public (remove underscore) when accessed as static
+**Solutions** (in order of preference):
+1. Convert static methods to module-level functions (cleanest)
+2. Make methods public (remove underscore) when accessed as static
+3. Use instance methods if they need instance state
 
 ### Immutability Requirements
 
@@ -572,7 +580,7 @@ return flow_builder.end_flow(TerminalEvent)
 
 **Exception**: Building lists with `.append()` allowed within functions
 
-### DSPy Configuration
+### DSPy Configuration and Best Practices
 
 **Required for OpenAI integration**:
 ```python
@@ -591,6 +599,19 @@ lm = dspy.LM(
     max_tokens=16000  # Required for reasoning models
 )
 ```
+
+**DSPy Module Selection**:
+- Use `dspy.ChainOfThought` over `dspy.Predict` for complex reasoning (20-30% quality improvement)
+- ChainOfThought adds automatic reasoning field for step-by-step analysis
+- Capture reasoning in signatures with `reasoning: str = dspy.OutputField(desc="...")`
+
+**DSPy Type Stubs**: Maintain minimal stubs in `typings/dspy/__init__.pyi` for APIs we actually use
+
+### Observer Display Patterns
+
+**Pattern**: Convert private static print methods to module-level functions
+**Rationale**: Eliminates ARCH006 violations, follows "flat is better than nested"
+**Implementation**: Place utility functions before class definition in observer modules
 
 ## Session Learnings: 2025-01-15
 
