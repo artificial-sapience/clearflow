@@ -1,13 +1,13 @@
 # ClearFlow
 
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
 [![Coverage Status](https://coveralls.io/repos/github/artificial-sapience/clearflow/badge.svg?branch=main)](https://coveralls.io/github/artificial-sapience/clearflow?branch=main)
 [![PyPI](https://badge.fury.io/py/clearflow.svg)](https://pypi.org/project/clearflow/)
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/clearflow?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/clearflow)
 ![Python](https://img.shields.io/badge/Python-3.13%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
-Message-driven orchestration of AI workflows. Type-safe, immutable, 100% coverage.
+Correctness-first orchestration for emergent AI. Type-safe, deeply immutable, 100% code coverage.
 
 ## Why ClearFlow?
 
@@ -17,11 +17,10 @@ Message-driven orchestration of AI workflows. Type-safe, immutable, 100% coverag
 - **Deep immutability** – All state transformations create new immutable data
 - **Minimal dependencies** – Only Pydantic for validation and immutability
 - **Single completion** – Exactly one end message type per flow
-- **AI-Ready Documentation** – llms.txt for optimal coding assistant integration
 
 ## How It Works
 
-ClearFlow uses **Messages** to orchestrate AI workflows:
+ClearFlow uses message-driven orchestration:
 
 ```text
 Command → Node → Event → Node → Event → End
@@ -32,7 +31,7 @@ Command → Node → Event → Node → Event → End
 - **Nodes** process messages and emit new ones
 - **Flows** route messages between nodes based on type
 
-Every message knows where it came from (causality tracking), making complex AI workflows debuggable and testable.
+Every message knows where it came from (causality tracking), making complex AI orchestration debuggable and testable.
 
 ## Quick Start
 
@@ -46,9 +45,9 @@ pip install clearflow
 
 | Example | What It Shows |
 |---------|---------------|
-| [Chat](examples/chat/) | Message routing between user and AI |
-| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-language model coordination with Events |
-| [RAG](examples/rag/) | Document processing pipeline with causality tracking |
+| [Chat](examples/chat/) | Message routing between user and LLM |
+| [Portfolio Analysis](examples/portfolio_analysis/) | DSPy-driven portfolio analysis |
+| [RAG](examples/rag/) | Document processing pipeline |
 
 ## AI Assistant Integration
 
@@ -77,8 +76,6 @@ For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/l
 | **Routing** | Message type-based explicit routes | Action-based graph edges |
 | **Completion** | Single end message type | Multiple exits allowed |
 | **Type safety** | Full static typing with pyright strict | Dynamic (no annotations) |
-
-ClearFlow provides **message-driven orchestration** with immutable causality tracking and type safety. PocketFlow emphasizes **brevity and flexibility** with minimal overhead.
 
 ## Development
 
