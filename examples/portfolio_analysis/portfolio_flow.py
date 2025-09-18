@@ -21,7 +21,7 @@ from examples.portfolio_analysis.nodes import (
     QuantAnalystNode,
     RiskAnalystNode,
 )
-from examples.shared.console_handler import ConsoleHandler
+from examples.portfolio_analysis.portfolio_observer import PortfolioAnalysisObserver
 
 
 def create_portfolio_analysis_flow() -> Node[StartAnalysisCommand, DecisionMadeEvent]:
@@ -54,13 +54,13 @@ def create_portfolio_analysis_flow() -> Node[StartAnalysisCommand, DecisionMadeE
     compliance = ComplianceOfficerNode()
     decision = DecisionMakerNode()
 
-    # Create console handler for visibility
-    console = ConsoleHandler()
+    # Create portfolio-specific observer for rich output
+    observer = PortfolioAnalysisObserver()
 
-    # Build the flow with console output
+    # Build the flow with portfolio-specific observer
     return (
         create_flow("PortfolioAnalysis", quant)
-        .observe(console)
+        .observe(observer)
         # Quant analysis outcomes
         .route(quant, MarketAnalyzedEvent, risk)  # Success → Risk assessment
         .route(quant, AnalysisFailedEvent, decision)  # Failure → Conservative decision

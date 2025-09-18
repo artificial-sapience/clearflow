@@ -11,7 +11,6 @@ from examples.portfolio_analysis.market_data import (
     create_volatile_market_data,
 )
 from examples.portfolio_analysis.messages import (
-    DecisionMadeEvent,
     PortfolioConstraints,
     StartAnalysisCommand,
 )
@@ -54,32 +53,6 @@ def create_market_scenario(scenario: str = "normal") -> StartAnalysisCommand:
     )
 
 
-def print_market_summary(command: StartAnalysisCommand) -> None:
-    """Print minimal market summary.
-
-    Args:
-        command: The start analysis command to display.
-
-    """
-    symbols = tuple(asset.symbol for asset in command.market_data.assets)
-    print(f"\n📊 Analyzing {len(symbols)} assets in {command.market_data.market_sentiment} market")
-    print(f"📅 Market date: {command.market_data.market_date}")
-
-
-def print_final_decision(event: DecisionMadeEvent) -> None:
-    """Print minimal final decision summary.
-
-    Args:
-        event: The decision made event to display.
-
-    """
-    print(f"\n📋 Decision: {event.decision.decision_status.upper()}")
-    if event.decision.approved_changes:
-        print(f"✅ {len(event.decision.approved_changes)} allocation changes approved")
-    if event.decision.decision_status == "escalate":
-        print("⚠️  Requires human review")
-
-
 async def run_portfolio_analysis(scenario: str = "normal") -> None:
     """Run the portfolio analysis workflow.
 
@@ -100,23 +73,19 @@ async def run_portfolio_analysis(scenario: str = "normal") -> None:
 
     # Create market command
     command = create_market_scenario(scenario)
-    print_market_summary(command)
 
-    # Create and run the flow with built-in console output
+    # Create and run the flow - all output handled by observer
     flow = create_portfolio_analysis_flow()
-    result = await flow.process(command)
-
-    # Display final decision summary
-    print_final_decision(result)
+    await flow.process(command)
 
 
 def print_menu() -> None:
     """Print menu options."""
-    print("\n🎯 PORTFOLIO ANALYSIS WITH LLM INTELLIGENCE")
-    print("\nSelect market scenario:")
-    print("1. Normal market conditions (default)")
-    print("2. Bullish market (growth opportunities)")
-    print("3. Volatile market (high risk)")
+    print("\nPORTFOLIO ANALYSIS")
+    print("Select market scenario:")
+    print("  1. Normal market conditions (default)")
+    print("  2. Bullish market (growth opportunities)")
+    print("  3. Volatile market (high risk)")
 
 
 async def main() -> None:
@@ -132,8 +101,6 @@ async def main() -> None:
     }
 
     scenario = scenarios.get(choice, "normal")
-    if choice and choice not in scenarios:
-        print("Invalid choice. Using default (normal).")
 
     await run_portfolio_analysis(scenario)
 
