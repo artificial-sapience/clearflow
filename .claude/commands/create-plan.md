@@ -1,0 +1,1 @@
+please capture the complete set of phases and tasks required to implement this, ensuring that each task passes @quality-check.sh checks 100% for any modified modules before proceeding to the next task. Please capture this detailed plan in @plan.md

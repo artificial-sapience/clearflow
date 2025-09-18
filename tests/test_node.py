@@ -1,234 +1,319 @@
-"""Test Node abstraction features of ClearFlow.
+"""Test message Node abstraction features.
 
-This module tests the Node class functionality including lifecycle hooks,
-lifecycle hooks, and routing patterns for mission-critical AI orchestration.
+This module tests the Node class for message-driven architecture including
+process method and message transformation patterns.
 
 """
 
-from dataclasses import dataclass as dc
-from dataclasses import replace
 from typing import override
 
-from clearflow import Node, NodeResult
-from tests.conftest import AgentState, Message, ValidationState
+import pytest
+from pydantic import ValidationError
 
-# Module-level test nodes to reduce complexity
-
-
-@dc(frozen=True)
-class TokenCountNode(Node[ValidationState]):
-    """Node for token counting in LLM validation."""
-
-    name: str = "token_counter"
-
-    @override
-    async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
-        # Transformation: count tokens (simplified)
-        token_count = len(state.input_text.split())
-
-        if token_count > 100:
-            errors = (*state.errors, f"Token count {token_count} exceeds limit")
-            new_state = replace(state, errors=errors, validated=False)
-            outcome = "too_long"
-        else:
-            new_state = replace(state, validated=True)
-            outcome = "valid_length"
-
-        return NodeResult(new_state, outcome=outcome)
+from clearflow import Node
+from tests.conftest import (
+    AnalysisCompleteEvent,
+    AnalyzeCommand,
+    ErrorEvent,
+    ProcessCommand,
+    ProcessedEvent,
+    ValidateCommand,
+    ValidationFailedEvent,
+    ValidationPassedEvent,
+    create_run_id,
+)
 
 
-@dc(frozen=True)
-class PromptState:
-    """Immutable state for prompt engineering pipeline."""
-
-    raw_prompt: str
-    sanitized: bool = False
-    validated: bool = False
-    enhanced: bool = False
-
-
-@dc(frozen=True)
-class PromptEngineeringNode(Node[PromptState]):
-    """Node demonstrating lifecycle hooks for prompt engineering."""
-
-    name: str = "prompt_engineer"
+# Test node implementations
+class ProcessorNode(Node[ProcessCommand, ProcessedEvent]):
+    """Node that processes commands into events."""
 
     @override
-    async def prep(self, state: PromptState) -> PromptState:
-        # Sanitize prompt in prep phase
-        return replace(state, sanitized=True)
-
-    @override
-    async def exec(self, state: PromptState) -> NodeResult[PromptState]:
-        # Validate prompt in main execution
-        new_state = replace(state, validated=True)
-        return NodeResult(new_state, outcome="validated")
-
-    @override
-    async def post(
-        self,
-        result: NodeResult[PromptState],
-    ) -> NodeResult[PromptState]:
-        # Enhance prompt in post phase
-        new_state = replace(result.state, enhanced=True)
-        return NodeResult(new_state, outcome=result.outcome)
-
-
-@dc(frozen=True)
-class LLMRouterNode(Node[AgentState]):
-    """Routes to different paths based on LLM analysis."""
-
-    name: str = "llm_router"
-
-    @override
-    async def exec(self, state: AgentState) -> NodeResult[AgentState]:
-        # Analyze last user message for intent (simulating LLM classification)
-        last_msg = state.messages[-1] if state.messages else None
-
-        # Determine outcome and response based on message content
-        outcome, response = self._classify_intent(last_msg)
-
-        # Immutable state update
-        new_state = AgentState(
-            messages=(*state.messages, response),
-            context=state.context,
-            temperature=0.3 if outcome == "code_generation" else state.temperature,
+    async def process(self, message: ProcessCommand) -> ProcessedEvent:
+        # Simple processing logic
+        result = f"processed: {message.data}"
+        return ProcessedEvent(
+            result=result,
+            processing_time_ms=100.0,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
         )
-        return NodeResult(new_state, outcome=outcome)
 
-    @staticmethod
-    def _classify_intent(msg: Message | None) -> tuple[str, Message]:
-        """Classify user intent from message.
 
-        Returns:
-            Tuple of (intent string, response message).
+class ValidatorNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFailedEvent]):
+    """Node that validates commands into success or failure events."""
 
-        """
-        if not msg or msg.role != "user":
-            return "no_input", Message(role="assistant", content="Please provide input.")
+    name: str = "validator"
 
-        content_lower = msg.content.lower()
-        if "weather" in content_lower:
-            return "tool_required", Message(
-                role="assistant",
-                content="I'll check the weather for you.",
-            )
-        if "code" in content_lower:
-            return "code_generation", Message(
-                role="assistant",
-                content="I'll help you write code.",
+    @override
+    async def process(self, message: ValidateCommand) -> ValidationPassedEvent | ValidationFailedEvent:
+        if message.strict and len(message.content) < 5:
+            return ValidationFailedEvent(
+                reason="Content too short",
+                errors=("Length < 5",),
+                triggered_by_id=message.id,
+                run_id=message.run_id,
             )
 
-        return "direct_response", Message(
-            role="assistant",
-            content="I understand your request.",
+        return ValidationPassedEvent(
+            validated_content=message.content.upper(),
+            validation_score=0.95,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
         )
 
 
-class TestNode:
-    """Test the Node abstraction."""
+class AnalyzerNode(Node[AnalyzeCommand, AnalysisCompleteEvent | ErrorEvent]):
+    """Node that analyzes commands, potentially failing with errors."""
 
-    @staticmethod
-    async def test_immutable_transformations() -> None:
-        """Test that nodes perform immutable transformations - same input produces same output."""
-        node = TokenCountNode()
-        initial = ValidationState(input_text="Short prompt for testing")
+    name: str = "analyzer"
+    fail_on_empty: bool = True
 
-        # Multiple calls with same input produce same output (immutable transformations)
-        result1 = await node(initial)
-        result2 = await node(initial)
+    @override
+    async def process(self, message: AnalyzeCommand) -> AnalysisCompleteEvent | ErrorEvent:
+        if self.fail_on_empty and not message.input_data:
+            return ErrorEvent(
+                error_message="Empty input data",
+                error_type="validation",
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )
 
-        assert result1.state == result2.state
-        assert result1.outcome == result2.outcome
-
-    @staticmethod
-    async def test_validation_success() -> None:
-        """Test successful validation for short text."""
-        node = TokenCountNode()
-        initial = ValidationState(input_text="Short prompt for testing")
-
-        result = await node(initial)
-
-        assert result.state.validated is True
-        assert result.outcome == "valid_length"
-        # Verify immutability
-        assert initial.validated is False
-
-    @staticmethod
-    async def test_validation_failure() -> None:
-        """Test validation failure for long text."""
-        node = TokenCountNode()
-        # Create text with more than 100 words
-        long_text = " ".join(["word"] * 101)
-        initial = ValidationState(input_text=long_text)
-
-        result = await node(initial)
-
-        assert result.state.validated is False
-        assert result.outcome == "too_long"
-        assert len(result.state.errors) == 1
-        assert "exceeds limit" in result.state.errors[0]
-
-    @staticmethod
-    async def test_lifecycle_hooks() -> None:
-        """Test that prep and post hooks work correctly."""
-        node = PromptEngineeringNode()
-        initial = PromptState(raw_prompt="Explain quantum computing")
-        result = await node(initial)
-
-        assert result.state.sanitized is True
-        assert result.state.validated is True
-        assert result.state.enhanced is True
-        assert initial.sanitized is False  # Original unchanged
-
-    @staticmethod
-    async def test_router_no_input() -> None:
-        """Test router handles missing user input."""
-        node = LLMRouterNode()
-        empty_state = AgentState(messages=(), context="assistant")
-        result = await node(empty_state)
-
-        assert result.outcome == "no_input"
-        assert "Please provide input" in result.state.messages[0].content
-
-    @staticmethod
-    async def test_router_tool_required() -> None:
-        """Test router identifies tool-required intent."""
-        node = LLMRouterNode()
-        weather_state = AgentState(
-            messages=(Message(role="user", content="What's the weather in NYC?"),),
-            context="weather_assistant",
+        findings = f"Analysis of {message.input_data}: {message.analysis_type}"
+        return AnalysisCompleteEvent(
+            findings=findings,
+            confidence=0.85,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
         )
-        result = await node(weather_state)
 
-        assert result.outcome == "tool_required"
-        assert len(result.state.messages) == 2
-        assert "check the weather" in result.state.messages[-1].content
 
-    @staticmethod
-    async def test_router_code_generation() -> None:
-        """Test router identifies code generation intent and adjusts temperature."""
-        node = LLMRouterNode()
-        code_state = AgentState(
-            messages=(Message(role="user", content="Help me write Python code"),),
-            context="coding_assistant",
-            temperature=0.7,
+class ChainNode(Node[ProcessedEvent, AnalyzeCommand]):
+    """Node that chains event to command transformation."""
+
+    name: str = "chainer"
+
+    @override
+    async def process(self, message: ProcessedEvent) -> AnalyzeCommand:
+        return AnalyzeCommand(
+            input_data=message.result,
+            analysis_type="detailed",
+            triggered_by_id=message.id,
+            run_id=message.run_id,
         )
-        result = await node(code_state)
 
-        assert result.outcome == "code_generation"
-        assert result.state.temperature == 0.3  # Lowered for code generation
-        assert "write code" in result.state.messages[-1].content
 
-    @staticmethod
-    async def test_router_direct_response() -> None:
-        """Test router handles general queries."""
-        node = LLMRouterNode()
-        general_state = AgentState(
-            messages=(Message(role="user", content="Tell me about history"),),
-            context="assistant",
-        )
-        result = await node(general_state)
+def _create_test_command(data: str = "test data") -> ProcessCommand:
+    """Create a test command with default run_id.
 
-        assert result.outcome == "direct_response"
-        assert "understand your request" in result.state.messages[-1].content
+    Returns:
+        ProcessCommand with the specified data.
+
+    """
+    return ProcessCommand(data=data, triggered_by_id=None, run_id=create_run_id())
+
+
+def _assert_processed_event_correct(output: ProcessedEvent, input_msg: ProcessCommand, expected_result: str) -> None:
+    """Assert that processed event has expected properties."""
+    assert isinstance(output, ProcessedEvent)
+    assert output.result == expected_result
+    _assert_event_metadata_correct(output, input_msg)
+
+
+def _assert_event_metadata_correct(output: ProcessedEvent, input_msg: ProcessCommand) -> None:
+    """Assert event metadata matches input message."""
+    assert output.processing_time_ms == 100.0
+    assert output.triggered_by_id == input_msg.id
+    assert output.run_id == input_msg.run_id
+
+
+async def test_node_basic_processing() -> None:
+    """Test basic node message processing."""
+    node = ProcessorNode(name="processor")
+    input_msg = _create_test_command()
+    output = await node.process(input_msg)
+    _assert_processed_event_correct(output, input_msg, "processed: test data")
+
+
+def test_node_immutability() -> None:
+    """Test that nodes are immutable."""
+    node = ProcessorNode(name="immutable_processor")
+
+    # Should not be able to modify node
+    with pytest.raises(ValidationError, match="frozen"):
+        node.name = "modified"
+
+
+async def test_node_union_return_types() -> None:
+    """Test nodes that return union types."""
+    node = ValidatorNode(name="validator")
+    run_id = create_run_id()
+
+    # Test validation success
+    valid_cmd = ValidateCommand(
+        content="valid content",
+        strict=True,
+        triggered_by_id=None,
+        run_id=run_id,
+    )
+    result = await node.process(valid_cmd)
+    assert isinstance(result, ValidationPassedEvent)
+    assert result.validated_content == "VALID CONTENT"
+
+    # Test validation failure
+    invalid_cmd = ValidateCommand(
+        content="bad",
+        strict=True,
+        triggered_by_id=None,
+        run_id=run_id,
+    )
+    result = await node.process(invalid_cmd)
+    assert isinstance(result, ValidationFailedEvent)
+    assert result.reason == "Content too short"
+
+
+async def _process_chain_step1(processor: ProcessorNode, cmd: ProcessCommand) -> ProcessedEvent:
+    """Process first step in chain and validate result.
+
+    Returns:
+        ProcessedEvent from the processor.
+
+    """
+    event1 = await processor.process(cmd)
+    assert isinstance(event1, ProcessedEvent)
+    return event1
+
+
+async def _process_chain_step2(chainer: ChainNode, event1: ProcessedEvent) -> AnalyzeCommand:
+    """Process second step in chain and validate result.
+
+    Returns:
+        AnalyzeCommand from the chainer.
+
+    """
+    cmd2 = await chainer.process(event1)
+    assert isinstance(cmd2, AnalyzeCommand)
+    assert cmd2.input_data == event1.result
+    return cmd2
+
+
+async def _process_chain_step3(analyzer: AnalyzerNode, cmd2: AnalyzeCommand) -> AnalysisCompleteEvent:
+    """Process final step in chain and validate result.
+
+    Returns:
+        AnalysisCompleteEvent from the analyzer.
+
+    """
+    event2 = await analyzer.process(cmd2)
+    assert isinstance(event2, AnalysisCompleteEvent)
+    assert "processed: important" in event2.findings
+    return event2
+
+
+async def test_node_message_chaining() -> None:
+    """Test chaining messages through multiple nodes."""
+    processor = ProcessorNode(name="processor")
+    chainer = ChainNode(name="chainer")
+    analyzer = AnalyzerNode(name="analyzer", fail_on_empty=False)
+
+    cmd = _create_test_command("important")
+    event1 = await _process_chain_step1(processor, cmd)
+    cmd2 = await _process_chain_step2(chainer, event1)
+    await _process_chain_step3(analyzer, cmd2)
+
+
+async def test_node_error_handling() -> None:
+    """Test node error event generation."""
+    analyzer = AnalyzerNode(name="analyzer", fail_on_empty=True)
+    run_id = create_run_id()
+
+    # Empty input should trigger error
+    cmd = AnalyzeCommand(
+        input_data="",
+        triggered_by_id=None,
+        run_id=run_id,
+    )
+
+    result = await analyzer.process(cmd)
+    assert isinstance(result, ErrorEvent)
+    assert result.error_message == "Empty input data"
+    assert result.error_type == "validation"
+
+
+async def test_node_causality_preservation() -> None:
+    """Test that nodes preserve message causality."""
+    node = ProcessorNode(name="processor")
+    run_id = create_run_id()
+
+    cmd = ProcessCommand(
+        data="test",
+        triggered_by_id=None,
+        run_id=run_id,
+    )
+
+    output = await node.process(cmd)
+
+    # Output should be triggered by input
+    assert output.triggered_by_id == cmd.id
+    assert output.run_id == cmd.run_id
+
+
+def test_node_name_property() -> None:
+    """Test node name configuration."""
+    # Default name
+    node1 = ProcessorNode(name="processor")
+    assert node1.name == "processor"
+
+    # Custom name
+    node2 = ProcessorNode(name="custom_processor")
+    assert node2.name == "custom_processor"
+
+
+async def test_node_with_configuration() -> None:
+    """Test nodes with configuration parameters."""
+    # Configurable analyzer
+    strict_analyzer = AnalyzerNode(name="strict", fail_on_empty=True)
+    lenient_analyzer = AnalyzerNode(name="lenient", fail_on_empty=False)
+    run_id = create_run_id()
+
+    empty_cmd = AnalyzeCommand(
+        input_data="",
+        triggered_by_id=None,
+        run_id=run_id,
+    )
+
+    # Strict fails on empty
+    strict_result = await strict_analyzer.process(empty_cmd)
+    assert isinstance(strict_result, ErrorEvent)
+
+    # Lenient processes empty
+    lenient_result = await lenient_analyzer.process(empty_cmd)
+    assert isinstance(lenient_result, AnalysisCompleteEvent)
+
+
+async def test_node_type_safety() -> None:
+    """Test that nodes maintain type safety."""
+    processor = ProcessorNode(name="processor")
+    validator = ValidatorNode(name="validator")
+    run_id = create_run_id()
+
+    # Processor expects ProcessCommand
+    process_cmd = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
+    process_result = await processor.process(process_cmd)
+    assert isinstance(process_result, ProcessedEvent)
+
+    # Validator expects ValidateCommand (different type)
+    validate_cmd = ValidateCommand(content="test", triggered_by_id=None, run_id=run_id)
+    validate_result = await validator.process(validate_cmd)
+    assert isinstance(validate_result, (ValidationPassedEvent, ValidationFailedEvent))
+
+
+def test_node_name_validation() -> None:
+    """Test that nodes validate their names during initialization."""
+    # Empty name should raise ValidationError
+    with pytest.raises(ValidationError, match="String should have at least 1 character"):
+        ProcessorNode(name="")
+
+    # Whitespace-only name should raise ValidationError (gets stripped then validated)
+    with pytest.raises(ValidationError, match="String should have at least 1 character"):
+        ProcessorNode(name="   ")

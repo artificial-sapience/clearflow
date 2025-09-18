@@ -7,26 +7,32 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
-Compose type-safe flows for emergent AI. 100% test coverage, zero dependencies.
-
-## Version Policy
-
-**Alpha Phase (0.x.y)**: ClearFlow is in active development. Breaking changes may occur in any release. Pin exact versions in production:
-
-```bash
-pip install clearflow==0.1.0  # Pin to exact version
-```
-
-After 1.0.0, we'll follow strict [Semantic Versioning](https://semver.org/).
+Message-driven orchestration of AI workflows. Type-safe, immutable, 100% coverage.
 
 ## Why ClearFlow?
 
+- **Message-driven architecture** – Commands trigger actions, Events record facts
 - **100% test coverage** – Every path proven to work
-- **Type-safe transformations** – Errors caught at development time, not runtime
-- **Immutable state** – No hidden mutations
-- **Zero dependencies** – No hidden failure modes
-- **Single exit enforcement** – No ambiguous endings
+- **Type-safe flows** – Full static typing with pyright strict mode
+- **Deep immutability** – All state transformations create new immutable data
+- **Minimal dependencies** – Only Pydantic for validation and immutability
+- **Single completion** – Exactly one end message type per flow
 - **AI-Ready Documentation** – llms.txt for optimal coding assistant integration
+
+## How It Works
+
+ClearFlow uses **Messages** to orchestrate AI workflows:
+
+```text
+Command → Node → Event → Node → Event → End
+```
+
+- **Commands** request actions: "analyze this portfolio"
+- **Events** record what happened: "risk assessment completed"
+- **Nodes** process messages and emit new ones
+- **Flows** route messages between nodes based on type
+
+Every message knows where it came from (causality tracking), making complex AI workflows debuggable and testable.
 
 ## Quick Start
 
@@ -34,7 +40,15 @@ After 1.0.0, we'll follow strict [Semantic Versioning](https://semver.org/).
 pip install clearflow
 ```
 
-> **Upgrading from v0.x?** See the [Migration Guide](MIGRATION.md) for breaking changes.
+**Note**: ClearFlow is in alpha. Pin your version in production (`clearflow==0.x.y`) as breaking changes may occur in minor releases.
+
+## Real-World Examples
+
+| Example | What It Shows |
+|---------|---------------|
+| [Chat](examples/chat/) | Message routing between user and AI |
+| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-language model coordination with Events |
+| [RAG](examples/rag/) | Document processing pipeline with causality tracking |
 
 ## AI Assistant Integration
 
@@ -54,62 +68,17 @@ claude mcp add-json clearflow-docs '{
 
 For IDEs (Cursor, Windsurf), see the [mcpdoc documentation](https://github.com/langchain-ai/mcpdoc#configuration).
 
-### Direct URL Access
-
-Use these URLs directly in any AI tool that supports llms.txt:
-
-- **Minimal index** (~2KB): <https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt>
-- **Full documentation** (~63KB): <https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms-full.txt>
-
-## Examples
-
-| Name | Description |
-|------|-------------|
-| [Chat](examples/chat/) | Simple conversational flow with OpenAI |
-| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-specialist workflow for financial analysis |
-| [RAG](examples/rag/) | Full retrieval-augmented generation with vector search |
-
-## Core Concepts
-
-### `Node[TIn, TOut]`
-
-A unit that transforms state from `TIn` to `TOut` (or `Node[T]` when types are the same).
-
-- `prep(state: TIn) -> TIn` – optional pre-work/validation  
-- `exec(state: TIn) -> NodeResult[TOut]` – **required**; return new state + outcome  
-- `post(result: NodeResult[TOut]) -> NodeResult[TOut]` – optional cleanup/logging  
-
-Nodes are frozen dataclasses that execute async transformations without mutating input state.
-
-### `NodeResult[T]`
-
-Holds the **new state** and an **outcome** string used for routing.
-
-### `flow()`
-
-A function that creates a flow with **explicit routing**:
-
-```python
-flow("Name", start_node)
-  .route(start_node, "outcome1", next_node)
-  .route(next_node, "outcome2", final_node)
-  .end(final_node, "done")  # exactly one termination
-```
-
-**Routing**: Routes are `(node, outcome)` pairs. Each outcome must have exactly one route.  
-**Type inference**: The flow infers types from start to end, supporting transformations.  
-**Composability**: A flow is itself a `Node` – compose flows within flows.
-
 ## ClearFlow vs PocketFlow
 
 | Aspect | ClearFlow | PocketFlow |
 |--------|-----------|------------|
-| **State** | Immutable, passed via `NodeResult` | Mutable, passed via `shared` param |
-| **Routing** | Outcome-based explicit routes | Action-based graph edges |
-| **Termination** | Exactly one exit enforced | Multiple exits allowed |
-| **Type safety** | Full Python 3.13+ generics | Dynamic (no annotations) |
+| **Architecture** | Message-driven (Commands/Events) | State-based transformations |
+| **State** | Immutable messages with causality tracking | Mutable, passed via `shared` param |
+| **Routing** | Message type-based explicit routes | Action-based graph edges |
+| **Completion** | Single end message type | Multiple exits allowed |
+| **Type safety** | Full static typing with pyright strict | Dynamic (no annotations) |
 
-ClearFlow emphasizes **robust, type-safe orchestration** with validation and guardrails. PocketFlow emphasizes **brevity and flexibility** with minimal overhead.
+ClearFlow provides **message-driven orchestration** with immutable causality tracking and type safety. PocketFlow emphasizes **brevity and flexibility** with minimal overhead.
 
 ## Development
 
@@ -125,7 +94,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ```bash
 git clone https://github.com/artificial-sapience/clearflow.git
-cd ClearFlow
+cd clearflow
 uv sync --all-extras     # Creates venv and installs deps automatically
 ./quality-check.sh       # Run all checks
 ```

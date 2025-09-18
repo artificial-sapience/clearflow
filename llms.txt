@@ -1,6 +1,6 @@
 # ClearFlow
 
-> Compose type-safe flows for emergent AI.
+> Message-driven workflows with observable flows for emergent AI.
 
 ## Quick Start
 
@@ -14,19 +14,15 @@
 
 ## Examples
 
-- [Chat](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/chat/README.md): Chat Example
 - [Portfolio Analysis](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/portfolio_analysis/README.md): Portfolio Analysis Example
-- [RAG Pipeline](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/examples/rag/README.md): RAG Pipeline
 
 ## Testing
 
-- [Error Handling](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_error_handling.py): Test error handling and edge cases for ClearFlow
-- [Flow Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow.py): Test Flow orchestration features of ClearFlow
-- [Flow Validation](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow_builder_validation.py): Test flow builder validation for reachability and duplicate routes
-- [Node Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_node.py): Test Node abstraction features of ClearFlow
-- [Type Transformations](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_type_transformations.py): Test type transformation features of ClearFlow
+- [Flow Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_flow.py): Test flow routing and composition
+- [Message](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_message.py): Test Message, Command, and Event base classes
+- [Node Tests](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_node.py): Test message Node abstraction features
+- [Observe](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/tests/test_observe.py): Tests for callback system using only public API
 
 ## Optional
 
-- [Migration Guide](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/MIGRATION.md): Documentation
 - [License](https://raw.githubusercontent.com/artificial-sapience/ClearFlow/main/LICENSE): MIT License

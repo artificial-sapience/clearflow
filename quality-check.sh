@@ -124,7 +124,7 @@ print_header "Running linting checks"
 if [ $# -gt 0 ]; then
     RUFF_ARGS="$QUALITY_TARGETS"
 else
-    RUFF_ARGS=""  # Let ruff use its configured paths
+    RUFF_ARGS="clearflow tests examples linters scripts"  # Use same targets as other tools
 fi
 if ! uv run ruff check --exit-non-zero-on-fix $RUFF_ARGS; then
     echo -e "${RED}✗ Linting violations detected${NC}"

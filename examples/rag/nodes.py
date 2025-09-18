@@ -1,93 +1,94 @@
-"""Node implementations for RAG pipeline."""
+"""Message-driven RAG node implementations."""
 
-from dataclasses import dataclass, replace
 from typing import override
 
 import faiss
 import numpy as np
 
-from clearflow import Node, NodeResult
-from examples.rag.models import (
-    AnsweredState,
-    ChunkedState,
-    EmbeddedState,
-    IndexedState,
-    QueryState,
-    RAGState,
-    RetrievedState,
+from clearflow import Node
+from examples.rag.messages import (
+    AnswerGeneratedEvent,
+    ChunksEmbeddedEvent,
+    DocumentsChunkedEvent,
+    DocumentsRetrievedEvent,
+    IndexCreatedEvent,
+    IndexDocumentsCommand,
+    QueryCommand,
+    QueryEmbeddedEvent,
 )
 from examples.rag.utils import call_llm, fixed_size_chunk, get_embedding
 
-# Offline indexing nodes
 
+class DocumentChunkerNode(Node[IndexDocumentsCommand, DocumentsChunkedEvent]):
+    """Node that chunks documents into smaller pieces using overlap."""
 
-@dataclass(frozen=True)
-class ChunkDocumentsNode(Node[RAGState, ChunkedState]):
-    """Splits documents into smaller chunks for processing."""
-
-    name: str = "chunk_documents"
+    name: str = "document_chunker"
 
     @override
-    async def exec(self, state: RAGState) -> NodeResult[ChunkedState]:
-        """Chunk all documents into smaller pieces.
+    async def process(self, message: IndexDocumentsCommand) -> DocumentsChunkedEvent:
+        """Chunk documents into smaller pieces with overlap.
 
         Returns:
-            NodeResult with chunked state and 'chunked' outcome.
+            DocumentsChunkedEvent with chunked text.
 
         """
-        all_chunks = tuple(chunk for doc in state.documents for chunk in fixed_size_chunk(doc))
+        # Use proper chunking with overlap like the working RAG implementation
+        all_chunks = tuple(chunk for doc in message.documents for chunk in fixed_size_chunk(doc))
 
-        print(f"✅ Created {len(all_chunks)} chunks from {len(state.documents)} documents")
+        print(f"✅ Created {len(all_chunks)} chunks from {len(message.documents)} documents")
 
-        new_state = ChunkedState(
-            documents=state.documents,
+        return DocumentsChunkedEvent(
+            triggered_by_id=message.id,
+            run_id=message.run_id,
             chunks=all_chunks,
         )
-        return NodeResult(new_state, outcome="chunked")
 
 
-@dataclass(frozen=True)
-class EmbedDocumentsNode(Node[ChunkedState, EmbeddedState]):
-    """Creates embeddings for all document chunks."""
+class ChunkEmbedderNode(Node[DocumentsChunkedEvent, ChunksEmbeddedEvent]):
+    """Node that embeds text chunks using OpenAI API with numpy arrays."""
 
-    name: str = "embed_documents"
+    name: str = "chunk_embedder"
 
     @override
-    async def exec(self, state: ChunkedState) -> NodeResult[EmbeddedState]:
-        """Create embeddings for all chunks.
+    async def process(self, message: DocumentsChunkedEvent) -> ChunksEmbeddedEvent:
+        """Embed text chunks using proper numpy arrays.
 
         Returns:
-            NodeResult with embedded state and 'embedded' outcome.
+            ChunksEmbeddedEvent with embeddings.
 
         """
-        embeddings_tuple = tuple(get_embedding(chunk) for chunk in state.chunks)
+        # Create embeddings using numpy arrays like the working implementation
+        embeddings_tuple = tuple(get_embedding(chunk) for chunk in message.chunks)
 
+        # Show progress
         for i in range(len(embeddings_tuple)):
-            print(f"  Embedded chunk {i + 1}/{len(state.chunks)}", end="\r")
+            print(f"  Embedded chunk {i + 1}/{len(message.chunks)}", end="\r")
 
         embeddings = np.array(embeddings_tuple, dtype=np.float32)
         print(f"✅ Created {len(embeddings)} document embeddings")
 
-        new_state = EmbeddedState(
-            documents=state.documents,
-            chunks=state.chunks,
-            embeddings=embeddings,
+        # Convert numpy array to tuple of tuples for message serialization
+        embeddings_tuple = tuple(tuple(row.tolist()) for row in embeddings)
+
+        return ChunksEmbeddedEvent(
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+            chunks=message.chunks,
+            embeddings=embeddings_tuple,
         )
-        return NodeResult(new_state, outcome="embedded")
 
 
-@dataclass(frozen=True)
-class CreateIndexNode(Node[EmbeddedState, IndexedState]):
-    """Creates a FAISS index from document embeddings."""
+class IndexCreatorNode(Node[ChunksEmbeddedEvent, IndexCreatedEvent]):
+    """Node that creates a FAISS index from embeddings."""
 
-    name: str = "create_index"
+    name: str = "index_creator"
 
     @override
-    async def exec(self, state: EmbeddedState) -> NodeResult[IndexedState]:
+    async def process(self, message: ChunksEmbeddedEvent) -> IndexCreatedEvent:
         """Create FAISS index from embeddings.
 
         Returns:
-            NodeResult with indexed state and 'indexed' outcome.
+            IndexCreatedEvent indicating index is ready.
 
         Raises:
             ValueError: If no embeddings are available to index.
@@ -95,128 +96,125 @@ class CreateIndexNode(Node[EmbeddedState, IndexedState]):
         """
         print("🔍 Creating search index...")
 
-        if state.embeddings is None or len(state.embeddings) == 0:
+        if not message.embeddings:
             msg = "No embeddings to index"
             raise ValueError(msg)
 
-        dimension = state.embeddings.shape[1]
+        # Convert tuple of tuples back to numpy array
+        embeddings_array = np.array(message.embeddings, dtype=np.float32)
+        dimension = embeddings_array.shape[1]
 
-        # Create a flat L2 index
+        # Create a flat L2 index (same as working RAG)
         index = faiss.IndexFlatL2(dimension)
-
-        # Add the embeddings to the index
-        index.add(state.embeddings)
+        index.add(embeddings_array)
 
         print(f"✅ Index created with {index.ntotal} vectors")
 
-        new_state = IndexedState(
-            documents=state.documents,
-            chunks=state.chunks,
-            embeddings=state.embeddings,
-            index=index,
+        return IndexCreatedEvent(
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+            chunks=message.chunks,
+            embeddings=message.embeddings,
         )
-        return NodeResult(new_state, outcome="indexed")
 
 
-# Online query nodes
+class QueryEmbedderNode(Node[QueryCommand, QueryEmbeddedEvent]):
+    """Node that embeds query text."""
 
-
-@dataclass(frozen=True)
-class EmbedQueryNode(Node[QueryState]):
-    """Creates embedding for the user's query."""
-
-    name: str = "embed_query"
+    name: str = "query_embedder"
 
     @override
-    async def exec(self, state: QueryState) -> NodeResult[QueryState]:
-        """Embed the query.
+    async def process(self, message: QueryCommand) -> QueryEmbeddedEvent:
+        """Embed the query text.
 
         Returns:
-            NodeResult with query embedding and 'embedded' outcome.
+            QueryEmbeddedEvent with query embedding.
 
         """
-        print(f"🔍 Embedding query: {state.query}")
+        print(f"🔍 Embedding query: {message.query}")
 
-        query_embedding = get_embedding(state.query)
-        query_embedding_array = np.array([query_embedding], dtype=np.float32)
+        query_embedding = get_embedding(message.query)
+        # Convert to tuple for message serialization
+        query_embedding_tuple = tuple(query_embedding.tolist())
 
-        new_state = replace(state, query_embedding=query_embedding_array)
-        return NodeResult(new_state, outcome="embedded")
+        return QueryEmbeddedEvent(
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+            query=message.query,
+            query_embedding=query_embedding_tuple,
+            chunks=message.chunks,
+            embeddings=message.embeddings,
+        )
 
 
-@dataclass(frozen=True)
-class RetrieveDocumentNode(Node[QueryState, RetrievedState]):
-    """Retrieves the most relevant document chunk."""
+class DocumentRetrieverNode(Node[QueryEmbeddedEvent, DocumentsRetrievedEvent]):
+    """Node that retrieves relevant documents using FAISS search."""
 
-    name: str = "retrieve_document"
+    name: str = "document_retriever"
 
     @override
-    async def exec(self, state: QueryState) -> NodeResult[RetrievedState]:
-        """Search for the most relevant document.
+    async def process(self, message: QueryEmbeddedEvent) -> DocumentsRetrievedEvent:
+        """Retrieve the most relevant document chunk using FAISS.
 
         Returns:
-            NodeResult with retrieved state and 'retrieved' outcome.
-
-        Raises:
-            ValueError: If query embedding, index, or chunks are missing.
+            DocumentsRetrievedEvent with relevant chunk (single best match).
 
         """
         print("🔎 Searching for relevant documents...")
 
-        if state.query_embedding is None:
-            msg = "No query embedding available"
-            raise ValueError(msg)
-        if state.index is None:
-            msg = "No search index available"
-            raise ValueError(msg)
-        if not state.chunks:
-            msg = "No document chunks available"
-            raise ValueError(msg)
+        # Reconstruct FAISS index and embeddings
+        embeddings_array = np.array(message.embeddings, dtype=np.float32)
+        dimension = embeddings_array.shape[1]
 
-        # Search for the most similar document
-        distances, indices = state.index.search(state.query_embedding, k=1)
+        # Recreate the index
+        index = faiss.IndexFlatL2(dimension)
+        index.add(embeddings_array)
 
-        # Get the index of the most similar document
+        # Convert query embedding back to numpy array
+        query_embedding_array = np.array([message.query_embedding], dtype=np.float32)
+
+        # Search for the single most similar document (k=1 like working RAG)
+        distances, indices = index.search(query_embedding_array, k=1)
+
+        # Get the index and distance of the most similar document
         best_idx = int(indices[0][0])
         distance = float(distances[0][0])
 
         # Get the corresponding text
-        most_relevant_text = state.chunks[best_idx]
+        most_relevant_text = message.chunks[best_idx]
 
         print(f"📄 Retrieved document (index: {best_idx}, distance: {distance:.4f})")
         print(f'📄 Most relevant text: "{most_relevant_text[:200]}..."')
 
-        new_state = RetrievedState(
-            documents=state.documents,
-            chunks=state.chunks,
-            embeddings=state.embeddings,
-            index=state.index,
-            query=state.query,
-            query_embedding=state.query_embedding,
-            retrieved_text=most_relevant_text,
-            retrieved_index=best_idx,
-            retrieval_score=distance,
+        # Return single relevant chunk (not multiple chunks)
+        relevant_chunks = (most_relevant_text,)
+
+        return DocumentsRetrievedEvent(
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+            query=message.query,
+            relevant_chunks=relevant_chunks,
         )
-        return NodeResult(new_state, outcome="retrieved")
 
 
-@dataclass(frozen=True)
-class GenerateAnswerNode(Node[RetrievedState, AnsweredState]):
-    """Generates an answer using the retrieved context."""
+class AnswerGeneratorNode(Node[DocumentsRetrievedEvent, AnswerGeneratedEvent]):
+    """Node that generates answers using retrieved documents."""
 
-    name: str = "generate_answer"
+    name: str = "answer_generator"
 
     @override
-    async def exec(self, state: RetrievedState) -> NodeResult[AnsweredState]:
-        """Generate answer using LLM with retrieved context.
+    async def process(self, message: DocumentsRetrievedEvent) -> AnswerGeneratedEvent:
+        """Generate answer from query and relevant documents.
 
         Returns:
-            NodeResult with answered state and 'answered' outcome.
+            AnswerGeneratedEvent with generated answer.
 
         """
+        # Use the same prompt format as working RAG
+        context = "\n".join(message.relevant_chunks)
         prompt = f"""Briefly answer the following question based on the context provided:
-Question: {state.query}
-Context: {state.retrieved_text}
+Question: {message.query}
+Context: {context}
 Answer:"""
 
         answer = call_llm(prompt)
@@ -224,16 +222,10 @@ Answer:"""
         print("\n🤖 Generated Answer:")
         print(answer)
 
-        new_state = AnsweredState(
-            documents=state.documents,
-            chunks=state.chunks,
-            embeddings=state.embeddings,
-            index=state.index,
-            query=state.query,
-            query_embedding=state.query_embedding,
-            retrieved_text=state.retrieved_text,
-            retrieved_index=state.retrieved_index,
-            retrieval_score=state.retrieval_score,
+        return AnswerGeneratedEvent(
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+            query=message.query,
             answer=answer,
+            relevant_chunks=message.relevant_chunks,
         )
-        return NodeResult(new_state, outcome="answered")

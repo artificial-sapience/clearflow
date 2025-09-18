@@ -1,86 +1,124 @@
-"""Shared test fixtures and types for ClearFlow test suite.
+"""Shared test fixtures and types for message-driven architecture tests.
 
-This module provides immutable types used across multiple test modules,
-demonstrating mission-critical AI orchestration patterns with deep immutability.
+This module provides immutable message types used across message test modules,
+demonstrating mission-critical AI orchestration patterns with message-driven flow.
 
 """
 
-from dataclasses import dataclass as dc
+import uuid
 
-# Immutable types for mission-critical AI orchestration scenarios
-# All state is deeply immutable using frozen dataclasses
+from clearflow import Command, Event
 
 
-@dc(frozen=True)
-class Document:
-    """Immutable document for RAG pipelines."""
+class ProcessCommand(Command):
+    """Command to initiate processing."""
+
+    data: str
+    priority: int = 1
+
+
+class ValidateCommand(Command):
+    """Command to validate input."""
 
     content: str
-    source: str
-    metadata: tuple[tuple[str, str], ...] = ()
+    strict: bool = True
 
 
-@dc(frozen=True)
-class EmbeddedDocument:
-    """Document with embedding vector."""
+class AnalyzeCommand(Command):
+    """Command to analyze data."""
 
-    document: Document
-    embedding: tuple[float, ...]
-
-
-@dc(frozen=True)
-class RAGState:
-    """State for retrieval-augmented generation."""
-
-    query: str
-    documents: tuple[Document, ...]
-    retrieved: tuple[Document, ...] = ()
-    context: str = ""
-    response: str = ""
+    input_data: str
+    analysis_type: str = "basic"
 
 
-@dc(frozen=True)
-class Message:
-    """Immutable message for agent communication."""
+class ProcessedEvent(Event):
+    """Event indicating processing completed."""
 
-    role: str  # 'user', 'assistant', 'system'
-    content: str
-
-
-@dc(frozen=True)
-class AgentState:
-    """State for multi-agent orchestration."""
-
-    messages: tuple[Message, ...]
-    context: str
-    temperature: float = 0.7
+    result: str
+    processing_time_ms: float
 
 
-@dc(frozen=True)
-class ToolCall:
-    """Immutable tool invocation."""
+class ValidationPassedEvent(Event):
+    """Event indicating validation succeeded."""
 
-    name: str
-    parameters: tuple[tuple[str, str], ...]
-    result: str = ""
+    validated_content: str
+    validation_score: float = 1.0
 
 
-@dc(frozen=True)
-class ToolState:
-    """State for tool use orchestration."""
+class ValidationFailedEvent(Event):
+    """Event indicating validation failed."""
 
-    query: str
-    available_tools: tuple[str, ...]
-    selected_tool: str = ""
-    tool_calls: tuple[ToolCall, ...] = ()
-    final_answer: str = ""
-
-
-@dc(frozen=True)
-class ValidationState:
-    """State for output validation pipelines."""
-
-    input_text: str
-    validated: bool = False
+    reason: str
     errors: tuple[str, ...] = ()
-    sanitized_output: str = ""
+
+
+class AnalysisCompleteEvent(Event):
+    """Event indicating analysis completed."""
+
+    findings: str
+    confidence: float = 0.95
+
+
+class ErrorEvent(Event):
+    """Event indicating an error occurred."""
+
+    error_message: str
+    error_type: str = "general"
+
+
+class SecurityAlertEvent(Event):
+    """Event indicating a security issue detected."""
+
+    threat_level: str  # "low", "medium", "high", "critical"
+    description: str
+
+
+# Test utilities for creating valid messages with required fields
+def create_test_command(
+    *,
+    triggered_by_id: uuid.UUID | None = None,
+    run_id: uuid.UUID | None = None,
+) -> ProcessCommand:
+    """Create a test command with valid fields.
+
+    Returns:
+        A ProcessCommand with test data.
+
+    """
+    return ProcessCommand(
+        data="test data",
+        triggered_by_id=triggered_by_id,
+        run_id=run_id or uuid.uuid4(),
+    )
+
+
+def create_test_event(
+    *,
+    triggered_by_id: uuid.UUID | None = None,
+    run_id: uuid.UUID | None = None,
+) -> ProcessedEvent:
+    """Create a test event with valid fields.
+
+    Returns:
+        A ProcessedEvent with test data.
+
+    """
+    if triggered_by_id is None:
+        triggered_by_id = uuid.uuid4()
+
+    return ProcessedEvent(
+        result="processed",
+        processing_time_ms=123.45,
+        triggered_by_id=triggered_by_id,
+        run_id=run_id or uuid.uuid4(),
+    )
+
+
+def create_run_id() -> uuid.UUID:
+    """Create a new flow ID for testing.
+
+    Returns:
+        A new UUID for flow identification.
+
+    """
+    return uuid.uuid4()

@@ -1,22 +1,21 @@
-# Portfolio Analysis Example
+# Portfolio Analysis Example (Message-Driven)
 
-Multi-specialist workflow for portfolio allocation decisions using simulated market data.
+Multi-specialist workflow for portfolio allocation decisions using event-driven architecture with real LLM intelligence.
 
 ## Flow
 
 ```mermaid
 graph LR
     Start([Market Data]) --> Q[QuantAnalyst]
-    Q -->|analysis_complete| R[RiskAnalyst]
-    Q -->|analysis_failed| E[ErrorHandler]
-    R -->|risk_acceptable| P[PortfolioManager]
-    R -->|risk_limits_exceeded| E
-    P -->|recommendations_ready| C[ComplianceOfficer]
-    P -->|analysis_failed| E
-    C -->|compliance_approved| D[DecisionNode]
-    C -->|compliance_failed| E
-    E -->|error_handled| D
-    D -->|decision_ready| End([Final Decision])
+    Q -->|MarketAnalyzedEvent| R[RiskAnalyst]
+    Q -->|AnalysisFailedEvent| D[DecisionMaker]
+    R -->|RiskAssessedEvent| P[PortfolioManager]
+    R -->|AnalysisFailedEvent| D
+    P -->|RecommendationsGeneratedEvent| C[ComplianceOfficer]
+    P -->|AnalysisFailedEvent| D
+    C -->|ComplianceReviewedEvent| D
+    C -->|AnalysisFailedEvent| D
+    D -->|DecisionMadeEvent| End([Final Decision])
 ```
 
 ## Quick Start
@@ -32,36 +31,77 @@ cp .env.example .env
 uv sync --all-extras
 
 # 3. Run the example
-cd examples/portfolio_analysis
+cd examples/portfolio_analysis_message_driven
 python main.py  # If venv is activated
 # Or: uv run python main.py
 ```
 
 ## How It Works
 
-This example demonstrates a sequential workflow where each specialist node analyzes market data and passes enriched state to the next stage:
+This example demonstrates a pure event-driven workflow where each specialist node analyzes data and publishes events describing outcomes:
 
-1. **QuantAnalyst** - Technical analysis and opportunity identification
-2. **RiskAnalyst** - Risk assessment and limit checking
-3. **PortfolioManager** - Allocation recommendations
-4. **ComplianceOfficer** - Regulatory validation
-5. **DecisionNode** - Final synthesis and execution plan
-6. **ErrorHandler** - Converts errors to conservative decisions
+1. **QuantAnalyst** - Analyzes market data using LLM, publishes opportunities found
+2. **RiskAnalyst** - Assesses risk using LLM, publishes acceptable positions
+3. **PortfolioManager** - Optimizes portfolio using LLM, publishes recommendations
+4. **ComplianceOfficer** - Reviews compliance using LLM, publishes approved allocations
+5. **DecisionMaker** - Makes final decision using LLM, publishes executable orders
 
-Each node uses DSPy for structured LLM outputs with Pydantic validation.
+Each node uses DSPy for structured LLM outputs with comprehensive error handling.
 
 ## Key Features
 
-- **Sequential processing** - Each specialist processes in order
-- **Type-safe transformations** - `MarketData → QuantInsights → RiskAssessment → Decision`
-- **Error recovery** - Failures route to ErrorHandler then continue
-- **Structured outputs** - DSPy signatures ensure consistent responses
-- **Audit trail** - Complete reasoning chain for compliance
+- **Pure event-driven** - Single command starts flow, all subsequent messages are events
+- **LLM intelligence** - Real OpenAI/DSPy integration, not simulated logic
+- **Type-safe messages** - Immutable dataclasses with Mapping types
+- **Error recovery** - AnalysisFailedEvent routes to DecisionMaker for conservative handling
+- **No orchestrators** - Direct event routing, flow definition is the sole orchestrator
+- **Observable** - Compatible with ClearFlow's Observer pattern (no console logging in nodes)
+
+## Architecture Principles
+
+### Event-Driven Design
+- **Single initiating command**: `StartAnalysisCommand` contains all initial context
+- **Events describe outcomes**: Past-tense naming (MarketAnalyzedEvent, not AnalyzeMarketEvent)
+- **No intermediate commands**: Events flow directly between nodes
+- **Explicit routing**: Flow definition specifies all event routes
+
+### Message Design (No God-Objects)
+```python
+# ✅ GOOD: Focused events with single responsibility
+@dataclass(frozen=True)
+class MarketAnalyzedEvent(Event):
+    opportunities: tuple[str, ...]  # Just symbols identified
+    opportunity_scores: tuple[float, ...]  # Confidence scores
+    market_trend: Literal["bullish", "bearish", "sideways"]
+    # Context for next stage
+    market_data: MarketData
+    constraints: PortfolioConstraints
+
+# ❌ BAD: God-object with too much data
+class AnalysisCompleteEvent(Event):
+    all_analysis_data: dict  # Everything in one place
+    full_market_data: MarketData
+    complete_insights: QuantInsights
+    # Too much responsibility!
+```
 
 ## Files
 
-- `main.py` - Entry point with scenario selection
-- `portfolio_flow.py` - Flow definition and routing
-- `market_data.py` - Simulated market data generation
-- `specialists/` - Individual specialist node implementations
-- `shared/` - Common models and configuration
+- `main.py` - Entry point with DSPy configuration and scenario selection
+- `portfolio_flow.py` - Pure event-driven flow definition (no orchestrators)
+- `messages.py` - Focused event types with immutable Mapping fields
+- `nodes.py` - Specialist nodes with DSPy predictors (no console logging)
+- `market_data.py` - Market data generation for different scenarios
+- `specialists/` - DSPy signatures and models for each specialist
+
+## Comparison with Legacy Approach
+
+### Legacy (Node-Flow-State)
+- Accumulates state as it flows
+- Nodes mutate shared state
+- Implicit data dependencies
+
+### Message-Driven (This Example)
+- Events carry only essential data
+- Nodes produce new events without mutation
+- Explicit data flow via messages

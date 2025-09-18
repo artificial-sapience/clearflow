@@ -1,405 +1,566 @@
-"""Test Flow orchestration features of ClearFlow.
+"""Test flow routing and composition.
 
-This module tests the Flow class functionality including linear flows,
-branching, single termination enforcement, and flow composition.
+This module tests the flow builder, routing logic, and flow composability
+for mission-critical AI orchestration with type-safe message routing.
 
 """
 
-from dataclasses import dataclass, replace
-from dataclasses import dataclass as dc
 from typing import override
 
-from clearflow import Node, NodeResult, flow
-from tests.conftest import ValidationState
+import pytest
+from pydantic import ValidationError
+
+from clearflow import Node, create_flow
+from tests.conftest import (
+    AnalysisCompleteEvent,
+    ErrorEvent,
+    ProcessCommand,
+    ProcessedEvent,
+    SecurityAlertEvent,
+    ValidateCommand,
+    ValidationFailedEvent,
+    ValidationPassedEvent,
+    create_run_id,
+)
 
 
-@dataclass(frozen=True)
-class ChatState:
-    """State for chat routing tests."""
-
-    query: str = ""
-    intent: str = ""
-    agent: str = ""
-    response_type: str = ""
-    formatted: bool = False
-
-
-@dataclass(frozen=True)
-class DocState:
-    """State for document processing tests."""
-
-    source: str
-    loaded: str = ""
-    doc_count: str = ""
-    embedded: str = ""
-    embedding_dim: str = ""
-    stored: str = ""
-
-
-# Test nodes for chat routing - defined outside test to reduce complexity
-@dc(frozen=True)
-class IntentClassifier(Node[ChatState]):
-    """Classifies user intent for appropriate AI response."""
-
-    name: str = "classifier"
+# Reusable test nodes
+class StartNode(Node[ProcessCommand, ProcessedEvent | ErrorEvent]):
+    """Initial processing node that succeeds."""
 
     @override
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        query = state.query or ""
-        intent = self._classify_intent(query)
-        new_state = replace(state, intent=intent)
-        return NodeResult(new_state, outcome=intent)
-
-    @staticmethod
-    def _classify_intent(query: str) -> str:
-        """Classify query intent.
-
-        Returns:
-            Intent string: "technical", "question", or "general".
-
-        """
-        query_lower = str(query).lower()
-        if "code" in query_lower or "bug" in query_lower:
-            return "technical"
-        if "?" in str(query):
-            return "question"
-        return "general"
+    async def process(self, message: ProcessCommand) -> ProcessedEvent | ErrorEvent:
+        return ProcessedEvent(
+            result=f"started: {message.data}",
+            processing_time_ms=50.0,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+        )
 
 
-@dc(frozen=True)
-class TechnicalAgent(Node[ChatState]):
-    """Handles technical queries with code examples."""
-
-    name: str = "technical_agent"
+class FailingStartNode(Node[ProcessCommand, ProcessedEvent | ErrorEvent]):
+    """Initial processing node that always fails."""
 
     @override
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        new_state = replace(
-            state,
-            agent="technical",
-            response_type="code_example",
+    async def process(self, message: ProcessCommand) -> ProcessedEvent | ErrorEvent:
+        return ErrorEvent(
+            error_message="Start failed",
+            triggered_by_id=message.id,
+            run_id=message.run_id,
         )
-        return NodeResult(new_state, outcome="responded")
 
 
-@dc(frozen=True)
-class QAAgent(Node[ChatState]):
-    """Handles Q&A with retrieval augmented generation."""
-
-    name: str = "qa_agent"
+class TransformNode(Node[ProcessedEvent, ValidateCommand]):
+    """Transform event to command."""
 
     @override
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        new_state = replace(
-            state,
-            agent="qa",
-            response_type="retrieved_answer",
+    async def process(self, message: ProcessedEvent) -> ValidateCommand:
+        return ValidateCommand(
+            content=message.result,
+            strict=True,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
         )
-        return NodeResult(new_state, outcome="responded")
 
 
-@dc(frozen=True)
-class GeneralAgent(Node[ChatState]):
-    """Handles general conversation."""
-
-    name: str = "general_agent"
+class ValidateNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFailedEvent]):
+    """Validation node with default minimum length of 5."""
 
     @override
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        new_state = replace(
-            state,
-            agent="general",
-            response_type="chat",
+    async def process(self, message: ValidateCommand) -> ValidationPassedEvent | ValidationFailedEvent:
+        if len(message.content) < 5:
+            return ValidationFailedEvent(
+                reason="Too short",
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )
+        return ValidationPassedEvent(
+            validated_content=message.content,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
         )
-        return NodeResult(new_state, outcome="responded")
 
 
-@dc(frozen=True)
-class ResponseFormatter(Node[ChatState]):
-    """Formats final response for user."""
-
-    name: str = "formatter"
+class StrictValidateNode(Node[ValidateCommand, ValidationPassedEvent | ValidationFailedEvent]):
+    """Validation node with strict minimum length of 10."""
 
     @override
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        new_state = replace(state, formatted=True)
-        return NodeResult(new_state, outcome="complete")
+    async def process(self, message: ValidateCommand) -> ValidationPassedEvent | ValidationFailedEvent:
+        if len(message.content) < 10:
+            return ValidationFailedEvent(
+                reason="Too short",
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )
+        return ValidationPassedEvent(
+            validated_content=message.content,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+        )
 
 
-# Test data classes and nodes for linear flow
-@dc(frozen=True)
-class RawText:
-    """Raw text to be processed."""
-
-    content: str
-    source: str
-
-
-@dc(frozen=True)
-class TokenizedText:
-    """Text split into tokens."""
-
-    raw: RawText
-    tokens: tuple[str, ...]
-
-
-@dc(frozen=True)
-class IndexedDocument:
-    """Final indexed document."""
-
-    tokenized: TokenizedText
-    token_count: int
-    indexed: bool = True
-
-
-@dc(frozen=True)
-class TokenizerNode(Node[RawText, TokenizedText]):
-    """Tokenizes text for embedding generation."""
-
-    name: str = "tokenizer"
+class FinalizeNode(Node[ValidationPassedEvent, AnalysisCompleteEvent]):
+    """Final processing node."""
 
     @override
-    async def exec(self, state: RawText) -> NodeResult[TokenizedText]:
-        tokens = tuple(state.content.split())
-        tokenized = TokenizedText(raw=state, tokens=tokens)
-        return NodeResult(tokenized, outcome="tokenized")
-
-
-@dc(frozen=True)
-class IndexerNode(Node[TokenizedText, IndexedDocument]):
-    """Creates embeddings and indexes document."""
-
-    name: str = "indexer"
-
-    @override
-    async def exec(self, state: TokenizedText) -> NodeResult[IndexedDocument]:
-        indexed = IndexedDocument(tokenized=state, token_count=len(state.tokens))
-        return NodeResult(indexed, outcome="indexed")
-
-
-# Nodes for nested flow testing
-@dc(frozen=True)
-class DocumentLoader(Node[DocState]):
-    """Loads documents for processing."""
-
-    name: str = "loader"
-
-    @override
-    async def exec(self, state: DocState) -> NodeResult[DocState]:
-        new_state = replace(state, loaded="true", doc_count="5")
-        return NodeResult(new_state, outcome="loaded")
-
-
-@dc(frozen=True)
-class Embedder(Node[DocState]):
-    """Creates embeddings from loaded documents."""
-
-    name: str = "embedder"
-
-    @override
-    async def exec(self, state: DocState) -> NodeResult[DocState]:
-        new_state = replace(
-            state,
-            embedded="true",
-            embedding_dim="768",
-        )
-        return NodeResult(new_state, outcome="embedded")
-
-
-@dc(frozen=True)
-class VectorStore(Node[DocState]):
-    """Stores embeddings in vector database."""
-
-    name: str = "vector_store"
-
-    @override
-    async def exec(self, state: DocState) -> NodeResult[DocState]:
-        new_state = replace(state, stored="true")
-        return NodeResult(new_state, outcome="indexed")
-
-
-class TestFlow:
-    """Test the Flow orchestration."""
-
-    @staticmethod
-    async def test_linear_flow_build() -> None:
-        """Test building a linear flow."""
-        tokenizer = TokenizerNode()
-        indexer = IndexerNode()
-
-        flow_instance = flow("RAG", tokenizer).route(tokenizer, "tokenized", indexer).end(indexer, "indexed")
-
-        assert flow_instance.name == "RAG"
-
-    @staticmethod
-    async def test_linear_flow_execution() -> None:
-        """Test executing a linear flow."""
-        tokenizer = TokenizerNode()
-        indexer = IndexerNode()
-
-        flow_instance = flow("RAG", tokenizer).route(tokenizer, "tokenized", indexer).end(indexer, "indexed")
-
-        initial = RawText(content="Natural language processing", source="test.txt")
-        result = await flow_instance(initial)
-
-        assert result.outcome == "indexed"
-        assert isinstance(result.state, IndexedDocument)
-        assert result.state.token_count == 3
-
-    @staticmethod
-    async def test_chat_routing_flow_setup() -> None:
-        """Test building an AI chat routing flow."""
-        # Build AI chat routing flow using new API
-        classifier = IntentClassifier()
-        technical = TechnicalAgent()
-        qa = QAAgent()
-        general = GeneralAgent()
-        formatter = ResponseFormatter()
-
-        chat_flow = (
-            flow("ChatRouter", classifier)
-            .route(classifier, "technical", technical)
-            .route(classifier, "question", qa)
-            .route(classifier, "general", general)
-            .route(technical, "responded", formatter)
-            .route(qa, "responded", formatter)
-            .route(general, "responded", formatter)
-            .end(formatter, "complete")
+    async def process(self, message: ValidationPassedEvent) -> AnalysisCompleteEvent:
+        return AnalysisCompleteEvent(
+            findings=f"Final: {message.validated_content}",
+            confidence=0.99,
+            triggered_by_id=message.id,
+            run_id=message.run_id,
         )
 
-        # Just verify flow builds correctly
-        assert chat_flow.name == "ChatRouter"
 
-    @staticmethod
-    async def test_chat_technical_path() -> None:
-        """Test technical query routing in chat flow."""
-        classifier = IntentClassifier()
-        technical = TechnicalAgent()
-        formatter = ResponseFormatter()
+async def test_simple_flow() -> None:
+    """Test a simple linear flow."""
+    start = StartNode(name="start")
 
-        chat_flow = (
-            flow("TechRouter", classifier)
-            .route(classifier, "technical", technical)
-            .route(technical, "responded", formatter)
-            .end(formatter, "complete")
-        )
+    test_flow = create_flow("simple", start).end_flow(ProcessedEvent)
 
-        tech_input = ChatState(query="How do I fix this bug in my code?")
-        result = await chat_flow(tech_input)
-        assert result.state.intent == "technical"
-        assert result.state.agent == "technical"
-        assert result.outcome == "complete"
+    # Execute flow
+    run_id = create_run_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
-    @staticmethod
-    async def test_chat_question_path() -> None:
-        """Test question routing in chat flow."""
-        classifier = IntentClassifier()
-        qa = QAAgent()
-        formatter = ResponseFormatter()
+    result = await test_flow.process(input_msg)
 
-        chat_flow = (
-            flow("QARouter", classifier)
-            .route(classifier, "question", qa)
-            .route(qa, "responded", formatter)
-            .end(formatter, "complete")
-        )
+    assert isinstance(result, ProcessedEvent)
+    assert result.result == "started: test"
 
-        question_input = ChatState(query="What is RAG?")
-        result = await chat_flow(question_input)
-        assert result.state.intent == "question"
-        assert result.state.agent == "qa"
-        assert result.outcome == "complete"
 
-    @staticmethod
-    async def test_chat_general_path() -> None:
-        """Test general conversation routing."""
-        classifier = IntentClassifier()
-        general = GeneralAgent()
-        formatter = ResponseFormatter()
+async def test_flow_with_routing() -> None:
+    """Test flow with multiple routes."""
+    start = StartNode(name="start")
+    transform = TransformNode(name="transform")
+    validate = ValidateNode(name="validate")
+    finalize = FinalizeNode(name="finalize")
 
-        chat_flow = (
-            flow("GeneralRouter", classifier)
-            .route(classifier, "general", general)
-            .route(general, "responded", formatter)
-            .end(formatter, "complete")
-        )
+    test_flow = (
+        create_flow("pipeline", start)
+        .route(start, ProcessedEvent, transform)
+        .route(transform, ValidateCommand, validate)
+        .route(validate, ValidationPassedEvent, finalize)
+        .end_flow(AnalysisCompleteEvent)
+    )
 
-        input_state = ChatState(query="Hello there")
-        result = await chat_flow(input_state)
-        assert result.state.intent == "general"
-        assert result.state.agent == "general"
-        assert result.outcome == "complete"
+    # Execute successful path
+    run_id = create_run_id()
+    input_msg = ProcessCommand(data="valid data", triggered_by_id=None, run_id=run_id)
 
-    @staticmethod
-    async def test_single_termination_enforcement() -> None:
-        """Test that flows must have exactly one termination point."""
+    result = await test_flow.process(input_msg)
 
-        @dc(frozen=True)
-        class DataValidator(Node[ValidationState]):
-            """Validates incoming data for processing."""
+    assert isinstance(result, AnalysisCompleteEvent)
+    assert "started: valid data" in result.findings
 
-            name: str = "validator"
 
-            @override
-            async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
-                return NodeResult(state, outcome="valid")
+async def test_flow_with_error_handling() -> None:
+    """Test flow with error route - demonstrates single responsibility.
 
-        @dc(frozen=True)
-        class DataProcessor(Node[ValidationState]):
-            """Processes validated data."""
+    This flow's goal: produce an ErrorEvent when failure occurs.
+    """
+    start = FailingStartNode(name="start")
+    transform = TransformNode(name="transform")
 
-            name: str = "processor"
+    # Simple flow - goal is to detect and report errors
+    test_flow = (
+        create_flow("error_detection", start)
+        .route(start, ProcessedEvent, transform)  # Won't be taken since start fails
+        .end_flow(ErrorEvent)  # Goal: detect error condition
+    )
 
-            @override
-            async def exec(self, state: ValidationState) -> NodeResult[ValidationState]:
-                return NodeResult(state, outcome="processed")
+    run_id = create_run_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
 
-        validator = DataValidator()
-        processor = DataProcessor()
+    result = await test_flow.process(input_msg)
 
-        # This works - single termination point
-        valid_flow = (
-            flow("ValidationPipeline", validator).route(validator, "valid", processor).end(processor, "processed")
-        )
+    assert isinstance(result, ErrorEvent)
+    assert result.error_message == "Start failed"
 
-        # Test that it runs successfully
-        result = await valid_flow(ValidationState(input_text="test data"))
-        assert result.outcome == "processed"
 
-    @staticmethod
-    async def test_flow_composition() -> None:
-        """Test that flows can be composed as nodes."""
-        loader = DocumentLoader()
-        embedder = Embedder()
+async def test_flow_with_branching() -> None:
+    """Test flow with conditional branching - failure path."""
+    start = StartNode(name="start")
+    transform = TransformNode(name="transform")
+    validate = StrictValidateNode(name="validate")  # Strict validation
 
-        # Create inner flow
-        inner_flow = flow("Inner", loader).route(loader, "loaded", embedder).end(embedder, "embedded")
+    test_flow = (
+        create_flow("branching", start)
+        .route(start, ProcessedEvent, transform)
+        .route(transform, ValidateCommand, validate)
+        .end_flow(ValidationFailedEvent)  # Single terminal type for failure
+    )
 
-        # Use inner flow as a node
-        vector_store = VectorStore()
-        outer_flow = flow("Outer", inner_flow).route(inner_flow, "embedded", vector_store).end(vector_store, "indexed")
+    run_id = create_run_id()
 
-        # Just verify it builds
-        assert outer_flow.name == "Outer"
+    # Test failure branch - make input that results in short content after "started: "
+    short_input = ProcessCommand(data="", triggered_by_id=None, run_id=run_id)  # "started: " = 9 chars < 10
+    result = await test_flow.process(short_input)
+    assert isinstance(result, ValidationFailedEvent)
 
-    @staticmethod
-    async def test_nested_flow_execution() -> None:
-        """Test execution of nested flows."""
-        loader = DocumentLoader()
-        embedder = Embedder()
-        doc_flow = flow("DocFlow", loader).route(loader, "loaded", embedder).end(embedder, "embedded")
 
-        vector_store = VectorStore()
-        pipeline = flow("Pipeline", doc_flow).route(doc_flow, "embedded", vector_store).end(vector_store, "indexed")
+async def test_flow_with_branching_success() -> None:
+    """Test flow with conditional branching - success path."""
+    start = StartNode(name="start")
+    transform = TransformNode(name="transform")
+    validate = StrictValidateNode(name="validate")  # Strict validation
 
-        doc_input = DocState(
-            source="kb",
-            loaded="",
-            doc_count="",
-            embedded="",
-            embedding_dim="",
-            stored="",
-        )
-        result = await pipeline(doc_input)
-        assert result.outcome == "indexed"
-        assert result.state.stored == "true"
+    test_flow = (
+        create_flow("branching", start)
+        .route(start, ProcessedEvent, transform)
+        .route(transform, ValidateCommand, validate)
+        .end_flow(ValidationPassedEvent)  # Single terminal type for success
+    )
+
+    run_id = create_run_id()
+
+    # Test success branch - make input that results in long enough content
+    long_input = ProcessCommand(data="long data", triggered_by_id=None, run_id=run_id)  # "started: long data" > 10
+    result = await test_flow.process(long_input)
+    assert isinstance(result, ValidationPassedEvent)
+    assert result.validated_content == "started: long data"
+
+
+async def test_flow_missing_route_error() -> None:
+    """Test that missing route raises error when message can't be routed."""
+    start = StartNode(name="start")
+    transform = TransformNode(name="transform")
+    validate = ValidateNode(name="validate")
+
+    # Build flow with incomplete routing - validate outputs ValidationPassedEvent
+    # but no route defined for it
+    test_flow = (
+        create_flow("incomplete", start)
+        .route(start, ProcessedEvent, transform)
+        .route(transform, ValidateCommand, validate)
+        # Missing route for ValidationPassedEvent from validate
+        .end_flow(ValidationFailedEvent)  # Terminal is ValidationFailedEvent (not reached on success)
+    )
+
+    run_id = create_run_id()
+    # Use data that will pass validation
+    input_msg = ProcessCommand(data="test data", triggered_by_id=None, run_id=run_id)
+
+    # Should raise ValueError for missing route
+    with pytest.raises(ValueError, match="No route defined") as exc_info:
+        await test_flow.process(input_msg)
+
+    assert "No route defined for message type" in str(exc_info.value)
+    assert "ValidationPassedEvent" in str(exc_info.value)
+
+
+async def test_flow_composability() -> None:
+    """Test that flows can be composed as nodes."""
+    # Create inner flow
+    validate = ValidateNode(name="validate")
+    finalize = FinalizeNode(name="finalize")
+
+    inner_flow = (
+        create_flow("inner", validate).route(validate, ValidationPassedEvent, finalize).end_flow(AnalysisCompleteEvent)
+    )
+
+    # Create outer flow using inner flow as a node
+    start = StartNode(name="start")
+    transform = TransformNode(name="transform")
+
+    outer_flow = (
+        create_flow("outer", start)
+        .route(start, ProcessedEvent, transform)
+        .route(transform, ValidateCommand, inner_flow)  # Inner flow as node!
+        .end_flow(AnalysisCompleteEvent)  # Terminal type
+    )
+
+    run_id = create_run_id()
+    input_msg = ProcessCommand(data="composite test", triggered_by_id=None, run_id=run_id)
+
+    result = await outer_flow.process(input_msg)
+
+    assert isinstance(result, AnalysisCompleteEvent)
+    assert "started: composite test" in result.findings
+
+
+def test_flow_invalid_output_type_validation() -> None:
+    """Test that flow builder validates output types match node signatures."""
+    # Create a node that outputs ProcessedEvent | ErrorEvent
+    start = StartNode(name="start")
+    # Create a node that expects ValidateCommand
+    validate = ValidateNode(name="validate")
+
+    # Try to route ValidationPassedEvent from start (which can't output that type)
+    builder = create_flow("test", start)
+
+    # This should raise TypeError because StartNode can't output ValidationPassedEvent
+    with pytest.raises(TypeError, match="cannot output ValidationPassedEvent"):
+        builder.route(start, ValidationPassedEvent, validate)
+
+
+def test_flow_invalid_input_type_validation() -> None:
+    """Test that flow builder validates input types match node signatures."""
+    # StartNode outputs ProcessedEvent | ErrorEvent
+    start = StartNode(name="start")
+    # ValidateNode expects ValidateCommand, not ProcessedEvent
+    validate = ValidateNode(name="validate")
+
+    builder = create_flow("test", start)
+
+    # This should raise TypeError because ValidateNode can't accept ProcessedEvent
+    with pytest.raises(TypeError, match="cannot accept ProcessedEvent"):
+        builder.route(start, ProcessedEvent, validate)
+
+
+def test_flow_union_type_compatibility() -> None:
+    """Test flow validation handles union types correctly."""
+
+    # Node that outputs union of multiple event types
+    class MultiOutputNode(Node[ProcessCommand, ProcessedEvent | ValidationPassedEvent | ErrorEvent]):
+        @override
+        async def process(self, message: ProcessCommand) -> ProcessedEvent | ValidationPassedEvent | ErrorEvent:
+            return ProcessedEvent(
+                result="test", processing_time_ms=10.0, triggered_by_id=message.id, run_id=message.run_id
+            )
+
+    # Node that accepts one of the union members
+    class ProcessedOnlyNode(Node[ProcessedEvent, AnalysisCompleteEvent]):
+        @override
+        async def process(self, message: ProcessedEvent) -> AnalysisCompleteEvent:
+            return AnalysisCompleteEvent(
+                findings=message.result, confidence=0.9, triggered_by_id=message.id, run_id=message.run_id
+            )
+
+    multi = MultiOutputNode(name="multi")
+    single = ProcessedOnlyNode(name="single")
+
+    # This should work - ProcessedEvent is in the union output and matches input
+    flow = create_flow("union_test", multi).route(multi, ProcessedEvent, single)
+
+    # Ensure it works (no exception)
+    assert flow is not None
+
+    # Now test incompatible types
+    class SecurityNode(Node[SecurityAlertEvent, AnalysisCompleteEvent]):
+        @override
+        async def process(self, message: SecurityAlertEvent) -> AnalysisCompleteEvent:
+            return AnalysisCompleteEvent(
+                findings="security", confidence=0.9, triggered_by_id=message.id, run_id=message.run_id
+            )
+
+    security_node = SecurityNode(name="security")
+
+    # This should fail - SecurityAlertEvent is not in the union
+    with pytest.raises(TypeError, match="cannot output SecurityAlertEvent"):
+        create_flow("bad_union", multi).route(multi, SecurityAlertEvent, security_node)
+
+
+def test_flow_reachability_validation() -> None:
+    """Test that flow builder validates node reachability."""
+    start = StartNode(name="start")
+    unreachable = ValidateNode(name="unreachable")
+
+    builder = create_flow("test", start)
+
+    # Try to route from unreachable node
+    with pytest.raises(ValueError, match="not reachable from start") as exc_info:
+        builder.route(unreachable, ValidationPassedEvent, start)
+
+    assert "not reachable from start" in str(exc_info.value)
+
+
+def test_flow_duplicate_route_error() -> None:
+    """Test that duplicate routes are rejected."""
+    start = StartNode(name="start")
+    node1 = TransformNode(name="transform1")
+    node2 = TransformNode(name="transform2")
+
+    builder = create_flow("test", start)
+    builder = builder.route(start, ProcessedEvent, node1)
+
+    # Try to add duplicate route for same message type from same node
+    with pytest.raises(ValueError, match="Route already defined") as exc_info:
+        builder.route(start, ProcessedEvent, node2)
+
+    assert "Route already defined" in str(exc_info.value)
+
+
+def test_flow_name_property() -> None:
+    """Test flow name is preserved."""
+    start = StartNode(name="start")
+    test_flow = create_flow("my_flow", start).end_flow(ProcessedEvent)
+
+    assert test_flow.name == "my_flow"
+
+
+def test_flow_immutability() -> None:
+    """Test that flows are immutable."""
+    start = StartNode(name="start")
+    test_flow = create_flow("immutable", start).end_flow(ProcessedEvent)
+
+    # Should not be able to modify flow
+    with pytest.raises(ValidationError, match="frozen"):
+        test_flow.name = "modified"
+
+
+def test_flow_builder_chaining() -> None:
+    """Test flow builder method chaining."""
+    start = StartNode(name="start")
+    transform = TransformNode(name="transform")
+    validate = ValidateNode(name="validate")
+
+    # Each route returns a new builder
+    builder1 = create_flow("test", start)
+    builder2 = builder1.route(start, ProcessedEvent, transform)
+    builder3 = builder2.route(transform, ValidateCommand, validate)
+
+    # Builders are different instances
+    assert builder1 is not builder2
+    assert builder2 is not builder3
+
+    # But can chain fluently
+    flow = (
+        create_flow("fluent", start)
+        .route(start, ProcessedEvent, transform)
+        .route(transform, ValidateCommand, validate)
+        .end_flow(ValidationPassedEvent)
+    )
+
+    assert flow.name == "fluent"
+
+
+async def test_single_terminal_type() -> None:
+    """Test that flow terminates on specified terminal type only."""
+
+    # Node with multiple output types - use message content to determine output
+    class MultiOutputNode(Node[ProcessCommand, ProcessedEvent | ErrorEvent]):
+        @override
+        async def process(self, message: ProcessCommand) -> ProcessedEvent | ErrorEvent:
+            if message.data == "error":
+                return ErrorEvent(
+                    error_message="Terminal error",
+                    triggered_by_id=message.id,
+                    run_id=message.run_id,
+                )
+            return ProcessedEvent(
+                result="terminal success",
+                processing_time_ms=10.0,
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )
+
+    # Create flow with ProcessedEvent as terminal
+    multi = MultiOutputNode(name="multi")
+    test_flow = create_flow("single_terminal", multi).end_flow(ProcessedEvent)
+
+    run_id = create_run_id()
+
+    # Test ProcessedEvent path - should terminate
+    result = await test_flow.process(ProcessCommand(data="success", triggered_by_id=None, run_id=run_id))
+    assert isinstance(result, ProcessedEvent)
+    assert result.result == "terminal success"
+
+    # For ErrorEvent terminal flow
+    error_flow = create_flow("error_terminal", multi).end_flow(ErrorEvent)
+
+    # Test ErrorEvent path - should terminate
+    result = await error_flow.process(ProcessCommand(data="error", triggered_by_id=None, run_id=run_id))
+    assert isinstance(result, ErrorEvent)
+    assert result.error_message == "Terminal error"
+
+
+def test_terminal_type_validation() -> None:
+    """Test that terminal type cannot be routed between nodes."""
+    start = StartNode(name="start")
+
+    # Create an error handler that outputs ErrorEvent
+    class ErrorHandler(Node[ErrorEvent, ErrorEvent]):
+        @override
+        async def process(self, message: ErrorEvent) -> ErrorEvent:
+            return message
+
+    error_handler = ErrorHandler(name="error_handler")
+
+    # This should work - ProcessedEvent not routed, can be terminal
+    builder = create_flow("test", start)
+    flow = builder.end_flow(ProcessedEvent)
+    assert flow is not None
+
+    # But this should fail - trying to use ErrorEvent as terminal after routing it
+    builder2 = (
+        create_flow("test2", start).route(start, ErrorEvent, error_handler)  # ErrorEvent is routed here
+    )
+
+    with pytest.raises(ValueError, match=r"Cannot use.*as terminal type.*already routed"):
+        builder2.end_flow(ErrorEvent)  # Can't use as terminal after routing
+
+
+async def test_terminal_type_immediately_ends_flow() -> None:
+    """Test that ANY node producing terminal type ends the flow immediately."""
+    start = StartNode(name="start")
+
+    # Flow where ProcessedEvent is terminal (no routes for it)
+    flow = create_flow("early_termination", start).end_flow(ProcessedEvent)
+
+    # ProcessedEvent terminates immediately when produced
+    run_id = create_run_id()
+    result = await flow.process(ProcessCommand(data="test", triggered_by_id=None, run_id=run_id))
+
+    # The flow should terminate at start node's ProcessedEvent output
+    assert isinstance(result, ProcessedEvent)
+    assert result.result == "started: test"
+
+
+async def test_terminal_type_mismatch_error() -> None:
+    """Test error when node output doesn't match terminal type and no route exists."""
+
+    # Node that transforms but outputs wrong type for terminal
+    class TransformToWrongType(Node[ProcessCommand, ValidateCommand]):
+        @override
+        async def process(self, message: ProcessCommand) -> ValidateCommand:
+            return ValidateCommand(
+                content=message.data,
+                strict=True,
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )
+
+    wrong_transform = TransformToWrongType(name="wrong_transform")
+
+    # Flow expects ProcessedEvent as terminal but node outputs ValidateCommand
+    flow = create_flow("mismatch", wrong_transform).end_flow(ProcessedEvent)
+
+    run_id = create_run_id()
+    input_msg = ProcessCommand(data="test", triggered_by_id=None, run_id=run_id)
+
+    # Should raise error about missing route (ValidateCommand has no route)
+    with pytest.raises(ValueError, match="No route defined"):
+        await flow.process(input_msg)
+
+
+def test_single_responsibility_principle() -> None:
+    """Test that flows enforce single responsibility through terminal type.
+
+    Each flow has ONE goal defined by its terminal type.
+    This encourages clear thinking: What is the purpose of this flow?
+    """
+    start = StartNode(name="start")
+    transform = TransformNode(name="transform")
+    validate = ValidateNode(name="validate")
+
+    # Flow 1: Goal is to produce ValidateCommand (preparation flow)
+    preparation_flow = (
+        create_flow("prepare_validation", start)
+        .route(start, ProcessedEvent, transform)
+        .end_flow(ValidateCommand)  # Clear goal: prepare for validation
+    )
+
+    # Flow 2: Goal is to produce ValidationPassedEvent (validation success flow)
+    validation_success_flow = (
+        create_flow("ensure_valid", validate).end_flow(ValidationPassedEvent)  # Clear goal: ensure validation passes
+    )
+
+    # Flow 3: Goal is to handle errors (error recovery flow)
+    error_flow = (
+        create_flow("handle_error", start).end_flow(ErrorEvent)  # Clear goal: handle error cases
+    )
+
+    # Each flow has a single, clear purpose
+    assert preparation_flow.name == "prepare_validation"
+    assert validation_success_flow.name == "ensure_valid"
+    assert error_flow.name == "handle_error"

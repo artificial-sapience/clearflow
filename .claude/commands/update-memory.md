@@ -20,6 +20,7 @@ Please review our collaboration session and update @CLAUDE.md with any important
 - **Avoid repetition** - Don't duplicate existing content
 - **Stay factual** - No opinions or philosophy, just technical facts
 - **Keep it proportional** - CLAUDE.md should stay under 300 lines
+- **Review and delete outdated information** - Meticulously analyze @CLAUDE.md for anything no longer correct or relevant
 
 ## Areas to consider
 
@@ -29,21 +30,4 @@ Please review our collaboration session and update @CLAUDE.md with any important
 - [ ] **Common pitfalls**: Issues we encountered and how to avoid them
 - [ ] **Tool usage**: Specific commands or tool configurations that work well
 - [ ] **Project conventions**: Naming, structure, or organization patterns
-
-## Example additions
-
-```markdown
-## Session: [Date]
-
-**Discovered**: Release workflow fails if draft release ID becomes stale
-**Solution**: Always fetch draft by tag name, not cached ID
-
-**Pattern**: When simplifying docs, remove "we/our" language
-**Example**: "We provide X" → "ClearFlow provides X" → "X"
-```
-
-After updating, commit with:
-
-```bash
-git commit -m "docs: update CLAUDE.md with session learnings"
-```
+- [ ] **Testing strategies**: Effective testing approaches

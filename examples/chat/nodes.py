@@ -1,180 +1,152 @@
-"""Chat node implementations - intelligent entities with complete I/O capabilities."""
+"""Chat nodes - just the two participants: User and Assistant."""
 
-import dataclasses
-from dataclasses import dataclass
-from typing import Literal, override
+from typing import override
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
-from clearflow import Node, NodeResult
+from clearflow import Node
+from examples.chat.messages import (
+    AssistantMessageReceived,
+    ChatCompleted,
+    ChatMessage,
+    StartChat,
+    UserMessageReceived,
+)
 
 
-@dataclass(frozen=True)
-class ChatMessage:
-    """Immutable chat message structure."""
-
-    role: Literal["system", "user", "assistant"]
-    content: str
-
-
-@dataclass(frozen=True)
-class ChatState:
-    """Immutable chat application state.
-
-    All fields are required - we use dataclasses.replace() to update.
-    Empty defaults make initialization clean.
-    """
-
-    messages: tuple[ChatMessage, ...] = ()
-    last_response: str = ""
-    user_input: str = ""
-
-
-def _to_openai_message(msg: ChatMessage) -> ChatCompletionMessageParam:
-    """Convert ChatMessage to OpenAI format with type narrowing.
-
-    OpenAI expects specific role literals for each message type,
-    not a union. This helper provides the type narrowing.
+def _to_openai_messages(history: tuple[ChatMessage, ...]) -> tuple[ChatCompletionMessageParam, ...]:
+    """Convert chat history to OpenAI API format.
 
     Returns:
-        OpenAI-compatible message dictionary with correct role literal.
+        Tuple of OpenAI-compatible message dictionaries.
 
     """
-    if msg.role == "user":
-        return {"role": "user", "content": msg.content}
-    if msg.role == "assistant":
-        return {"role": "assistant", "content": msg.content}
-    # system
-    return {"role": "system", "content": msg.content}
+    result: tuple[ChatCompletionMessageParam, ...] = ()
+    for msg in history:
+        param: ChatCompletionMessageParam
+        if msg.role == "user":
+            param = {"role": "user", "content": msg.content}
+        elif msg.role == "assistant":
+            param = {"role": "assistant", "content": msg.content}
+        else:  # system
+            param = {"role": "system", "content": msg.content}
+        result = (*result, param)
+    return result
 
 
-def _ensure_system_message(messages: tuple[ChatMessage, ...], system_prompt: str) -> tuple[ChatMessage, ...]:
-    """Ensure conversation has a system message.
+def _setup_chat_history(message: StartChat | AssistantMessageReceived) -> tuple[ChatMessage, ...]:
+    """Set up conversation history and display messages.
 
     Returns:
-        Messages tuple with system message prepended if missing.
+        Current conversation history.
 
     """
-    if not messages:
-        return (ChatMessage(role="system", content=system_prompt),)
-    return messages
+    if isinstance(message, StartChat):
+        history: tuple[ChatMessage, ...] = (ChatMessage(role="system", content=message.system_prompt),)
+        if message.initial_message:
+            print(f"Assistant: {message.initial_message}")
+            print("-" * 50)
+        return history
+
+    # Display assistant's message
+    print(f"\nAssistant: {message.message}")
+    print("-" * 50)
+    return message.conversation_history
 
 
-async def _get_ai_response(messages: tuple[ChatMessage, ...], model: str) -> str:
-    """Call OpenAI API and get response.
+def _create_chat_ended(
+    message: StartChat | AssistantMessageReceived, history: tuple[ChatMessage, ...]
+) -> ChatCompleted:
+    """Create ChatCompleted event.
 
     Returns:
-        AI-generated response content string.
+        ChatCompleted event with proper metadata.
 
     """
-    client = AsyncOpenAI()
-    # OpenAI API requires a list, not a tuple - this is outside our control
-    api_messages = [  # clearflow: ignore[IMM006] # OpenAI requires list
-        _to_openai_message(msg) for msg in messages
-    ]
-
-    response = await client.chat.completions.create(
-        model=model,
-        messages=api_messages,
+    print("\nGoodbye!")
+    return ChatCompleted(
+        triggered_by_id=message.id,
+        run_id=message.run_id,
+        final_history=history,
+        reason="user_quit",
     )
 
-    content = response.choices[0].message.content
-    return content or ""
 
+class UserNode(Node[StartChat | AssistantMessageReceived, UserMessageReceived | ChatCompleted]):
+    """Proxy for the user."""
 
-@dataclass(frozen=True)
-class HumanNode(Node[ChatState]):
-    """Human intelligent entity with complete I/O capabilities.
-
-    This node represents a human participant in the conversation, handling:
-    - Input: Getting console input from the user
-    - Output: Displaying AI responses on the console
-    - Cognition: Deciding whether to continue or quit the conversation
-    - Memory: Adding human messages to the conversation history
-
-    The human is a complete intelligent entity, not just an input source.
-    """
+    name: str = "user"
 
     @override
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        """Execute human interaction cycle: display, input, decide.
+    async def process(self, message: StartChat | AssistantMessageReceived) -> UserMessageReceived | ChatCompleted:
+        """Handle user interaction.
 
         Returns:
-            NodeResult with "responded" (message sent) or "quit" (exit).
+            UserMessageReceived with user's message or ChatCompleted if quitting.
 
         """
-        # Output capability: Display AI response if present
-        if state.last_response:
-            print(f"\nAssistant: {state.last_response}")
-            print("-" * 50)
+        history = _setup_chat_history(message)
 
-        # Input capability: Get human input
+        # Get user input
         try:
             user_input = input("You: ")
 
-            # Cognitive process: Decide to quit or continue
+            # Check for quit commands
             if user_input.lower() in {"quit", "exit", "bye"}:
-                print("\nGoodbye!")
-                return NodeResult(state, outcome="quit")
+                return _create_chat_ended(message, history)
 
-            # Memory management: Add human message to conversation
-            messages = (*state.messages, ChatMessage(role="user", content=user_input))
-            new_state = dataclasses.replace(
-                state,
-                messages=messages,
-                user_input=user_input,
-                last_response="",  # Clear for next cycle
+            # Add user message to history
+            updated_history = (*history, ChatMessage(role="user", content=user_input))
+
+            return UserMessageReceived(
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+                message=user_input,
+                conversation_history=updated_history,
             )
-            return NodeResult(new_state, outcome="responded")
 
         except (EOFError, KeyboardInterrupt):
-            # Graceful exit on interrupt
-            print("\nGoodbye!")
-            return NodeResult(state, outcome="quit")
+            return _create_chat_ended(message, history)
 
 
-@dataclass(frozen=True)
-class LlmNode(Node[ChatState]):
-    """LLM intelligent entity with complete I/O capabilities.
+class AssistantNode(Node[UserMessageReceived, AssistantMessageReceived]):
+    """Proxy for the LLM assistant."""
 
-    This node represents an AI participant in the conversation, handling:
-    - Input: Receiving human messages from state
-    - Output: Generating responses via OpenAI API
-    - Cognition: Reasoning about context and generating appropriate responses
-    - Memory: Adding AI responses to the conversation history
-
-    The LLM is a complete intelligent entity, not just a processing function.
-    """
-
+    name: str = "assistant"
     model: str = "gpt-5-nano-2025-08-07"
-    system_prompt: str = "You are a helpful assistant."
 
     @override
-    async def exec(self, state: ChatState) -> NodeResult[ChatState]:
-        """Execute LLM interaction cycle: receive, process, respond.
+    async def process(self, message: UserMessageReceived) -> AssistantMessageReceived:
+        """Generate assistant response.
 
         Returns:
-            NodeResult with "responded" outcome (always responds).
+            AssistantMessageReceived from the LLM.
 
         """
-        # Ensure system message exists for context
-        messages = _ensure_system_message(state.messages, self.system_prompt)
+        # Convert history to OpenAI format
+        api_messages = _to_openai_messages(message.conversation_history)
 
-        # Input capability: Receive human message from state
-        # (Already in messages from HumanNode)
-
-        # Cognitive process + Output capability: Generate response via API
-        assistant_response = await _get_ai_response(messages, self.model)
-
-        # Memory management: Add AI response to conversation
-        messages = (*messages, ChatMessage(role="assistant", content=assistant_response))
-        new_state = dataclasses.replace(
-            state,
-            messages=messages,
-            last_response=assistant_response,
-            user_input="",  # Clear human input after processing
+        # Call OpenAI API
+        client = AsyncOpenAI()
+        # OpenAI API requires a mutable sequence, not a tuple - convert at the last moment
+        messages_for_api = [*api_messages]  # clearflow: ignore[IMM006] # OpenAI requires mutable
+        response = await client.chat.completions.create(
+            model=self.model,
+            messages=messages_for_api,
         )
 
-        # LLM always responds (no quit outcome)
-        return NodeResult(new_state, outcome="responded")
+        ai_response = response.choices[0].message.content or ""
+
+        # Add assistant message to history
+        updated_history = (
+            *message.conversation_history,
+            ChatMessage(role="assistant", content=ai_response),
+        )
+
+        return AssistantMessageReceived(
+            triggered_by_id=message.id,
+            run_id=message.run_id,
+            message=ai_response,
+            conversation_history=updated_history,
+        )

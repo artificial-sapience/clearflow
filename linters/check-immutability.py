@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-"""Check deep immutability compliance for the ClearFlow project.
+"""Check deep immutability compliance for mission-critical Python projects.
 
-This script enforces deep immutability requirements.
+This script enforces deep immutability requirements for both ClearFlow and Sociocracy.
 Zero tolerance for violations in mission-critical software.
 
 Requirements enforced:
 - All types SHALL be deeply immutable throughout the system
+  - No mutable collections: list, dict, set, bytearray, collections.*
+  - Use immutable alternatives: tuple, frozenset, Mapping, bytes, frozen dataclasses
   - Pydantic models must use frozen=True in ConfigDict
   - Dataclasses must use @dataclass(frozen=True)
-  - Collections must use tuple instead of list
   - No mutable default arguments
 """
 
@@ -16,7 +17,29 @@ import ast
 import re
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, cast
+
+
+# Auto-detect project from pyproject.toml
+def detect_project() -> str:
+    """Detect the project name.
+
+    Returns:
+        Project name string
+
+    """
+    pyproject_path = Path("pyproject.toml")
+    if pyproject_path.exists():
+        content = pyproject_path.read_text(encoding="utf-8")
+        if 'name = "clearflow"' in content:
+            return "clearflow"
+        if 'name = "sociocracy"' in content:
+            return "sociocracy"
+    # Default to clearflow if can't detect
+    return "clearflow"
+
+
+PROJECT_NAME = detect_project()
 
 
 class Violation(NamedTuple):
@@ -39,10 +62,11 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
         code: The code to check for suppression (e.g., "IMM001")
 
     Returns:
-        True if the line has a clearflow: ignore comment for this specific code
+        True if the line has a project-specific ignore comment for this specific code
 
     Format:
-        # clearflow: ignore[IMM001]  - Specific code suppression
+        # clearflow: ignore[IMM001]  - Specific code suppression for ClearFlow
+        # sociocracy: ignore[IMM001]  - Specific code suppression for Sociocracy
 
     """
     lines = content.splitlines()
@@ -51,41 +75,59 @@ def has_suppression(content: str, line_num: int, code: str) -> bool:
 
     line = lines[line_num - 1]  # Convert to 0-indexed
 
-    # Check for # clearflow: ignore[CODE] pattern
-    pattern = rf"#\s*clearflow:\s*ignore\[{code}\]"
+    # Check for # PROJECT: ignore[CODE] pattern
+    pattern = rf"#\s*{PROJECT_NAME}:\s*ignore\[{code}\]"
     return bool(re.search(pattern, line, re.IGNORECASE))
 
 
-def _is_mutable_list_annotation(node: ast.Subscript) -> str | None:
-    """Check if node is a mutable list annotation and return the type name.
+def _get_mutable_collection_info(node: ast.Subscript | ast.Name) -> tuple[str, str] | None:
+    """Check if node is a mutable collection annotation and return info.
 
     Returns:
-        String description of the list type found, or None if not a list.
+        Tuple of (type_name, suggestion) or None if not a mutable collection.
 
     """
-    if not isinstance(node.value, ast.Name):
-        return None
-    if node.value.id == "list":
-        return "list"
-    if node.value.id == "List":
-        return "List"
+    # Handle both Subscript (e.g., list[int]) and Name (e.g., dict) nodes
+    if isinstance(node, ast.Subscript):
+        if not isinstance(node.value, ast.Name):
+            return None
+        name = node.value.id
+    else:  # node is ast.Name
+        name = node.id
+
+    # Map of mutable types to their immutable alternatives
+    mutable_types = {
+        "list": ("list", "tuple"),
+        "List": ("List", "tuple"),
+        "dict": ("dict", "Mapping or frozen dataclass"),
+        "Dict": ("Dict", "Mapping or frozen dataclass"),
+        "set": ("set", "frozenset"),
+        "Set": ("Set", "frozenset"),
+        "bytearray": ("bytearray", "bytes"),
+        "deque": ("collections.deque", "tuple"),
+        "defaultdict": ("collections.defaultdict", "Mapping or frozen dataclass"),
+        "OrderedDict": ("collections.OrderedDict", "Mapping or frozen dataclass"),
+        "Counter": ("collections.Counter", "frozen dataclass"),
+        "ChainMap": ("collections.ChainMap", "Mapping or frozen dataclass"),
+        "UserDict": ("collections.UserDict", "frozen dataclass"),
+        "UserList": ("collections.UserList", "tuple"),
+    }
+
+    if name in mutable_types:
+        return mutable_types[name]
     return None
 
 
-def check_list_annotations(file_path: Path, content: str) -> tuple[Violation, ...]:
-    """Check for list type annotations that should be tuple.
+def check_mutable_collections(file_path: Path, content: str) -> tuple[Violation, ...]:
+    """Check for mutable collection type annotations.
 
     Returns:
-        List of violations for mutable list usage in type annotations.
+        List of violations for mutable collection usage in type annotations.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
-    # Skip this check for test files and linters - they often need mutable collections
-    # for tracking test state, assertions, and violations
-    path_str = str(file_path)
-    if "tests/" in path_str or path_str.startswith("test_") or "linters/" in path_str:
-        return tuple(violations)
+    # No exclusions - all Python code must pass immutability checks
 
     try:
         tree = ast.parse(content, filename=str(file_path))
@@ -93,21 +135,24 @@ def check_list_annotations(file_path: Path, content: str) -> tuple[Violation, ..
         return tuple(violations)
 
     for node in ast.walk(tree):
-        if isinstance(node, ast.Subscript):
-            list_type = _is_mutable_list_annotation(node)
-            if list_type and not has_suppression(content, node.lineno, "IMM001"):
-                violations.append(
+        # Check both Subscript (e.g., list[int]) and Name (e.g., dict) nodes
+        if isinstance(node, (ast.Subscript, ast.Name)):
+            mutable_info = _get_mutable_collection_info(node)
+            if mutable_info and not has_suppression(content, node.lineno, "IMM001"):
+                type_name, suggestion = mutable_info
+                violations = (
+                    *violations,
                     Violation(
                         file=file_path,
                         line=node.lineno,
                         column=node.col_offset,
                         code="IMM001",
-                        message=f"Using '{list_type}' in type annotation - use 'tuple[T, ...]' for immutable collections",
+                        message=f"Using mutable type '{type_name}' in type annotation - use '{suggestion}' for immutability",
                         requirement="REQ-ARCH-004",
                     ),
                 )
 
-    return tuple(violations)
+    return violations
 
 
 def _is_dataclass_decorator(decorator: ast.expr) -> bool:
@@ -149,7 +194,7 @@ def check_dataclass_frozen(file_path: Path, content: str) -> tuple[Violation, ..
         List of violations for unfrozen dataclasses.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     try:
         tree = ast.parse(content, filename=str(file_path))
@@ -168,7 +213,8 @@ def check_dataclass_frozen(file_path: Path, content: str) -> tuple[Violation, ..
 
             # If it's a dataclass but doesn't have frozen=True
             if not has_frozen and not has_suppression(content, node.lineno, "IMM002"):
-                violations.append(
+                violations = (
+                    *violations,
                     Violation(
                         file=file_path,
                         line=node.lineno,
@@ -179,7 +225,7 @@ def check_dataclass_frozen(file_path: Path, content: str) -> tuple[Violation, ..
                     ),
                 )
 
-    return tuple(violations)
+    return violations
 
 
 def _is_basemodel_class(base: ast.expr) -> bool:
@@ -194,7 +240,7 @@ def _is_basemodel_class(base: ast.expr) -> bool:
     return isinstance(base, ast.Attribute) and base.attr == "BaseModel"
 
 
-def _has_model_config_target(targets: list[ast.expr]) -> bool:
+def _has_model_config_target(targets: tuple[ast.expr, ...]) -> bool:
     """Check if any target is named model_config.
 
     Returns:
@@ -214,7 +260,7 @@ def _is_config_dict_call(value: ast.expr) -> bool:
     return isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == "ConfigDict"
 
 
-def _has_frozen_true_keyword(keywords: list[ast.keyword]) -> bool:
+def _has_frozen_true_keyword(keywords: tuple[ast.keyword, ...]) -> bool:
     """Check if keywords contain frozen=True.
 
     Returns:
@@ -234,13 +280,13 @@ def _is_frozen_config_assignment(item: ast.Assign) -> bool:
         True if assignment is frozen model_config, False otherwise.
 
     """
-    if not _has_model_config_target(item.targets):
+    if not _has_model_config_target(tuple(item.targets)):
         return False
     if not _is_config_dict_call(item.value):
         return False
     if not isinstance(item.value, ast.Call):
         return False
-    return _has_frozen_true_keyword(item.value.keywords)
+    return _has_frozen_true_keyword(tuple(item.value.keywords))
 
 
 def _has_frozen_config(node: ast.ClassDef) -> bool:
@@ -253,7 +299,7 @@ def _has_frozen_config(node: ast.ClassDef) -> bool:
     return any(isinstance(item, ast.Assign) and _is_frozen_config_assignment(item) for item in node.body)
 
 
-def _is_pydantic_model(node: ast.ClassDef, pydantic_classes: set[str]) -> bool:
+def _is_pydantic_model(node: ast.ClassDef, pydantic_classes: frozenset[str]) -> bool:
     """Check if class is a Pydantic model.
 
     Returns:
@@ -275,7 +321,7 @@ def check_pydantic_frozen(file_path: Path, content: str) -> tuple[Violation, ...
         List of violations for unfrozen Pydantic models.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     try:
         tree = ast.parse(content, filename=str(file_path))
@@ -283,30 +329,31 @@ def check_pydantic_frozen(file_path: Path, content: str) -> tuple[Violation, ...
         return tuple(violations)
 
     # Track which classes inherit from BaseModel
-    pydantic_classes: set[str] = set()
-    classes_to_check: list[ast.ClassDef] = []
+    pydantic_class_names = ()
+    classes_to_check = ()
 
     # Single pass: identify Pydantic models and collect them
     for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef) and _is_pydantic_model(node, pydantic_classes):
-            pydantic_classes.add(node.name)
-            classes_to_check.append(node)
+        if isinstance(node, ast.ClassDef) and _is_pydantic_model(node, frozenset(pydantic_class_names)):
+            pydantic_class_names = (*pydantic_class_names, node.name)
+            classes_to_check = (*classes_to_check, node)
 
     # Check each Pydantic model for frozen config
-    violations.extend(
-        Violation(
-            file=file_path,
-            line=node.lineno,
-            column=node.col_offset,
-            code="IMM003",
-            message=f"Pydantic model '{node.name}' must have frozen=True in ConfigDict",
-            requirement="REQ-ARCH-004",
-        )
-        for node in classes_to_check
-        if not _has_frozen_config(node)
+    return (
+        *violations,
+        *tuple(
+            Violation(
+                file=file_path,
+                line=node.lineno,
+                column=node.col_offset,
+                code="IMM003",
+                message=f"Pydantic model '{node.name}' must have frozen=True in ConfigDict",
+                requirement="REQ-ARCH-004",
+            )
+            for node in classes_to_check
+            if not _has_frozen_config(node)
+        ),
     )
-
-    return tuple(violations)
 
 
 def _get_mutable_default_info(default: ast.expr) -> tuple[str, str] | None:
@@ -332,7 +379,7 @@ def check_mutable_defaults(file_path: Path, content: str) -> tuple[Violation, ..
         List of violations for mutable defaults.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     try:
         tree = ast.parse(content, filename=str(file_path))
@@ -346,7 +393,8 @@ def check_mutable_defaults(file_path: Path, content: str) -> tuple[Violation, ..
                 mutable_info = _get_mutable_default_info(default)
                 if mutable_info:
                     mutable_type, suggestion = mutable_info
-                    violations.append(
+                    violations = (
+                        *violations,
                         Violation(
                             file=file_path,
                             line=default.lineno,
@@ -357,7 +405,7 @@ def check_mutable_defaults(file_path: Path, content: str) -> tuple[Violation, ..
                         ),
                     )
 
-    return tuple(violations)
+    return violations
 
 
 def _has_temporary_markers(lines: tuple[str, ...]) -> bool:
@@ -420,17 +468,6 @@ def _should_skip_listcomp(node: ast.ListComp, lines: tuple[str, ...]) -> bool:
     return any(word in context for word in skip_patterns)
 
 
-def _should_skip_file(file_path: Path) -> bool:
-    """Check if file should be skipped for list building checks.
-
-    Returns:
-        True if file should be skipped, False otherwise.
-
-    """
-    path_str = str(file_path)
-    return "tests/" in path_str or "linters/" in path_str
-
-
 def _collect_list_violations(
     tree: ast.Module, lines: tuple[str, ...], file_path: Path, content: str
 ) -> tuple[Violation, ...]:
@@ -440,17 +477,18 @@ def _collect_list_violations(
         Tuple of violations found.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Attribute):
             violation = _check_append_usage(node, lines, file_path)
             if violation and not has_suppression(content, violation.line, "IMM005"):
-                violations.append(violation)
+                violations = (*violations, violation)
         elif isinstance(node, ast.ListComp) and not _should_skip_listcomp(node, lines):
             # Check for suppression comment
             if not has_suppression(content, node.lineno, "IMM006"):
-                violations.append(
+                violations = (
+                    *violations,
                     Violation(
                         file=file_path,
                         line=node.lineno,
@@ -461,7 +499,7 @@ def _collect_list_violations(
                     ),
                 )
 
-    return tuple(violations)
+    return violations
 
 
 def check_list_building(file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -471,10 +509,6 @@ def check_list_building(file_path: Path, content: str) -> tuple[Violation, ...]:
         List of violations for mutable list building.
 
     """
-    # Skip this check for test files and scripts
-    if _should_skip_file(file_path):
-        return ()
-
     try:
         tree = ast.parse(content, filename=str(file_path))
     except SyntaxError:
@@ -499,7 +533,7 @@ def _check_typeddict_import(node: ast.ImportFrom, file_path: Path) -> tuple[Viol
     if node.module != "typing":
         return ()
 
-    violations = [
+    return tuple(
         Violation(
             file=file_path,
             line=node.lineno,
@@ -510,8 +544,7 @@ def _check_typeddict_import(node: ast.ImportFrom, file_path: Path) -> tuple[Viol
         )
         for alias in node.names
         if alias.name == "TypedDict"
-    ]
-    return tuple(violations)
+    )
 
 
 def _is_typeddict_base(base: ast.expr) -> bool:
@@ -533,7 +566,7 @@ def _check_typeddict_inheritance(node: ast.ClassDef, file_path: Path) -> tuple[V
         Tuple of violations for TypedDict inheritance.
 
     """
-    violations = [
+    return tuple(
         Violation(
             file=file_path,
             line=node.lineno,
@@ -544,8 +577,7 @@ def _check_typeddict_inheritance(node: ast.ClassDef, file_path: Path) -> tuple[V
         )
         for base in node.bases
         if _is_typeddict_base(base)
-    ]
-    return tuple(violations)
+    )
 
 
 def check_typeddict_usage(file_path: Path, content: str) -> tuple[Violation, ...]:
@@ -560,15 +592,15 @@ def check_typeddict_usage(file_path: Path, content: str) -> tuple[Violation, ...
     except SyntaxError:
         return ()
 
-    violations: list[Violation] = []
+    violations = ()
 
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
-            violations.extend(_check_typeddict_import(node, file_path))
+            violations = (*violations, *_check_typeddict_import(node, file_path))
         elif isinstance(node, ast.ClassDef):
-            violations.extend(_check_typeddict_inheritance(node, file_path))
+            violations = (*violations, *_check_typeddict_inheritance(node, file_path))
 
-    return tuple(violations)
+    return violations
 
 
 def check_file(file_path: Path) -> tuple[Violation, ...]:
@@ -578,7 +610,7 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         List of all immutability violations found in the file.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     try:
         content = file_path.read_text(encoding="utf-8")
@@ -591,14 +623,12 @@ def check_file(file_path: Path) -> tuple[Violation, ...]:
         return tuple(violations)
 
     # Run all checks
-    violations.extend(check_list_annotations(file_path, content))
-    violations.extend(check_dataclass_frozen(file_path, content))
-    violations.extend(check_pydantic_frozen(file_path, content))
-    violations.extend(check_mutable_defaults(file_path, content))
-    violations.extend(check_list_building(file_path, content))
-    violations.extend(check_typeddict_usage(file_path, content))
-
-    return tuple(violations)
+    violations = (*violations, *check_mutable_collections(file_path, content))
+    violations = (*violations, *check_dataclass_frozen(file_path, content))
+    violations = (*violations, *check_pydantic_frozen(file_path, content))
+    violations = (*violations, *check_mutable_defaults(file_path, content))
+    violations = (*violations, *check_list_building(file_path, content))
+    return (*violations, *check_typeddict_usage(file_path, content))
 
 
 def scan_directory(directory: Path) -> tuple[Violation, ...]:
@@ -608,7 +638,7 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
         List of all violations found in Python files within the directory.
 
     """
-    violations: list[Violation] = []
+    violations = ()
 
     if not directory.exists():
         return tuple(violations)
@@ -620,9 +650,9 @@ def scan_directory(directory: Path) -> tuple[Violation, ...]:
         # Skip files in excluded directories
         if any(part in excluded_dirs for part in file_path.parts):
             continue
-        violations.extend(check_file(file_path))
+        violations = (*violations, *check_file(file_path))
 
-    return tuple(violations)
+    return violations
 
 
 def print_report(violations: tuple[Violation, ...]) -> None:
@@ -635,14 +665,14 @@ def print_report(violations: tuple[Violation, ...]) -> None:
     print("=" * 70)
 
     # Group by code
-    by_code: dict[str, list[Violation]] = {}
+    by_code = cast("dict[str, tuple[Violation, ...]]", {})
     for v in violations:
         if v.code not in by_code:
-            by_code[v.code] = []
-        by_code[v.code].append(v)
+            by_code[v.code] = ()
+        by_code[v.code] = (*by_code[v.code], v)
 
     code_descriptions = {
-        "IMM001": "Mutable list type annotations",
+        "IMM001": "Mutable collection type annotations (list, dict, set, etc.)",
         "IMM002": "Dataclasses without frozen=True",
         "IMM003": "Pydantic models without frozen=True",
         "IMM004": "Mutable default arguments",
@@ -683,25 +713,25 @@ def print_report(violations: tuple[Violation, ...]) -> None:
 def main() -> None:
     """Execute the immutability compliance check."""
     # Get items from command line arguments, or use defaults
-    items = sys.argv[1:] if len(sys.argv) > 1 else ["clearflow", "tests", "examples"]
+    items = sys.argv[1:] if len(sys.argv) > 1 else [PROJECT_NAME, "tests", "examples"]
 
-    all_violations: list[Violation] = []
+    all_violations = ()
     for item in items:
         path = Path(item)
         if path.is_file() and path.suffix == ".py":
             # Single Python file
             violations = check_file(path)
-            all_violations.extend(violations)
+            all_violations = (*all_violations, *violations)
         elif path.is_dir():
             # Directory - scan recursively
             violations = scan_directory(path)
-            all_violations.extend(violations)
+            all_violations = (*all_violations, *violations)
         else:
             print(f"Warning: {item} is not a Python file or directory, skipping")
             continue
 
     # Print report
-    print_report(tuple(all_violations))
+    print_report(all_violations)
 
     # Exit with appropriate code
     if all_violations:

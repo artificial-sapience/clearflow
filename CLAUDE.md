@@ -2,321 +2,228 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Core Philosophy
+## Core Concept
 
-**Tagline**: "Compose type-safe flows for emergent AI"
+**ClearFlow**: Message-driven orchestration for AI workflows with type safety, immutability, and 100% test coverage.
 
-ClearFlow provides mission-critical AI orchestration with verifiable correctness. Built for Python engineers who demand:
+## Architecture Overview
 
-- **Deep immutability** - All state transformations create new immutable data structures
-- **Immutable transformations** - Nodes transform state without mutation (though they may perform I/O)
-- **Type safety** - Full static typing with pyright strict mode
-- **100% test coverage** - Every path tested, no exceptions
-- **Explicit routing** - Given an outcome, the next step is always the same
-- **Zero dependencies** - Stdlib only for maximum reliability
+### Message Flow Pattern
 
-Target audience: Python engineers building mission-critical AI systems who require verifiable orchestration with explicit control flow.
+```text
+Command → Node → Event → Node → Event → End
+```
+
+- **Commands**: Request actions (`AnalyzeCommand`, `LoadCommand`)
+- **Events**: Record what happened (`AnalysisComplete`, `DocumentLoaded`)
+- **Nodes**: Transform messages (`Node[TIn, TOut]`)
+- **Flows**: Route by message type with single termination
+
+### Key Files Structure
+
+```text
+clearflow/
+├── __init__.py          # Public API exports
+├── message.py           # Command/Event base classes
+├── node.py              # Node interface
+├── flow.py              # FlowBuilder interface
+├── observer.py          # Observer pattern
+└── _internal/
+    ├── flow_impl.py     # Flow implementation
+    └── callback_handler.py
+```
 
 ## Development Commands
 
 ```bash
-# Install dependencies
-uv sync                    # Install runtime dependencies
-uv sync --all-extras        # Install with dev dependencies
+# Setup
+uv sync --all-extras
 
-# Run quality checks (enforced before commits)
-./quality-check.sh         # Runs all checks: custom linters, lint, format, type check, tests
+# Run all quality checks (MUST PASS 100%)
+./quality-check.sh
 
-# Custom linters (mission-critical compliance)
-python linters/check-architecture-compliance.py  # Architecture violations
-python linters/check-immutability.py            # Deep immutability enforcement
-python linters/check-test-suite-compliance.py   # Test isolation and resource management
+# Individual commands
+uv run ruff check --fix .        # Lint with fixes
+uv run ruff format .              # Format code
+uv run pyright .                  # Type checking
+uv run pytest -xvs                # Run all tests
+uv run pytest -xvs -k test_name   # Run specific test
+uv run pytest --cov=clearflow --cov-fail-under=100  # Coverage
 
-# Individual quality commands
-uv run ruff check --fix clearflow tests                 # Auto-fix linting (no unsafe fixes)
-uv run ruff format clearflow tests                      # Format code
-uv run pyright clearflow tests                          # Type check (pyright - only type checker)
-uv run pytest -x -v tests                              # Run all tests
-uv run pytest -x -v tests -k "specific_test"           # Run specific test
-
-# Coverage requirements
-uv run pytest --cov=clearflow --cov-report=term-missing --cov-fail-under=100
+# Run examples
+cd examples/chat && uv run python main.py
+cd examples/portfolio_analysis && uv run python main.py
+cd examples/rag && uv run python main.py
 ```
 
-## Architecture Overview
+## Quality Requirements
 
-ClearFlow is a minimal orchestration framework with functional patterns and **zero third-party dependencies**. It implements a **Node-Flow-State** pattern for managing workflows that include language model calls and other async operations.
+### Zero Tolerance Policies
 
-### Core Concepts
+1. **100% test coverage** - No exceptions
+2. **No linter suppressions** without explicit user approval
+3. **pyright strict mode** - All type errors must be fixed
+4. **Immutable data** - Enforced by custom linters
 
-1. **Nodes**: Async functions that transform state
-   - Inherit from `Node[T]` or `Node[TIn, TOut]` and override `exec()` method
-   - Nodes are frozen dataclasses with a `name` field
-   - Input: state of type `T` (any type: dict, TypedDict, dataclass, primitives)
-   - Output: `NodeResult[T](state, outcome)`
-   - Designed for explicit transformations
-   - Lifecycle hooks: `prep()`, `exec()`, `post()`
+### Custom Linters (Auto-run in quality-check.sh)
 
-2. **State**: Unconstrained - use any type T
-   - Type-safe with `T` where T is any Python type
-   - Natural Python operations: `{**state, "key": "value"}`
-   - Encourages immutable patterns
-   - Works with dict, TypedDict, dataclass, primitives
+- `check-architecture-compliance.py`: No `_internal` imports in tests
+- `check-immutability.py`: Use `tuple` not `list`, frozen dataclasses
+- `check-test-suite-compliance.py`: Proper async test patterns
 
-3. **Flow**: Type-safe workflow builder
-   - Create with `flow("name", start_node)` function
-   - Chain with `.route(from_node, outcome, to_node)`
-   - End with `.end(final_node, outcome)` for single termination
-   - Single termination rule: exactly one route to `None`
-   - Full generic support with type inference
+## Code Patterns
 
-### Key Facts
-
-- **Code size**: ~250 lines total, ~185 non-comment lines
-- **Test coverage**: 100% required
-- **Type safety**: No unnecessary `Any` (required for metaclass patterns)
-- **Immutability**: All dataclasses frozen
-- **Routing**: Explicit (NOT deterministic execution)
-- **Single termination**: Exactly one route to `None` per flow
-
-### Common Patterns
+### Creating a Message-Driven Flow
 
 ```python
-from dataclasses import dataclass
 from typing import override
-from clearflow import Node, NodeResult, flow
+from clearflow import Node, Command, Event, create_flow
 
-# Creating nodes - Node is a frozen dataclass
-@dataclass(frozen=True)
-class DocumentLoader(Node[DocumentState]):
-    name: str = "loader"
-    
+# 1. Define messages
+class ProcessCommand(Command):
+    data: str
+
+class ProcessedEvent(Event):
+    result: str
+    triggered_by_id: str  # Required for events
+
+# 2. Create node
+class ProcessorNode(Node[ProcessCommand, ProcessedEvent]):
+    name: str = "processor"
+
     @override
-    async def exec(self, state: DocumentState) -> NodeResult[DocumentState]:
-        content = await load_document(state["path"])
-        new_state: DocumentState = {**state, "content": content}
-        return NodeResult(new_state, outcome="loaded")
+    async def process(self, msg: ProcessCommand) -> ProcessedEvent:
+        return ProcessedEvent(
+            result=f"Processed: {msg.data}",
+            triggered_by_id=msg.id
+        )
 
-# Building a flow with single termination
-loader = DocumentLoader()
-processor = ProcessorNode()
-complete = CompleteNode()
+# 3. Build flow
+flow = (
+    create_flow("pipeline", ProcessorNode())
+    .route(ProcessorNode(), ProcessedEvent, NextNode())
+    .end_flow(CompleteEvent)  # Single termination
+)
 
-flow_instance = (
-    flow("Pipeline", loader)
-    .route(loader, "loaded", processor)
-    .route(loader, "error", complete)
-    .route(processor, "processed", complete)
-    .end(complete, "done")  # Single termination
+# 4. Run
+result = await flow.process(ProcessCommand(data="test"))
+```
+
+### Testing Patterns
+
+```python
+# Always use public API
+from clearflow import Node, create_flow  # ✓
+from clearflow._internal import ...      # ✗
+
+# Test real scenarios
+async def test_multi_agent_flow():
+    """Test actual AI orchestration patterns."""
+    flow = create_portfolio_analysis_flow()
+    result = await flow.process(StartAnalysisCommand(...))
+    assert isinstance(result, DecisionMadeEvent)
+
+# Extract complex assertions
+def _assert_event_causality(event: Event, command: Command) -> None:
+    assert event.triggered_by_id == command.id
+    assert event.run_id == command.run_id
+```
+
+### Adding Observers
+
+```python
+from clearflow import Observer
+
+class LoggingObserver(Observer):
+    async def on_node_start(self, node: str, message: Message) -> None:
+        print(f"[{node}] Processing: {message.id}")
+
+flow = (
+    create_flow("pipeline", start_node)
+    .observe(LoggingObserver())  # Add before end_flow
+    .route(start_node, EventType, next_node)
+    .end_flow(CompleteEvent)
 )
 ```
 
-### Testing Requirements
+## Important Constraints
 
-- **100% coverage**: No exceptions, ever
-- **Deep immutability**: Use frozen dataclasses or tuples for all test state
-- **Real AI scenarios**: Model actual AI orchestration patterns (RAG, agents, tool use)
-- **Functional purity**: Test that transformations are pure with no side effects
-- **Precise types**: Every test knows exact TIn and TOut types
-- **Educational tests**: Tests should demonstrate best practices for mission-critical AI
+### Type Safety
 
-### Code Quality Standards
+- Use `Node[TIn, TOut]` with precise types
+- Union types for branching: `Node[Cmd, EventA | EventB]`
+- No `Any` types except metaclass patterns
 
-**CRITICAL**: These standards maintain trust:
+### Immutability Rules
 
-- All linting rules must pass without suppression
-- Pyright must pass in strict mode (sole type checker)
-- Minimal `# pyright: ignore` comments (only for documented limitations)
-- No `Any` types except where required (e.g., metaclass patterns)
-- Prefer boring, obvious code over clever solutions
+- Messages are Pydantic models with `frozen=True`
+- Type annotations: `tuple[T, ...]` not `list[T]`
+- No mutable default arguments
+- Use `cast()` for accumulation patterns in linters/tests
 
-**LINTER SUPPRESSION POLICY**:
+### Import Rules
 
-- **NEVER add linter suppressions without explicit user approval**
-- This includes: `# noqa`, `# pyright: ignore`, etc.
-- All approved suppressions MUST include a justification comment
-- Example: `# noqa: C901  # Display function complexity acceptable for UI`
-- Always fix the root cause instead of suppressing when possible
+- Absolute imports only (no relative imports)
+- Tests must use public API from `clearflow` module
+- Examples use full paths: `from examples.chat.nodes import ChatNode`
 
-#### Custom Linters
+## Common Tasks
 
-ClearFlow uses three custom linters to enforce mission-critical standards:
+### Add New Message Type
 
-1. **Architecture Compliance** (`linters/check-architecture-compliance.py`)
-   - No patching/mocking of internal components in tests
-   - No imports from private modules (`_internal`)
-   - No use of `TYPE_CHECKING` (indicates circular dependencies)
-   - No `object` or `Any` types in parameters
+```python
+class MyEvent(Event):
+    data: str
+    triggered_by_id: str  # Required for Event
+    run_id: str | None = None  # Auto-generated if None
+```
 
-2. **Immutability Compliance** (`linters/check-immutability.py`)
-   - All dataclasses must have `frozen=True`
-   - No `list` in type annotations (use `tuple[T, ...]`)
-   - No mutable default arguments
-   - No list building with `.append()` in production code
+### Create Multi-Path Node
 
-3. **Test Suite Compliance** (`linters/check-test-suite-compliance.py`)
-   - No `asyncio.run()` in tests (use `@pytest.mark.asyncio`)
-   - No manual event loop creation without cleanup
-   - All async tests must have `@pytest.mark.asyncio`
-   - All resources must use context managers
+```python
+class RouterNode(Node[InputCmd, SuccessEvent | ErrorEvent]):
+    name: str = "router"
 
-These linters run automatically as part of `./quality-check.sh` and enforce strict policies for violations.
+    @override
+    async def process(self, msg: InputCmd) -> SuccessEvent | ErrorEvent:
+        if validate(msg):
+            return SuccessEvent(triggered_by_id=msg.id)
+        return ErrorEvent(error="Invalid", triggered_by_id=msg.id)
+```
 
-### Contributing Guidelines
+### Handle Node Errors
 
-1. **PR Standards**
-   - Must maintain 100% test coverage
-   - Must pass all type checks
-   - Must use frozen dataclasses
-   - Must handle all outcomes explicitly
+```python
+flow = (
+    create_flow("safe_pipeline", StartNode())
+    .route(StartNode(), SuccessEvent, ProcessNode())
+    .route(StartNode(), ErrorEvent, ErrorHandler())  # Error path
+    .route(ProcessNode(), CompleteEvent, FinalNode())
+    .route(ErrorHandler(), CompleteEvent, FinalNode())
+    .end_flow(CompleteEvent)
+)
+```
 
-2. **Documentation**
-   - Focus on guarantees and limitations
-   - No marketing language
-   - Examples must work exactly as shown
-   - Be explicit about what we don't do
+## Project Status
 
-3. **Feature Requests**
-   - Reject anything that compromises type safety
-   - Reject anything that reduces testability
-   - Reject anything that adds implicit behavior
-   - "No" is a complete answer
+- **Version**: Alpha (0.x.y) - Breaking changes allowed
+- **Python**: 3.13+ required (PEP 695 support)
+- **Dependencies**: Pydantic only
+- **Code size**: ~700 SLOC core
+- **Test coverage**: 100% required
+- **PyPI**: <https://pypi.org/project/clearflow/>
 
-### Documentation Style
+## Key Principles
 
-- **Factual and concise** - No verbosity, no "we/our" language
-- **Ego-free** - No defensiveness, no marketing speak
-- **Direct responses** - State facts and limitations without explanation
-
-### Red Flags to Avoid
-
-1. **Never claim**:
-   - "Deterministic orchestration" or "deterministic execution" (we only provide explicit routing)
-   - "Exhaustive outcome handling" (we don't enforce this)
-   - "Compile-time safety" (Python doesn't have this)
-   - "Makes language model agents reliable" (we only provide orchestration structure)
-   - "Production-ready agents" (we provide orchestration, not complete agents)
-   - "You can't test LLM outputs" (you can test them, just not deterministically)
-
-2. **Never add**:
-   - Claims about execution order or timing guarantees
-   - Methods that hide what happens between node calls
-   - Optional parameters that change flow behavior
-   - Dependencies that could introduce unpredictability
-
-3. **Language to avoid**:
-   - "Deterministic" when describing the framework
-   - "Unreasonable AI" or other hyperbolic characterizations of LLMs
-   - Absolute statements about what users can't do
-   - Marketing language that can't be verified
-
-### Before Any Change
-
-Ask:
-
-- Can this be tested completely?
-- Does this make behavior more explicit?
-- Is this simpler than the alternative?
-
-If any answer is "no", don't do it.
-
-### Git Workflow
-
-1. **Branch Protection**: Main branch requires PR with passing checks
-2. **Conventional Commits**: Use `fix:`, `feat:`, `docs:`, `ci:` prefixes
-3. **Local Protection**: Pre-commit hook prevents direct commits to main
-4. **PR Process**:
-
-   ```bash
-   git checkout -b type/description
-   # Make changes
-   ./quality-check.sh
-   git commit -m "type: clear description"
-   git push -u origin type/description
-   gh pr create --title "type: description" --body "concise explanation"
-   ```
+1. **Message-driven**: Commands trigger, Events record
+2. **Type-safe**: Full static typing, no runtime surprises
+3. **Immutable**: All data transformations create new objects
+4. **Testable**: Every path must be tested
+5. **Explicit**: No hidden behavior or implicit routing
 
 ## Remember
 
-ClearFlow provides explicit routing with single termination enforcement. Keep the code minimal, the documentation concise, and the claims verifiable.
-
-## Documentation Size Limits
-
-- README.md: ~100 lines (proportional to 250-line codebase)
-- Individual docs: <100 lines
-- Total documentation: <500 lines
-
-## Release Process
-
-Automated via GitVersion and Release Drafter. Manual trigger of release.yml publishes to PyPI.
-**PyPI Package**: <https://pypi.org/project/clearflow/>
-
-## Critical Technical Distinctions
-
-**Explicit routing ≠ Deterministic execution** - ClearFlow provides explicit routing (given outcome X, next step is always Y) but NOT deterministic execution.
-
-## Technical Notes
-
-- **Pyright only** - Removed mypy, pyright supports PEP 695 defaults
-- **Type stubs** - Stub only what you use (6 DSPy APIs, not 127 files)
-- **Metaclass patterns** - Field descriptors must return `Any` (standard practice)
-
-## llms.txt Implementation
-
-ClearFlow includes comprehensive llms.txt support for optimal AI assistant integration:
-
-1. **Files**:
-   - `llms.txt` - Minimal index with documentation links (~2KB)
-   - `llms-full.txt` - Auto-generated expanded content (~63KB)
-   - Generated with: `uv run llms_txt2ctx --optional true llms.txt > llms-full.txt`
-
-2. **Key Decisions**:
-   - Single `clearflow/__init__.py` contains entire implementation (not split files)
-   - Example links point to README.md files (context before code)
-   - Include CLAUDE.md in llms.txt for AI context
-   - Use GitHub raw URLs (we have no separate website)
-
-3. **Integration**:
-   - See README.md for Claude Code setup instructions
-   - Direct URLs work with any llms.txt-compatible tool
-
-4. **Maintenance**:
-   - Manual generation: `uv run python scripts/generate_llms_txt_files.py`
-   - Review changes before committing to maintain quality
-   - Validate URLs: `cat llms.txt | grep -oE 'https://[^)]+' | xargs -I {} curl -I {}`
-
-## Complexity Management
-
-**Radical Simplification Strategy** for Grade A compliance:
-
-- Replace complex content analysis with static descriptions
-- Remove file system dependencies when possible
-- Use simple dictionary lookups instead of conditional chains
-- Question if dynamic behavior is truly necessary
-
-**Common Over-engineering Patterns to Avoid**:
-
-- Complex text processing for marginal metadata gains
-- Multiple decision branches for utility scripts
-- Dynamic file content analysis when static works
-- Perfect descriptions when "good enough" suffices
-
-**Example**: llms.txt generation - static descriptions work as well as complex extraction
-
-## Security and Suppressions
-
-**Subprocess Security Suppressions** (legitimate cases):
-
-```python
-import subprocess  # noqa: S404  # Required for running uv/mcpdoc commands in dev setup
-["uv", "run", "cmd"],  # noqa: S607  # Safe: hardcoded command with literal args
-```
-
-**Pattern**: Development/configuration scripts with hardcoded commands are safe to suppress
-
-## Messaging Principles
-
-- **Avoid vague claims** - "Full transparency" misleads about features we don't have
-- **Use active voice** - "Compose flows" not "Composing flows"
-- **Acknowledge AI nature** - "emergent AI" not "unpredictable AI" (less adversarial)
-- **Be specific** - "Type-safe", "Zero dependencies" are verifiable features
+- Fix root causes, not symptoms
+- Every file is production code (including examples)
+- Single responsibility per flow
+- Causality tracking makes debugging possible

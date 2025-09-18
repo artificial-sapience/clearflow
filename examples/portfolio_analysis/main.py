@@ -1,96 +1,83 @@
-"""Main entry point for AI-powered portfolio analysis using DSPy."""
+"""Main entry point for message-driven portfolio analysis with LLM intelligence."""
 
 import asyncio
+import sys
+import uuid
+from pathlib import Path
 
-from clearflow import NodeResult
 from examples.portfolio_analysis.market_data import (
     create_bullish_market_data,
     create_sample_market_data,
     create_volatile_market_data,
 )
+from examples.portfolio_analysis.messages import (
+    DecisionMadeEvent,
+    PortfolioConstraints,
+    StartAnalysisCommand,
+)
 from examples.portfolio_analysis.portfolio_flow import create_portfolio_analysis_flow
-from examples.portfolio_analysis.shared import MarketData
-from examples.portfolio_analysis.specialists.decision.models import TradingDecision
-from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange
+from examples.portfolio_analysis.shared.config import configure_dspy
+from examples.shared.console_handler import LoadingIndicator
 
 
-def print_market_overview(market_data: MarketData) -> None:
-    """Print market data overview."""
-    print("\n" + "=" * 80)
-    print("📊 MARKET DATA")
-    print("=" * 80)
+def create_market_scenario(scenario: str = "normal") -> StartAnalysisCommand:
+    """Create market analysis command for different scenarios.
 
-    for asset in market_data.assets:
-        print(f"\n{asset.symbol}:")
-        print(f"  Price: ${asset.price:.2f}")
-        print(f"  Volume: {asset.volume:,}")
-        print(f"  Volatility: {asset.volatility:.2%}")
-        print(f"  Momentum: {asset.momentum:+.2f}")
-        print(f"  Sector: {asset.sector}")
-
-    print(f"\nMarket Sentiment: {market_data.market_sentiment}")
-    print(f"Risk-Free Rate: {market_data.risk_free_rate:.2%}")
-    print(f"Market Date: {market_data.market_date}")
-
-
-def _get_allocation_action(delta: float) -> str:
-    """Get allocation action based on delta.
+    Args:
+        scenario: Market scenario - "normal", "bullish", or "volatile"
 
     Returns:
-        Action string: "INCREASE", "DECREASE", or "HOLD".
+        StartAnalysisCommand with complete market data and constraints.
 
     """
-    if delta > 0:
-        return "INCREASE"
-    if delta < 0:
-        return "DECREASE"
-    return "HOLD"
+    # Get appropriate market data
+    if scenario == "bullish":
+        market_data = create_bullish_market_data()
+    elif scenario == "volatile":
+        market_data = create_volatile_market_data()
+    else:  # normal
+        market_data = create_sample_market_data()
+
+    # Define portfolio constraints
+    constraints = PortfolioConstraints(
+        max_position_size=15.0,  # Max 15% per asset
+        max_sector_allocation=40.0,  # Max 40% per sector
+        min_position_size=2.0,  # Min 2% if taking position
+        max_var_limit=2_000_000.0,  # $2M Value at Risk limit
+        max_drawdown_threshold=0.20,  # 20% max drawdown
+    )
+
+    return StartAnalysisCommand(
+        market_data=market_data,
+        portfolio_constraints=constraints,
+        run_id=uuid.uuid4(),  # Generate flow ID for this analysis session
+    )
 
 
-def _print_allocation_changes(changes: tuple[AllocationChange, ...]) -> None:
-    """Print allocation changes."""
-    if not changes:
-        print("\nNo allocation changes approved (HOLD)")
-        return
+def print_market_summary(command: StartAnalysisCommand) -> None:
+    """Print minimal market summary.
 
-    print("\nApproved Allocation Changes:")
-    for change in changes:
-        delta = change.recommended_allocation - change.current_allocation
-        action = _get_allocation_action(delta)
-        msg = (
-            f"  • {change.symbol}: {action} to {change.recommended_allocation:.1f}% "
-            f"(from {change.current_allocation:.1f}%)"
-        )
-        print(msg)
-        if change.change_reason:
-            print(f"    Reason: {change.change_reason}")
+    Args:
+        command: The start analysis command to display.
+
+    """
+    symbols = tuple(asset.symbol for asset in command.market_data.assets)
+    print(f"\n📊 Analyzing {len(symbols)} assets in {command.market_data.market_sentiment} market")
+    print(f"📅 Market date: {command.market_data.market_date}")
 
 
-def _print_trading_decision(decision: TradingDecision) -> None:
-    """Print approved trading decision details."""
-    print("\n✅ Trading Decision Approved")
-    print(f"\nExecution Plan: {decision.execution_plan}")
+def print_final_decision(event: DecisionMadeEvent) -> None:
+    """Print minimal final decision summary.
 
-    _print_allocation_changes(decision.approved_changes)
+    Args:
+        event: The decision made event to display.
 
-    if decision.monitoring_requirements:
-        print("\nMonitoring Requirements:")
-        for req in decision.monitoring_requirements:
-            print(f"  • {req}")
-
-    if decision.decision_status == "escalate":
-        print("\n⚠️ Escalation Required")
-
-
-def print_final_decision(result: NodeResult[TradingDecision]) -> None:
-    """Print the final trading decision or error."""
-    print("\n" + "=" * 80)
-    print("📋 FINAL DECISION")
-    print("=" * 80)
-
-    _print_trading_decision(result.state)
-
-    print("\n" + "=" * 80)
+    """
+    print(f"\n📋 Decision: {event.decision.decision_status.upper()}")
+    if event.decision.approved_changes:
+        print(f"✅ {len(event.decision.approved_changes)} allocation changes approved")
+    if event.decision.decision_status == "escalate":
+        print("⚠️  Requires human review")
 
 
 async def run_portfolio_analysis(scenario: str = "normal") -> None:
@@ -100,67 +87,62 @@ async def run_portfolio_analysis(scenario: str = "normal") -> None:
         scenario: Market scenario - "normal", "bullish", or "volatile"
 
     """
-    # Create market data based on scenario
-    if scenario == "bullish":
-        market_data = create_bullish_market_data()
-        print("\n🚀 Running BULLISH market scenario...")
-    elif scenario == "volatile":
-        market_data = create_volatile_market_data()
-        print("\n⚡ Running VOLATILE market scenario...")
-    else:
-        market_data = create_sample_market_data()
-        print("\n📈 Running NORMAL market scenario...")
+    # Configure DSPy with OpenAI
+    async with LoadingIndicator("Configuring DSPy"):
+        try:
+            configure_dspy()
+        except ValueError as e:
+            print(f"\n❌ Configuration Error: {e}")
+            print("\n📝 Setup Instructions:")
+            print("1. Copy .env.example to .env")
+            print("2. Add your OpenAI API key to .env")
+            sys.exit(1)
 
-    # Display market overview
-    print_market_overview(market_data)
+    # Create market command
+    command = create_market_scenario(scenario)
+    print_market_summary(command)
 
-    # Create and run the flow
-    print("\n" + "=" * 80)
-    print("🤖 SPECIALIST WORKFLOW ANALYSIS")
-    print("=" * 80)
-
+    # Create and run the flow with built-in console output
     flow = create_portfolio_analysis_flow()
-    result = await flow(market_data)
+    result = await flow.process(command)
 
-    # Display final decision
+    # Display final decision summary
     print_final_decision(result)
 
 
-def _print_menu() -> None:
+def print_menu() -> None:
     """Print menu options."""
-    print("\n" + "=" * 80)
-    print("🎯 PORTFOLIO ANALYSIS EXAMPLE")
-    print("=" * 80)
-    print("\n📊 Example using simulated market data")
-    print("\nMulti-specialist portfolio analysis using DSPy")
-    print("for structured outputs and Pydantic for validation.")
+    print("\n🎯 PORTFOLIO ANALYSIS WITH LLM INTELLIGENCE")
     print("\nSelect market scenario:")
     print("1. Normal market conditions (default)")
-    print("2. Bullish market (opportunities)")
-    print("3. Volatile market (risk limits)")
+    print("2. Bullish market (growth opportunities)")
+    print("3. Volatile market (high risk)")
 
 
-async def _run_scenario_by_choice(choice: str) -> None:
-    """Run scenario based on user choice."""
+async def main() -> None:
+    """Run the main entry point with menu."""
+    print_menu()
+    choice = input("\nEnter choice (1-3, default=1): ").strip()
+
     scenarios = {
         "1": "normal",
         "2": "bullish",
         "3": "volatile",
     }
 
-    if choice in scenarios:
-        await run_portfolio_analysis(scenarios[choice])
-    else:
-        print("Running default scenario (normal market conditions).")
-        await run_portfolio_analysis("normal")
+    scenario = scenarios.get(choice, "normal")
+    if choice and choice not in scenarios:
+        print("Invalid choice. Using default (normal).")
 
-
-async def main() -> None:
-    """Run the main entry point with menu."""
-    _print_menu()
-    choice = input("\nEnter choice (1-3, default=1): ").strip()
-    await _run_scenario_by_choice(choice)
+    await run_portfolio_analysis(scenario)
 
 
 if __name__ == "__main__":
+    # Ensure we're in the right directory for .env loading
+    example_dir = Path(__file__).parent
+    if example_dir.exists():
+        import os
+
+        os.chdir(example_dir)
+
     asyncio.run(main())
