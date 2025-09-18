@@ -1,4 +1,4 @@
-# Portfolio Analysis Example (Message-Driven)
+# Portfolio Analysis Example (DSPy-powered)
 
 Multi-specialist workflow for portfolio allocation decisions using event-driven architecture with real LLM intelligence.
 
@@ -60,12 +60,14 @@ Each node uses DSPy for structured LLM outputs with comprehensive error handling
 ## Architecture Principles
 
 ### Event-Driven Design
+
 - **Single initiating command**: `StartAnalysisCommand` contains all initial context
 - **Events describe outcomes**: Past-tense naming (MarketAnalyzedEvent, not AnalyzeMarketEvent)
 - **No intermediate commands**: Events flow directly between nodes
 - **Explicit routing**: Flow definition specifies all event routes
 
 ### Message Design (No God-Objects)
+
 ```python
 # ✅ GOOD: Focused events with single responsibility
 @dataclass(frozen=True)
@@ -97,11 +99,13 @@ class AnalysisCompleteEvent(Event):
 ## Comparison with Legacy Approach
 
 ### Legacy (Node-Flow-State)
+
 - Accumulates state as it flows
 - Nodes mutate shared state
 - Implicit data dependencies
 
 ### Message-Driven (This Example)
+
 - Events carry only essential data
 - Nodes produce new events without mutation
 - Explicit data flow via messages
