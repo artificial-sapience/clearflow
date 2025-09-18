@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "clearflow"
 version = "0.0.0"  # Version dynamically set by CI/CD pipeline
-description = "Message-driven workflows with observable flows for emergent AI"
+description = "Correctness-first orchestration for emergent AI. Type-safe, deeply immutable, 100% code coverage."
 authors = [
   {name = "Richard Beauchamp", email = "rbeauchamp@users.noreply.github.com"}
 ]
@@ -17,9 +17,9 @@ readme = "README.md"
 requires-python = ">=3.13"
 
 keywords = [
-    "message-driven", "observable", "event-sourcing", "language-models",
-    "ai-agents", "orchestration", "agents", "async", "type-safe",
-    "pydantic", "validation", "reliable"
+    "message-driven", "observability", "event-sourcing", "language-models",
+    "ai-agents", "ai-orchestration", "agents", "type-safe", "mission-critical",
+    "pydantic", "validation", "immutability", "functional-programming"
 ]
 
 classifiers = [
