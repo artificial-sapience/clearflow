@@ -96,20 +96,24 @@ jobs:
       run: |
         # Get the most recent draft release
         DRAFT_TAG=$(gh api repos/${{ github.repository }}/releases --jq '[.[] | select(.draft == true)] | first | .tag_name')
-        
+
         if [ -z "$DRAFT_TAG" ] || [ "$DRAFT_TAG" = "null" ]; then
           echo "::error::No draft release found"
           exit 1
         fi
-        
-        # Update draft with correct tag and publish it
+
+        # First, update the draft with the correct tag but keep it as draft
         gh release edit "$DRAFT_TAG" \
           --tag "v${{ needs.version.outputs.versionTag }}" \
           --title "v${{ needs.version.outputs.versionTag }}" \
+          --draft=true
+
+        # Upload built artifacts to the draft release
+        gh release upload "v${{ needs.version.outputs.versionTag }}" dist/* --clobber
+
+        # Finally, publish the release (making it immutable)
+        gh release edit "v${{ needs.version.outputs.versionTag }}" \
           --draft=false \
           --latest
-        
-        # Upload built artifacts to the release
-        gh release upload "v${{ needs.version.outputs.versionTag }}" dist/* --clobber
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
