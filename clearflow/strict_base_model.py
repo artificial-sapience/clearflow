@@ -51,7 +51,7 @@ class StrictBaseModel(BaseModel):
         >>> cmd.query = "changed"  # Can't mutate frozen instance
 
     Perfect for:
-    - Message types in event-driven systems
+    - Message types in message-driven systems
     - Configuration that must be validated once
     - API contracts where schema compliance is critical
     - Any data structure where mutation would be a bug

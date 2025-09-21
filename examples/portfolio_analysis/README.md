@@ -1,6 +1,6 @@
 # Portfolio Analysis Example (DSPy-enabled)
 
-Multi-specialist workflow for portfolio allocation decisions using event-driven architecture with DSPy-powered analysis.
+Multi-specialist workflow for portfolio allocation decisions using message-driven architecture with DSPy-powered analysis.
 
 ## Flow
 
@@ -38,7 +38,7 @@ python main.py  # If venv is activated
 
 ## How It Works
 
-This example demonstrates a pure event-driven workflow where each specialist node analyzes data and publishes events describing outcomes:
+This example demonstrates a message-driven workflow where each specialist node analyzes data and publishes events describing outcomes:
 
 1. **QuantAnalyst** - Analyzes market data and publishes identified opportunities
 2. **RiskAnalyst** - Assesses portfolio risk and publishes risk metrics
@@ -50,7 +50,7 @@ Each node uses DSPy for structured LLM outputs with comprehensive error handling
 
 ## Key Features
 
-- **Pure event-driven** - Single command starts flow, all subsequent messages are events
+- **Message-driven** - Single command starts flow, all subsequent messages are events
 - **AI-powered analysis** - OpenAI/DSPy integration for structured outputs
 - **Type-safe messages** - Immutable dataclasses with Mapping types
 - **Error recovery** - AnalysisFailedEvent routes to DecisionMaker for conservative handling
@@ -59,7 +59,7 @@ Each node uses DSPy for structured LLM outputs with comprehensive error handling
 
 ## Architecture Principles
 
-### Event-Driven Design
+### Message-Driven Design
 
 - **Single initiating command**: `StartAnalysisCommand` contains all initial context
 - **Events describe outcomes**: Past-tense naming (MarketAnalyzedEvent, not AnalyzeMarketEvent)
@@ -90,7 +90,7 @@ class AnalysisCompleteEvent(Event):
 ## Files
 
 - `main.py` - Entry point with DSPy configuration and scenario selection
-- `portfolio_flow.py` - Pure event-driven flow definition (no orchestrators)
+- `portfolio_flow.py` - Message-driven flow definition (no orchestrators)
 - `messages.py` - Focused event types with immutable Mapping fields
 - `nodes.py` - Specialist nodes with DSPy predictors (no console logging)
 - `market_data.py` - Market data generation for different scenarios

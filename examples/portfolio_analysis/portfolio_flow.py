@@ -1,6 +1,6 @@
-"""Portfolio analysis flow using pure event-driven architecture.
+"""Portfolio analysis flow using message-driven architecture.
 
-Direct event-to-node routing without orchestrators.
+Direct message-to-node routing without orchestrators.
 The flow definition is the single source of routing truth.
 """
 
@@ -25,7 +25,7 @@ from examples.portfolio_analysis.portfolio_observer import PortfolioAnalysisObse
 
 
 def create_portfolio_analysis_flow() -> Node[StartAnalysisCommand, DecisionMadeEvent]:
-    """Create the portfolio analysis workflow with pure event-driven architecture.
+    """Create the portfolio analysis workflow with message-driven architecture.
 
     This flow demonstrates:
     - Single initiating command (StartAnalysisCommand)
