@@ -2,6 +2,8 @@
 
 Retrieval-Augmented Generation pipeline using ClearFlow's message-driven architecture.
 
+This example simulates an environmental research organization's knowledge base containing documents about PFAS contamination and mycelium-based remediation methods.
+
 ## Flows
 
 ### Indexing Flow
@@ -40,7 +42,7 @@ uv sync --all-extras
 cd examples/rag
 uv run python main.py
 # With custom query:
-uv run python main.py "What is Q-Mesh protocol?"
+uv run python main.py "How does HI-271 compare to traditional methods?"
 ```
 
 ## How It Works
