@@ -68,8 +68,8 @@ def call_llm(prompt: str) -> str:
     response = client.chat.completions.create(
         model="gpt-5-nano-2025-08-07",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-        max_tokens=200,
+        temperature=1.0,
+        max_completion_tokens=16000,
     )
     content = response.choices[0].message.content
     return cast("str", content)
