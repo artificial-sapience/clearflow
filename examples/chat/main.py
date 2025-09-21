@@ -7,7 +7,7 @@ import sys
 
 from dotenv import load_dotenv
 
-from examples.chat.chat_flow import create_chat_flow
+from examples.chat.flow import create_chat_flow
 from examples.chat.messages import ChatCompleted, StartChat
 from tests.conftest import create_run_id
 

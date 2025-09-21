@@ -8,6 +8,7 @@ from types import TracebackType
 
 from rich.console import Console
 
+from examples.portfolio_analysis.flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.market_data import (
     create_bullish_market_data,
     create_sample_market_data,
@@ -17,7 +18,6 @@ from examples.portfolio_analysis.messages import (
     PortfolioConstraints,
     StartAnalysisCommand,
 )
-from examples.portfolio_analysis.portfolio_flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.shared.config import configure_dspy
 
 

@@ -7,8 +7,8 @@ import sys
 
 from dotenv import load_dotenv
 
+from examples.rag.flows import create_indexing_flow, create_query_flow
 from examples.rag.messages import AnswerGeneratedEvent, IndexDocumentsCommand, QueryCommand
-from examples.rag.rag_flows import create_indexing_flow, create_query_flow
 from tests.conftest import create_run_id
 
 
