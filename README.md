@@ -46,7 +46,7 @@ pip install clearflow
 | Example | What It Shows |
 |---------|---------------|
 | [Chat](examples/chat/) | Message routing between user and LLM |
-| [Portfolio Analysis](examples/portfolio_analysis/) | DSPy-driven portfolio analysis |
+| [Portfolio Analysis](examples/portfolio_analysis/) | DSPy-enabled portfolio analysis |
 | [RAG](examples/rag/) | Document processing pipeline |
 
 ## AI Assistant Integration

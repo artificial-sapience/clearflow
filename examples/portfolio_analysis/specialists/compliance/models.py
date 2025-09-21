@@ -1,6 +1,7 @@
 """Data models for Compliance Officer."""
 
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
@@ -21,7 +22,5 @@ class ComplianceReview:
 
     all_checks_passed: bool = Field(description="Whether all compliance checks passed")
     violations: Sequence[ComplianceViolation] = Field(description="Compliance violations found")
-    approval_status: Literal["approved", "conditional", "rejected"] = Field(
-        description="Compliance approval status"
-    )
+    approval_status: Literal["approved", "conditional", "rejected"] = Field(description="Compliance approval status")
     required_disclosures: Sequence[str] = Field(description="Required regulatory disclosures")

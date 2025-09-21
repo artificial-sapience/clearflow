@@ -2,7 +2,7 @@
 
 import dspy
 
-from examples.portfolio_analysis.specialists.compliance.models import ComplianceError, ComplianceReview
+from examples.portfolio_analysis.specialists.compliance.models import ComplianceReview
 from examples.portfolio_analysis.specialists.portfolio.models import PortfolioRecommendations
 
 
@@ -29,13 +29,4 @@ class ComplianceOfficerSignature(dspy.Signature):
     recommendations: PortfolioRecommendations = dspy.InputField(desc="Portfolio manager's allocation recommendations")
     compliance_review: ComplianceReview = dspy.OutputField(
         desc="Detailed compliance checks and overall approval status"
-    )
-
-
-class ComplianceViolationSignature(dspy.Signature):
-    """Identify compliance violations and required actions."""
-
-    recommendations: PortfolioRecommendations = dspy.InputField(desc="Portfolio recommendations to check")
-    compliance_error: ComplianceError | None = dspy.OutputField(
-        desc="Compliance error if violations found, None if compliant"
     )

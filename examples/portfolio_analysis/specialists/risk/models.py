@@ -1,6 +1,7 @@
 """Data models for Risk Analyst."""
 
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
@@ -28,12 +29,6 @@ class RiskAssessment:
 
     portfolio_var: float = Field(description="Value at Risk in dollars", gt=0)
     sharpe_ratio: float = Field(description="Risk-adjusted return metric")
-    risk_level: Literal["low", "medium", "high", "extreme"] = Field(
-        description="Overall risk classification"
-    )
-    concentration_risks: Sequence[ConcentrationRisk] = Field(
-        description="Risk concentrations by sector or asset"
-    )
-    stress_tests: Sequence[StressTestResult] = Field(
-        description="Stress test scenario results"
-    )
+    risk_level: Literal["low", "medium", "high", "extreme"] = Field(description="Overall risk classification")
+    concentration_risks: Sequence[ConcentrationRisk] = Field(description="Risk concentrations by sector or asset")
+    stress_tests: Sequence[StressTestResult] = Field(description="Stress test scenario results")

@@ -249,7 +249,9 @@ class DecisionMakerNode(Node[ComplianceReviewedEvent | AnalysisFailedEvent, Deci
             conservative_decision = TradingDecision(
                 decision_status="rejected",
                 approved_changes=(),
-                execution_instructions=(f"Analysis failed at {message.failed_stage}: {message.error_message}. Holding all positions.",),
+                execution_instructions=(
+                    f"Analysis failed at {message.failed_stage}: {message.error_message}. Holding all positions.",
+                ),
                 risk_warnings=("System health issue - monitor and retry when stable",),
             )
 

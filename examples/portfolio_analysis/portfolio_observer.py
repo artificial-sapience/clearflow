@@ -4,8 +4,9 @@ This observer demonstrates how to create domain-specific output formatting
 without any logging in nodes or main. All display logic is centralized here.
 """
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Sequence, override
+from typing import override
 
 from rich.console import Console
 
@@ -41,12 +42,12 @@ def _print_market_overview(command: StartAnalysisCommand) -> None:
     print(f"   Assets Under Analysis: {len(assets)}")
 
     # Sector breakdown
-    sectors = {}
-    for asset in assets:
-        sectors[asset.sector] = sectors.get(asset.sector, 0) + 1
+    sectors = tuple(asset.sector for asset in assets)
+    unique_sectors = sorted(frozenset(sectors))
 
     print("\n   Sector Distribution:")
-    for sector, count in sorted(sectors.items()):
+    for sector in unique_sectors:
+        count = sum(1 for s in sectors if s == sector)
         print(f"     • {sector}: {count} assets")
 
 

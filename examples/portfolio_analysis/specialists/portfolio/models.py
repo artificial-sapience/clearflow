@@ -1,6 +1,7 @@
 """Data models for Portfolio Manager."""
 
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
@@ -28,12 +29,8 @@ class ExpectedOutcome:
 class PortfolioRecommendations:
     """Portfolio optimization recommendations."""
 
-    allocation_changes: Sequence[AllocationChange] = Field(
-        description="Recommended allocation adjustments"
-    )
-    rebalancing_urgency: Literal["immediate", "gradual", "conditional"] = Field(
-        description="Execution timeline"
-    )
+    allocation_changes: Sequence[AllocationChange] = Field(description="Recommended allocation adjustments")
+    rebalancing_urgency: Literal["immediate", "gradual", "conditional"] = Field(description="Execution timeline")
     expected_return: float = Field(description="Expected annual return percentage")
     expected_volatility: float = Field(description="Expected portfolio volatility")
     rationale: str = Field(description="Investment thesis")
