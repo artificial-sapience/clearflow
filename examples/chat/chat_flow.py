@@ -8,6 +8,7 @@ from examples.chat.messages import (
     UserMessageReceived,
 )
 from examples.chat.nodes import AssistantNode, UserNode
+from examples.shared import AsyncSpinnerObserver
 
 
 def create_chat_flow() -> Node[StartChat, UserMessageReceived | ChatCompleted]:
@@ -21,9 +22,10 @@ def create_chat_flow() -> Node[StartChat, UserMessageReceived | ChatCompleted]:
     user = UserNode()
     assistant = AssistantNode()
 
-    # Build the natural alternating flow
+    # Build the natural alternating flow with spinner for LLM calls
     return (
         create_flow("Chat", user)
+        .observe(AsyncSpinnerObserver(spinner_nodes=("assistant",)))
         .route(user, UserMessageReceived, assistant)
         .route(assistant, AssistantMessageReceived, user)
         .end_flow(ChatCompleted)

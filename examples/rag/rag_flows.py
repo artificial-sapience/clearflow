@@ -19,6 +19,7 @@ from examples.rag.nodes import (
     IndexCreatorNode,
     QueryEmbedderNode,
 )
+from examples.shared import AsyncSpinnerObserver
 
 
 def create_indexing_flow() -> Node[IndexDocumentsCommand, IndexCreatedEvent]:
@@ -39,6 +40,7 @@ def create_indexing_flow() -> Node[IndexDocumentsCommand, IndexCreatedEvent]:
 
     return (
         create_flow("DocumentIndexing", chunker)
+        .observe(AsyncSpinnerObserver(spinner_nodes=("chunk_embedder",)))
         .route(chunker, DocumentsChunkedEvent, embedder)
         .route(embedder, ChunksEmbeddedEvent, indexer)
         .end_flow(IndexCreatedEvent)  # Terminal type
@@ -63,6 +65,7 @@ def create_query_flow() -> Node[QueryCommand, AnswerGeneratedEvent]:
 
     return (
         create_flow("QueryProcessing", query_embedder)
+        .observe(AsyncSpinnerObserver(spinner_nodes=("query_embedder", "answer_generator")))
         .route(query_embedder, QueryEmbeddedEvent, retriever)
         .route(retriever, DocumentsRetrievedEvent, generator)
         .end_flow(AnswerGeneratedEvent)  # Terminal type

@@ -9,6 +9,8 @@ from datetime import datetime
 from types import TracebackType
 from typing import override
 
+from rich.console import Console
+
 from clearflow import Command, Event, Message, Observer
 
 
@@ -174,38 +176,63 @@ class ConsoleHandler(Observer):
         return text
 
 
-class LoadingIndicator:
-    """Context manager for showing loading indicators during async operations."""
+class SpinnerContext:
+    """Simple spinner context manager for async operations."""
 
     def __init__(self, message: str = "Processing") -> None:
-        """Initialize loading indicator.
+        """Initialize spinner.
 
         Args:
             message: Message to display while loading
 
         """
         self.message = message
-        self.running = False
+        self.console = Console()
+        self.status_obj = None
 
-    async def __aenter__(self) -> "LoadingIndicator":
-        """Start showing loading indicator.
+    async def __aenter__(self) -> "SpinnerContext":
+        """Start spinner.
 
         Returns:
-            Self for context manager protocol
+            Self for context manager protocol.
 
         """
-        self.running = True
-        sys.stderr.write(f"\r{self.message}... ")
-        sys.stderr.flush()
+        self.status_obj = self.console.status(self.message, spinner="dots")
+        self.status_obj.__enter__()
         return self
 
     async def __aexit__(
         self, _exc_type: type[BaseException] | None, exc_val: BaseException | None, _exc_tb: TracebackType | None
     ) -> None:
-        """Stop showing loading indicator."""
-        self.running = False
-        if exc_val:
-            sys.stderr.write("❌\n")
-        else:
-            sys.stderr.write("✓\n")
-        sys.stderr.flush()
+        """Stop spinner."""
+        if self.status_obj:
+            self.status_obj.__exit__(None, None, None)
+
+
+class AsyncSpinnerObserver(Observer):
+    """Observer that shows spinners for async operations in specific nodes."""
+
+    def __init__(self, spinner_nodes: tuple[str, ...] = ()) -> None:
+        """Initialize with list of node names that should show spinners.
+
+        Args:
+            spinner_nodes: Tuple of node names that trigger spinners (e.g., ("assistant", "embedder"))
+
+        """
+        self.spinner_nodes = spinner_nodes
+        self._console = Console()
+        self._current_spinner = None
+
+    @override
+    async def on_node_start(self, node_name: str, message: Message) -> None:
+        """Start spinner if this node is in our spinner list."""
+        if node_name in self.spinner_nodes:
+            self._current_spinner = self._console.status(f"[cyan]{node_name}[/cyan] processing...", spinner="dots")
+            self._current_spinner.start()
+
+    @override
+    async def on_node_end(self, node_name: str, message: Message, error: Exception | None) -> None:
+        """Stop spinner if one is active."""
+        if self._current_spinner:
+            self._current_spinner.stop()
+            self._current_spinner = None

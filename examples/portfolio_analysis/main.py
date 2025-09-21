@@ -16,7 +16,7 @@ from examples.portfolio_analysis.messages import (
 )
 from examples.portfolio_analysis.portfolio_flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.shared.config import configure_dspy
-from examples.shared.console_handler import LoadingIndicator
+from examples.shared import SpinnerContext
 
 
 def create_market_scenario(scenario: str = "normal") -> StartAnalysisCommand:
@@ -61,7 +61,7 @@ async def run_portfolio_analysis(scenario: str = "normal") -> None:
 
     """
     # Configure DSPy with OpenAI
-    async with LoadingIndicator("Configuring DSPy"):
+    async with SpinnerContext("Configuring DSPy..."):
         try:
             configure_dspy()
         except ValueError as e:
