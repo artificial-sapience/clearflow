@@ -1,10 +1,4 @@
-"""Message flow implementation for type-safe routing.
-
-Provides an explicit routing API for building message-driven workflows where
-messages are routed based on their types. Uses strategic type erasure at
-routing boundaries to handle union types while maintaining type safety at
-flow input/output boundaries.
-"""
+"""Message flow implementation for type-safe routing."""
 
 import types
 from dataclasses import dataclass
@@ -159,51 +153,21 @@ def _validate_terminal_type_not_routed(
 
 @final
 class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
-    """Executable AI workflow that routes messages through nodes based on their types.
+    """Executable workflow that routes messages through nodes based on their types."""
 
-    Orchestrates message flow through a graph of AI operations, routing based on
-    message types. Each node performs a specific AI task (LLM calls, vector search,
-    validation) and produces typed outputs that determine the next step.
-
-    Why _Flow is internal:
-    - Complex type erasure patterns needed for union type routing
-    - Internal optimization strategies for message dispatch
-    - Separation of builder API from execution mechanics
-    - Maintains simpler public API surface
-
-    The flow provides:
-    - Type-safe message routing at runtime
-    - Automatic causality chain preservation
-    - Observer hooks for monitoring AI decisions
-    - Single termination enforcement for clear workflow completion
-
-    """
-
-    starting_node: NodeInterface[Message, Message] = Field(
-        description="First node to process incoming messages, typically parsing or validation"
-    )
+    starting_node: NodeInterface[Message, Message] = Field(description="First node to process incoming messages")
     routes: tuple[RouteEntry, ...] = Field(
         description="Routing table mapping (source_node, message_type) pairs to destination nodes"
     )
-    terminal_type: type[Message] = Field(
-        description="Message type that immediately completes the flow when produced by any node"
-    )
-    callbacks: CallbackHandler | None = Field(
-        default=None, description="Optional handler for observer callbacks to monitor flow execution events"
-    )
+    terminal_type: type[Message] = Field(description="Message type that completes the flow when produced")
+    callbacks: CallbackHandler | None = Field(default=None, description="Optional handler for observer callbacks")
 
     async def _safe_callback(self, method: str, *args: str | Message | Exception | None) -> None:
         """Execute callback safely without affecting flow.
 
-        REQ-016: Zero overhead when no callbacks
-        REQ-017: Async execution (non-blocking)
-
-        CallbackHandler internally handles all errors (REQ-005, REQ-006) so we don't
-        need additional error handling here.
-
         Args:
             method: Name of callback method to invoke
-            *args: Arguments to pass to the callback method (flow_name, node_name, message, error)
+            *args: Arguments to pass to the callback method
 
         """
         if not self.callbacks:  # REQ-016: Zero overhead when no callbacks
@@ -311,20 +275,11 @@ class _Flow[TStartIn: Message, TEnd: Message](Node[TStartIn, TEnd]):
 @final
 @dataclass(frozen=True)
 class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, TStartOut]):
-    """Module private builder for composing message routes with explicit source nodes.
-
-    Uses the pattern from the original flow API where each route explicitly
-    specifies: from_node -> outcome -> to_node. This enables sequential thinking
-    about workflow construction.
+    """Internal builder for composing message routes with explicit source nodes.
 
     Type parameters:
         TStartIn: The input message type the flow accepts
-        TStartOut: The output type of the start node (remains constant throughout builder chain)
-
-    The builder maintains stable type parameters throughout the chain, unlike tracking
-    current message types, because type erasure makes intermediate types meaningless.
-
-    Call end_flow() to specify where the flow terminates and get the completed flow.
+        TStartOut: The output type of the start node
     """
 
     name: str
@@ -399,9 +354,6 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
     def observe(self, *observers: Observer) -> "_FlowBuilder[TStartIn, TStartOut]":
         """Attach observers to the flow.
 
-        REQ-009: MessageFlow accepts optional observers
-        REQ-016: Zero overhead when no observers
-
         Args:
             *observers: Observer instances to monitor flow execution
 
@@ -427,17 +379,6 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
         to_node: Node[TToIn, TToOut],
     ) -> "_FlowBuilder[TStartIn, TStartOut]":
         """Route specific message type from source node to destination.
-
-        Explicitly specifies that when `from_node` produces a message of type `outcome`,
-        route it to `to_node`. This matches the original flow API pattern for clarity.
-
-        Type Erasure Rationale:
-            Python's type system cannot express "route only this specific type from
-            a union to the next node." For example, if a node outputs
-            UserMessage | SystemMessage, we cannot type-check at compile time that
-            only UserMessage goes to a specific handler. We use type erasure
-            (outcome: type[Message]) to allow this flexibility while maintaining
-            runtime validation.
 
         Args:
             from_node: Source node that may emit the outcome message type
@@ -472,15 +413,11 @@ class _FlowBuilder[TStartIn: Message, TStartOut: Message](FlowBuilder[TStartIn, 
     ) -> Node[TStartIn, TEnd]:
         """Declare the message type that completes this flow.
 
-        When any node in the flow produces an instance of the terminal type,
-        the flow immediately terminates and returns that message. The terminal
-        type cannot be routed between nodes - it always ends the flow.
-
         Args:
             terminal_type: The message type that completes the flow
 
         Returns:
-            A Node that represents the complete flow with single terminal type
+            A Node that represents the complete flow
 
         """
         # Validate that terminal type is not already routed
@@ -501,11 +438,8 @@ def create_flow[TStartIn: Message, TStartOut: Message](
 ) -> FlowBuilder[TStartIn, TStartOut]:
     """Create a flow with type-safe routing.
 
-    This is the entry point for building message-driven workflows. The flow
-    starts at the given node and routes messages based on their types.
-
     Args:
-        name: The name of the flow for identification and debugging
+        name: The name of the flow
         starting_node: The starting node that processes TStartIn
 
     Returns:
