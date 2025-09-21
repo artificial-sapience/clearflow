@@ -15,16 +15,11 @@ __all__ = [
 
 
 class NodeInterface[TMessageIn: Message, TMessageOut: Message](ABC):
-    """Behavioral contract for AI-powered message processing nodes.
+    """Abstract interface for message processing nodes.
 
-    Defines the interface for nodes that transform messages in AI workflows.
-    Each node encapsulates a specific capability: LLM calls, vector search, validation, etc.
-
-    Why use NodeInterface:
-    - Type safety: Compile-time guarantees about message compatibility
-    - Async-first: Built for concurrent AI operations
-    - Single responsibility: Each node does one thing well
-    - Testable: Mock implementations for deterministic testing
+    Defines the contract for nodes that transform messages in workflows.
+    Each node encapsulates a specific operation: LLM calls, vector search,
+    validation, data transformation, etc.
 
     Type parameters:
         TMessageIn: Type of message this node can process
@@ -33,46 +28,33 @@ class NodeInterface[TMessageIn: Message, TMessageOut: Message](ABC):
 
     @abstractmethod
     async def process(self, message: TMessageIn) -> TMessageOut:
-        """Transform input message into output message through AI operations.
-
-        This method contains the node's core logic: calling LLMs, querying vectors,
-        validating outputs, or orchestrating other AI operations.
+        """Transform input message into output message.
 
         Args:
-            message: Typed input message containing request data and metadata
+            message: Input message to process
 
         Returns:
-            Typed output message with results and preserved causality chain
+            Output message with results and metadata
 
         """
         ...
 
 
 class Node[TMessageIn: Message, TMessageOut: Message](StrictBaseModel, NodeInterface[TMessageIn, TMessageOut]):
-    """Concrete message processing node for AI workflows.
+    """Concrete message processing node.
 
-    Nodes are the building blocks of AI orchestration, each performing a specific
-    operation: AI generation, vector retrieval, output validation,
-    or transforming data between AI services.
-
-    Why use Node:
-    - Named operations: Each node has a unique identifier for tracing
-    - Immutable configuration: Node parameters are frozen after creation
-    - Pydantic validation: Automatic validation of node configuration
-    - Composable: Nodes chain together to form complex AI pipelines
-
-    Example node types for AI systems:
-    - LLMGenerator: Wraps language model API calls
-    - VectorRetriever: Queries embedding databases
-    - OutputValidator: Checks AI responses against criteria
-    - ResultAggregator: Combines outputs from multiple AI agents
+    A named, immutable processing unit that transforms one message type into another.
+    Nodes chain together in flows to form message processing pipelines.
 
     Type parameters:
         TMessageIn: Type of message this node can process
         TMessageOut: Type of message this node produces
 
+    Attributes:
+        name: Unique identifier for this node instance
+
     """
 
     name: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)] = Field(
-        description="Unique identifier for this node instance, used in routing and debugging AI workflows"
+        description="Unique identifier for this node instance"
     )
