@@ -1,8 +1,4 @@
-"""Internal callback handler implementation.
-
-This module contains the private implementation for managing observers
-with automatic error isolation.
-"""
+"""Internal callback handler implementation."""
 
 import sys
 from collections.abc import Sequence
