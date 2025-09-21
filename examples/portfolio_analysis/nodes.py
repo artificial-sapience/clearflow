@@ -115,7 +115,7 @@ class RiskAnalystNode(Node[MarketAnalyzedEvent, RiskAssessedEvent | AnalysisFail
                 failed_stage="RiskAnalystNode",
                 error_type="LimitExceeded" if "limit" in str(exc).lower() else "ValidationError",
                 error_message=str(exc),
-                partial_results={"opportunities_count": len(message.insights.opportunities)},
+                partial_results={"market_trend": message.insights.market_trend},
                 can_retry=isinstance(exc, openai.OpenAIError),
                 fallback_action="hold",
                 market_data=message.market_data,
@@ -247,11 +247,10 @@ class DecisionMakerNode(Node[ComplianceReviewedEvent | AnalysisFailedEvent, Deci
         if isinstance(message, AnalysisFailedEvent):
             # Conservative decision on failure - create minimal TradingDecision
             conservative_decision = TradingDecision(
+                decision_status="rejected",
                 approved_changes=(),
-                execution_plan=f"Analysis failed at {message.failed_stage}: {message.error_message}. Taking conservative approach - holding all positions.",
-                monitoring_requirements=("Monitor system health", "Retry analysis when stable"),
-                audit_trail=f"System error: {message.error_type}. Defaulting to hold position for safety.",
-                decision_status="hold",
+                execution_instructions=(f"Analysis failed at {message.failed_stage}: {message.error_message}. Holding all positions.",),
+                risk_warnings=("System health issue - monitor and retry when stable",),
             )
 
             return DecisionMadeEvent(
@@ -278,11 +277,10 @@ class DecisionMakerNode(Node[ComplianceReviewedEvent | AnalysisFailedEvent, Deci
         except (ValidationError, openai.OpenAIError, ValueError, TypeError) as exc:
             # Fallback to conservative decision on error
             conservative_decision = TradingDecision(
+                decision_status="rejected",
                 approved_changes=(),
-                execution_plan=f"Decision process error: {exc!s}. Taking conservative approach - holding all positions.",
-                monitoring_requirements=("Monitor decision system health", "Review error logs"),
-                audit_trail=f"Decision error: {type(exc).__name__}. Defaulting to hold position for safety.",
-                decision_status="hold",
+                execution_instructions=(f"Decision process error: {exc!s}. Holding all positions.",),
+                risk_warnings=("Decision system health issue - review error logs",),
             )
 
             return DecisionMadeEvent(

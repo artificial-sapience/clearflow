@@ -5,7 +5,7 @@ without any logging in nodes or main. All display logic is centralized here.
 """
 
 from datetime import UTC, datetime
-from typing import override
+from typing import Sequence, override
 
 from rich.console import Console
 
@@ -19,6 +19,7 @@ from examples.portfolio_analysis.messages import (
     RiskAssessedEvent,
     StartAnalysisCommand,
 )
+from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange
 
 
 def _print_header() -> None:
@@ -62,13 +63,14 @@ def _print_quant_insights(event: MarketAnalyzedEvent) -> None:
     """Print quantitative analysis insights."""
     insights = event.insights
     print(f"   📊 Market Trend: {insights.market_trend.upper()}")
-    print(f"   📊 Confidence: {insights.overall_confidence:.0%}")
+    print(f"   📊 Confidence: {insights.confidence:.0%}")
+    print(f"   📊 Volatility Index: {insights.volatility_index:.1f}")
 
-    # Top opportunities
-    if insights.opportunities:
-        print("   📊 Top Opportunities:")
-        for opp in insights.opportunities[:3]:
-            print(f"      • {opp.symbol}: {opp.signal_type.upper()} @ {opp.target_allocation:.0f}%")
+    # Top signals
+    if insights.top_signals:
+        print("   📊 Top Signals:")
+        for signal in insights.top_signals[:3]:
+            print(f"      • {signal.symbol}: {signal.signal.upper()} (strength: {signal.strength:.0%})")
 
 
 def _print_risk_assessment(event: RiskAssessedEvent) -> None:
@@ -101,7 +103,7 @@ def _print_compliance_review(event: ComplianceReviewedEvent) -> None:
         print(f"   ⚠️ Violations: {len(review.violations)}")
 
 
-def _print_buys(buys: tuple) -> None:
+def _print_buys(buys: Sequence[AllocationChange]) -> None:
     """Print buy allocations."""
     if buys:
         print("\n   BUYS:")
@@ -110,7 +112,7 @@ def _print_buys(buys: tuple) -> None:
             print(f"     • {change.symbol}: +{delta:.1f}% (to {change.new_weight:.1f}%)")
 
 
-def _print_sells(sells: tuple) -> None:
+def _print_sells(sells: Sequence[AllocationChange]) -> None:
     """Print sell allocations."""
     if sells:
         print("\n   SELLS:")
@@ -119,7 +121,7 @@ def _print_sells(sells: tuple) -> None:
             print(f"     • {change.symbol}: -{delta:.1f}% (to {change.new_weight:.1f}%)")
 
 
-def _print_execution_notes(instructions: tuple) -> None:
+def _print_execution_notes(instructions: Sequence[str]) -> None:
     """Print execution instructions."""
     if instructions:
         print("\n📝 EXECUTION NOTES:")
@@ -127,7 +129,7 @@ def _print_execution_notes(instructions: tuple) -> None:
             print(f"   • {instruction}")
 
 
-def _print_risk_warnings(warnings: tuple) -> None:
+def _print_risk_warnings(warnings: Sequence[str]) -> None:
     """Print risk warnings."""
     if warnings:
         print("\n⚠️ RISK WARNINGS:")
@@ -145,8 +147,8 @@ def _print_decision_summary(event: DecisionMadeEvent) -> None:
         print(f"\n📊 APPROVED ALLOCATIONS ({len(decision.approved_changes)} changes):")
 
         # Group by action type
-        buys = tuple(c for c in decision.approved_changes if c.new_weight > c.current_weight)
-        sells = tuple(c for c in decision.approved_changes if c.new_weight < c.current_weight)
+        buys = [c for c in decision.approved_changes if c.new_weight > c.current_weight]
+        sells = [c for c in decision.approved_changes if c.new_weight < c.current_weight]
 
         _print_buys(buys)
         _print_sells(sells)
@@ -158,7 +160,7 @@ def _print_decision_summary(event: DecisionMadeEvent) -> None:
 def _print_failure_summary(event: AnalysisFailedEvent) -> None:
     """Print analysis failure summary."""
     print("\n❌ ANALYSIS FAILED")
-    print(f"   Stage: {event.failed_at_stage}")
+    print(f"   Stage: {event.failed_stage}")
     print(f"   Reason: {event.error_message}")
     if event.partial_results:
         print("   Partial Results Available: Yes")

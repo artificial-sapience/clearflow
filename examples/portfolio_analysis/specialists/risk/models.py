@@ -1,42 +1,39 @@
 """Data models for Risk Analyst."""
 
-from collections.abc import Mapping
-from typing import Literal
+from typing import Literal, Sequence
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class RiskMetrics:
-    """Portfolio risk calculations."""
+class ConcentrationRisk:
+    """Risk concentration for a sector or asset."""
 
-    value_at_risk: float = Field(gt=0, description="Value at Risk (VaR) in dollars")
-    max_drawdown: float = Field(ge=0, le=1, description="Maximum potential loss as decimal")
-    concentration_risk: Mapping[str, float] = Field(
-        description="Risk concentration by sector/asset ID as percentages, e.g., {'Technology': 45.5, 'AAPL': 12.3}"
-    )
-    correlation_warning: bool = Field(description="Flag for high correlation issues")
+    identifier: str = Field(description="Sector or asset ID")
+    percentage: float = Field(description="Risk concentration percentage", ge=0.0, le=100.0)
+
+
+@dataclass(frozen=True)
+class StressTestResult:
+    """Result of a stress test scenario."""
+
+    scenario: str = Field(description="Scenario name")
+    pnl_impact: float = Field(description="Profit/loss impact in dollars")
 
 
 @dataclass(frozen=True)
 class RiskAssessment:
-    """Stage 3: Risk analysis of quantitative recommendations."""
+    """Risk analysis of portfolio allocations."""
 
-    risk_metrics: RiskMetrics = Field(description="Calculated risk metrics")
-    risk_level: Literal["low", "medium", "high", "extreme"] = Field(description="Overall risk classification")
-    stress_test_results: Mapping[str, float] = Field(
-        description="Scenario PnL projections in dollars, e.g., {'recession': -500000, 'bull_market': 800000, 'rate_hike': -150000}"
+    portfolio_var: float = Field(description="Value at Risk in dollars", gt=0)
+    sharpe_ratio: float = Field(description="Risk-adjusted return metric")
+    risk_level: Literal["low", "medium", "high", "extreme"] = Field(
+        description="Overall risk classification"
     )
-    risk_warnings: tuple[str, ...] = Field(description="Specific risk concerns identified")
-    risk_summary: str = Field(max_length=500, description="Risk analysis summary")
-
-
-@dataclass(frozen=True)
-class RiskLimitError:
-    """Error state when risk limits are exceeded."""
-
-    exceeded_limits: tuple[str, ...] = Field(description="List of exceeded risk limits")
-    risk_metrics: RiskMetrics = Field(description="Current risk metrics")
-    recommendations: tuple[str, ...] = Field(description="Risk mitigation suggestions")
-    failed_stage: str = Field(description="Stage where limit was exceeded")
+    concentration_risks: Sequence[ConcentrationRisk] = Field(
+        description="Risk concentrations by sector or asset"
+    )
+    stress_tests: Sequence[StressTestResult] = Field(
+        description="Stress test scenario results"
+    )
