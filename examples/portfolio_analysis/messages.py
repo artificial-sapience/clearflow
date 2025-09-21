@@ -1,6 +1,6 @@
-"""Event-driven message types for portfolio analysis.
+"""Message types for portfolio analysis.
 
-Pure event-driven architecture with single initiating command.
+Message-driven architecture with single initiating command.
 Events describe outcomes, not instructions.
 """
 

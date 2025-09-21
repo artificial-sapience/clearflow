@@ -1,5 +1,6 @@
-"""Message-driven portfolio analysis example with pure event-driven architecture."""
+"""Message-driven portfolio analysis example."""
 
+from examples.portfolio_analysis.flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.messages import (
     AnalysisFailedEvent,
     ComplianceReviewedEvent,
@@ -10,7 +11,6 @@ from examples.portfolio_analysis.messages import (
     RiskAssessedEvent,
     StartAnalysisCommand,
 )
-from examples.portfolio_analysis.portfolio_flow import create_portfolio_analysis_flow
 
 __all__ = [
     "AnalysisFailedEvent",

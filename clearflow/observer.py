@@ -1,9 +1,4 @@
-"""Observer pattern for monitoring message flow execution.
-
-This module provides the Observer base class for ClearFlow, enabling
-integration with observability platforms, debugging tools, and user
-interfaces without affecting flow execution.
-"""
+"""Observer pattern for monitoring message flow execution."""
 
 from clearflow.message import Message
 
@@ -13,9 +8,7 @@ __all__ = ["Observer"]
 class Observer:
     """Base class for observing messages during flow execution.
 
-    Create custom observers by subclassing and overriding only the methods
-    you need. All methods have no-op defaults, so you can monitor just the
-    lifecycle points you care about. Any errors raised will be caught and
+    All methods have no-op defaults. Errors in observers are caught and
     logged without affecting flow execution.
     """
 

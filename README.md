@@ -7,12 +7,12 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![llms.txt](https://img.shields.io/badge/llms.txt-green)](https://raw.githubusercontent.com/artificial-sapience/clearflow/main/llms.txt)
 
-Correctness-first orchestration for emergent AI. Type-safe, deeply immutable, 100% code coverage.
+Correctness-first orchestration for probabilistic AI. Type-safe, deeply immutable, 100% code coverage.
 
 ## Why ClearFlow?
 
 - **Message-driven architecture** – Commands trigger actions, Events record facts
-- **100% test coverage** – Every path proven to work
+- **100% test coverage** – Every path verified to work
 - **Type-safe flows** – Full static typing with pyright strict mode
 - **Deep immutability** – All state transformations create new immutable data
 - **Minimal dependencies** – Only Pydantic for validation and immutability
@@ -45,9 +45,9 @@ pip install clearflow
 
 | Example | What It Shows |
 |---------|---------------|
-| [Chat](examples/chat/) | Message routing between user and LLM |
-| [Portfolio Analysis](examples/portfolio_analysis/) | DSPy-driven portfolio analysis |
-| [RAG](examples/rag/) | Document processing pipeline |
+| [Chat](examples/chat/) | OpenAI integration with conversation history |
+| [Portfolio Analysis](examples/portfolio_analysis/) | Multi-agent coordination using DSPy |
+| [RAG](examples/rag/) | Document chunking and FAISS vector search |
 
 ## AI Assistant Integration
 

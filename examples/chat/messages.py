@@ -1,4 +1,4 @@
-"""Message definitions for chat application using natural event-driven semantics."""
+"""Message definitions for chat application using message-driven semantics."""
 
 from typing import Literal
 

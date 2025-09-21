@@ -1,5 +1,6 @@
 """Data models for Trading Decision."""
 
+from collections.abc import Sequence
 from typing import Literal
 
 from pydantic import Field
@@ -10,10 +11,9 @@ from examples.portfolio_analysis.specialists.portfolio.models import AllocationC
 
 @dataclass(frozen=True)
 class TradingDecision:
-    """Stage 6: Final approved portfolio decision."""
+    """Final trading decision and execution plan."""
 
-    approved_changes: tuple[AllocationChange, ...] = Field(description="Final approved allocation changes")
-    execution_plan: str = Field(description="Detailed execution instructions")
-    monitoring_requirements: tuple[str, ...] = Field(description="Ongoing monitoring needs")
-    audit_trail: str = Field(description="Complete decision reasoning chain")
-    decision_status: Literal["execute", "hold", "escalate"] = Field(description="Final decision status")
+    decision_status: Literal["approved", "rejected", "conditional"] = Field(description="Decision status")
+    approved_changes: Sequence[AllocationChange] = Field(description="Approved allocation changes")
+    execution_instructions: Sequence[str] = Field(description="Execution instructions")
+    risk_warnings: Sequence[str] = Field(description="Risk warnings to monitor")

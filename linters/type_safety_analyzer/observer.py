@@ -156,10 +156,10 @@ class TypeSafetyAnalyzerObserver(Observer):
         if node_name == "code_parser":
             print_status("📝 Parsing Python code...", "yellow")
         elif node_name == "issue_detector":
-            print_status("🤖 Analyzing with LLM for type safety issues...", "yellow")
+            print_status("🤖 Analyzing for type safety issues...", "yellow")
             print_info("   (This may take 10-30 seconds depending on file size)", dim=True)
         elif node_name == "fix_generator":
-            print_status("🔧 Generating fixes with LLM...", "yellow")
+            print_status("🔧 Generating fixes...", "yellow")
         elif node_name == "fix_applier":
             print_status("📝 Preparing fix report...", "yellow")
 

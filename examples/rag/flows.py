@@ -1,6 +1,10 @@
 """Message-driven RAG flow construction."""
 
-from clearflow import Node, create_flow
+from typing import override
+
+from rich.console import Console
+
+from clearflow import Message, Node, Observer, create_flow
 from examples.rag.messages import (
     AnswerGeneratedEvent,
     ChunksEmbeddedEvent,
@@ -21,6 +25,28 @@ from examples.rag.nodes import (
 )
 
 
+class SimpleSpinnerObserver(Observer):
+    """Simple spinner observer for async operations."""
+
+    def __init__(self) -> None:
+        """Initialize the spinner observer."""
+        self._console = Console()
+        self._spinner = None
+
+    @override
+    async def on_node_start(self, node_name: str, message: Message) -> None:
+        """Start spinner when any node starts processing."""
+        self._spinner = self._console.status(f"[cyan]{node_name}[/cyan] processing...", spinner="dots")
+        self._spinner.start()
+
+    @override
+    async def on_node_end(self, node_name: str, message: Message, error: Exception | None) -> None:
+        """Stop spinner when node completes."""
+        if self._spinner:
+            self._spinner.stop()
+            self._spinner = None
+
+
 def create_indexing_flow() -> Node[IndexDocumentsCommand, IndexCreatedEvent]:
     """Create message-driven document indexing flow.
 
@@ -39,6 +65,7 @@ def create_indexing_flow() -> Node[IndexDocumentsCommand, IndexCreatedEvent]:
 
     return (
         create_flow("DocumentIndexing", chunker)
+        .observe(SimpleSpinnerObserver())
         .route(chunker, DocumentsChunkedEvent, embedder)
         .route(embedder, ChunksEmbeddedEvent, indexer)
         .end_flow(IndexCreatedEvent)  # Terminal type
@@ -63,6 +90,7 @@ def create_query_flow() -> Node[QueryCommand, AnswerGeneratedEvent]:
 
     return (
         create_flow("QueryProcessing", query_embedder)
+        .observe(SimpleSpinnerObserver())
         .route(query_embedder, QueryEmbeddedEvent, retriever)
         .route(retriever, DocumentsRetrievedEvent, generator)
         .end_flow(AnswerGeneratedEvent)  # Terminal type

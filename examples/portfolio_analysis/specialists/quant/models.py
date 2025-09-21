@@ -1,47 +1,26 @@
 """Data models for Quantitative Analyst."""
 
-from collections.abc import Mapping
+from collections.abc import Sequence
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic.dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class OpportunitySignal:
-    """Individual investment opportunity identified by quant analysis."""
+class MarketSignal:
+    """Individual market signal for a specific asset."""
 
-    symbol: str = Field(description="Asset symbol for this opportunity")
-    signal_type: Literal["buy", "sell", "hold"] = Field(description="Trading signal")
-    confidence: float = Field(ge=0, le=1, description="Confidence score 0-1")
-    target_allocation: float = Field(ge=0, le=100, description="Recommended portfolio percentage")
-    reasoning: str = Field(description="Rationale for this signal")
+    symbol: str = Field(description="Asset symbol")
+    signal: Literal["buy", "sell", "hold"] = Field(description="Trading signal")
+    strength: float = Field(description="Signal strength", ge=0.0, le=1.0)
 
 
 @dataclass(frozen=True)
 class QuantInsights:
-    """Stage 2: Quantitative analysis insights and opportunities."""
+    """Quantitative analysis insights from market data."""
 
-    market_trend: Literal["bullish", "bearish", "sideways"] = Field(description="Overall market trend assessment")
-    sector_analysis: Mapping[str, float] = Field(description="Sector momentum scores (-1 to 1)")
-    opportunities: tuple[OpportunitySignal, ...] = Field(description="Identified trading opportunities")
-    overall_confidence: float = Field(ge=0, le=1, description="Overall analysis confidence")
-    analysis_summary: str = Field(max_length=500, description="Brief summary of analysis")
-
-    @field_validator("sector_analysis")
-    @classmethod
-    def validate_sector_scores(cls, v: Mapping[str, float]) -> Mapping[str, float]:
-        """Ensure sector scores are within valid range.
-
-        Returns:
-            Validated sector scores dictionary.
-
-        Raises:
-            ValueError: If any sector score is outside [-1, 1] range.
-
-        """
-        for sector, score in v.items():
-            if not -1 <= score <= 1:
-                msg = f"{cls.__name__}: Sector score for {sector} must be between -1 and 1"
-                raise ValueError(msg)
-        return v
+    market_trend: Literal["bullish", "bearish", "neutral"] = Field(description="Overall market trend assessment")
+    confidence: float = Field(description="Confidence in the analysis", ge=0.0, le=1.0)
+    top_signals: Sequence[MarketSignal] = Field(description="Top trading signals identified")
+    volatility_index: float = Field(description="Market volatility index", ge=0.0, le=100.0)

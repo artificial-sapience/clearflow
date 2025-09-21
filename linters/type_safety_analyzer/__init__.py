@@ -1,7 +1,7 @@
-"""Type safety analyzer using ClearFlow and LLM intelligence.
+"""Type safety analyzer using ClearFlow and DSPy.
 
 This package implements a type safety analyzer that uses ClearFlow's
-message-driven architecture combined with DSPy-powered LLM analysis
+message-driven architecture combined with DSPy-powered analysis
 to detect and fix magic strings and type safety issues in Python code.
 """
 

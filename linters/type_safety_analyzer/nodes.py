@@ -36,7 +36,7 @@ class TypeSafetyAnalysisSignature(dspy.Signature):
 class SimplifiedAnalyzerNode(Node[StartAnalysisCommand, AnalysisCompleteEvent]):
     """Type safety analyzer that processes entire files using DSPy.
 
-    Analyzes complete files for type safety patterns using LLM reasoning
+    Analyzes complete files for type safety patterns using AI reasoning
     for comprehensive and context-aware detection.
     """
 

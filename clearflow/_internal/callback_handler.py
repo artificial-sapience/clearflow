@@ -1,8 +1,4 @@
-"""Internal callback handler implementation.
-
-This module contains the private implementation for managing observers
-with automatic error isolation.
-"""
+"""Internal callback handler implementation."""
 
 import sys
 from collections.abc import Sequence
@@ -12,11 +8,7 @@ from clearflow.observer import Observer
 
 
 class CallbackHandler:
-    """Internal handler that manages observers with automatic error isolation.
-
-    Executes all registered observers for each event, ensuring that
-    errors in one observer don't affect others or the flow execution.
-    """
+    """Internal handler that manages observers with automatic error isolation."""
 
     def __init__(self, observers: Sequence[Observer]) -> None:
         """Initialize with observers.

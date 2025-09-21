@@ -1,23 +1,55 @@
-"""Main entry point for message-driven portfolio analysis with LLM intelligence."""
+"""Main entry point for message-driven portfolio analysis with AI-powered decisions."""
 
 import asyncio
 import sys
 import uuid
 from pathlib import Path
+from types import TracebackType
 
+from rich.console import Console
+
+from examples.portfolio_analysis.flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.market_data import (
     create_bullish_market_data,
     create_sample_market_data,
     create_volatile_market_data,
 )
 from examples.portfolio_analysis.messages import (
-    DecisionMadeEvent,
     PortfolioConstraints,
     StartAnalysisCommand,
 )
-from examples.portfolio_analysis.portfolio_flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.shared.config import configure_dspy
-from examples.shared.console_handler import LoadingIndicator
+
+
+class SpinnerContext:
+    """Simple spinner context manager for async operations."""
+
+    def __init__(self, message: str = "Processing") -> None:
+        """Initialize spinner with a message."""
+        self.message = message
+        self._console = Console()
+        self._status = None
+
+    async def __aenter__(self) -> "SpinnerContext":
+        """Start the spinner.
+
+        Returns:
+            Self for context manager protocol.
+
+        """
+        self._status = self._console.status(self.message, spinner="dots")
+        self._status.__enter__()
+        return self
+
+    async def __aexit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: TracebackType | None,
+    ) -> None:
+        """Stop the spinner."""
+        if self._status:
+            self._status.__exit__(None, None, None)
 
 
 def create_market_scenario(scenario: str = "normal") -> StartAnalysisCommand:
@@ -54,32 +86,6 @@ def create_market_scenario(scenario: str = "normal") -> StartAnalysisCommand:
     )
 
 
-def print_market_summary(command: StartAnalysisCommand) -> None:
-    """Print minimal market summary.
-
-    Args:
-        command: The start analysis command to display.
-
-    """
-    symbols = tuple(asset.symbol for asset in command.market_data.assets)
-    print(f"\n📊 Analyzing {len(symbols)} assets in {command.market_data.market_sentiment} market")
-    print(f"📅 Market date: {command.market_data.market_date}")
-
-
-def print_final_decision(event: DecisionMadeEvent) -> None:
-    """Print minimal final decision summary.
-
-    Args:
-        event: The decision made event to display.
-
-    """
-    print(f"\n📋 Decision: {event.decision.decision_status.upper()}")
-    if event.decision.approved_changes:
-        print(f"✅ {len(event.decision.approved_changes)} allocation changes approved")
-    if event.decision.decision_status == "escalate":
-        print("⚠️  Requires human review")
-
-
 async def run_portfolio_analysis(scenario: str = "normal") -> None:
     """Run the portfolio analysis workflow.
 
@@ -88,7 +94,7 @@ async def run_portfolio_analysis(scenario: str = "normal") -> None:
 
     """
     # Configure DSPy with OpenAI
-    async with LoadingIndicator("Configuring DSPy"):
+    async with SpinnerContext("Configuring DSPy..."):
         try:
             configure_dspy()
         except ValueError as e:
@@ -100,23 +106,19 @@ async def run_portfolio_analysis(scenario: str = "normal") -> None:
 
     # Create market command
     command = create_market_scenario(scenario)
-    print_market_summary(command)
 
-    # Create and run the flow with built-in console output
+    # Create and run the flow - all output handled by observer
     flow = create_portfolio_analysis_flow()
-    result = await flow.process(command)
-
-    # Display final decision summary
-    print_final_decision(result)
+    await flow.process(command)
 
 
 def print_menu() -> None:
     """Print menu options."""
-    print("\n🎯 PORTFOLIO ANALYSIS WITH LLM INTELLIGENCE")
-    print("\nSelect market scenario:")
-    print("1. Normal market conditions (default)")
-    print("2. Bullish market (growth opportunities)")
-    print("3. Volatile market (high risk)")
+    print("\nPORTFOLIO ANALYSIS")
+    print("Select market scenario:")
+    print("  1. Normal market conditions (default)")
+    print("  2. Bullish market (growth opportunities)")
+    print("  3. Volatile market (high risk)")
 
 
 async def main() -> None:
@@ -132,8 +134,6 @@ async def main() -> None:
     }
 
     scenario = scenarios.get(choice, "normal")
-    if choice and choice not in scenarios:
-        print("Invalid choice. Using default (normal).")
 
     await run_portfolio_analysis(scenario)
 

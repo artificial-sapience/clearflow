@@ -12,10 +12,6 @@ __all__ = ["FlowBuilder"]
 class FlowBuilder[TStartIn: Message, TStartOut: Message](ABC):
     """Builder for composing message-driven flows.
 
-    Provides a fluent API for composing message routes through nodes.
-    Users interact with this interface to define how messages flow
-    through their system based on message types.
-
     Type parameters:
         TStartIn: The input message type the flow accepts
         TStartOut: The output type of the start node
@@ -61,18 +57,14 @@ class FlowBuilder[TStartIn: Message, TStartOut: Message](ABC):
     ) -> Node[TStartIn, TEnd]:
         """Declare the message type that completes this flow.
 
-        When any node in the flow produces an instance of the terminal type,
-        the flow immediately terminates and returns that message. The terminal
-        type cannot be routed between nodes - it always ends the flow.
-
-        This enforces single responsibility: each flow has exactly one
-        completion condition defined by its terminal type.
+        When any node produces an instance of the terminal type, the flow
+        immediately terminates and returns that message.
 
         Args:
             terminal_type: The message type that completes the flow
 
         Returns:
-            A Node that represents the complete flow with single terminal type
+            A Node that represents the complete flow
 
         """
         ...

@@ -1,6 +1,6 @@
-# Portfolio Analysis Example (DSPy-powered)
+# Portfolio Analysis Example (DSPy-enabled)
 
-Multi-specialist workflow for portfolio allocation decisions using event-driven architecture with real LLM intelligence.
+Multi-specialist workflow for portfolio allocation decisions using message-driven architecture with DSPy-powered analysis.
 
 ## Flow
 
@@ -31,27 +31,27 @@ cp .env.example .env
 uv sync --all-extras
 
 # 3. Run the example
-cd examples/portfolio_analysis_message_driven
+cd examples/portfolio_analysis
 python main.py  # If venv is activated
 # Or: uv run python main.py
 ```
 
 ## How It Works
 
-This example demonstrates a pure event-driven workflow where each specialist node analyzes data and publishes events describing outcomes:
+This example demonstrates a message-driven workflow where each specialist node analyzes data and publishes events describing outcomes:
 
-1. **QuantAnalyst** - Analyzes market data using LLM, publishes opportunities found
-2. **RiskAnalyst** - Assesses risk using LLM, publishes acceptable positions
-3. **PortfolioManager** - Optimizes portfolio using LLM, publishes recommendations
-4. **ComplianceOfficer** - Reviews compliance using LLM, publishes approved allocations
-5. **DecisionMaker** - Makes final decision using LLM, publishes executable orders
+1. **QuantAnalyst** - Analyzes market data and publishes identified opportunities
+2. **RiskAnalyst** - Assesses portfolio risk and publishes risk metrics
+3. **PortfolioManager** - Optimizes allocations and publishes recommendations
+4. **ComplianceOfficer** - Reviews compliance and publishes approved allocations
+5. **DecisionMaker** - Makes final decision and publishes executable orders
 
 Each node uses DSPy for structured LLM outputs with comprehensive error handling.
 
 ## Key Features
 
-- **Pure event-driven** - Single command starts flow, all subsequent messages are events
-- **LLM intelligence** - Real OpenAI/DSPy integration, not simulated logic
+- **Message-driven** - Single command starts flow, all subsequent messages are events
+- **AI-powered analysis** - OpenAI/DSPy integration for structured outputs
 - **Type-safe messages** - Immutable dataclasses with Mapping types
 - **Error recovery** - AnalysisFailedEvent routes to DecisionMaker for conservative handling
 - **No orchestrators** - Direct event routing, flow definition is the sole orchestrator
@@ -59,7 +59,7 @@ Each node uses DSPy for structured LLM outputs with comprehensive error handling
 
 ## Architecture Principles
 
-### Event-Driven Design
+### Message-Driven Design
 
 - **Single initiating command**: `StartAnalysisCommand` contains all initial context
 - **Events describe outcomes**: Past-tense naming (MarketAnalyzedEvent, not AnalyzeMarketEvent)
@@ -72,40 +72,41 @@ Each node uses DSPy for structured LLM outputs with comprehensive error handling
 # ✅ GOOD: Focused events with single responsibility
 @dataclass(frozen=True)
 class MarketAnalyzedEvent(Event):
-    opportunities: tuple[str, ...]  # Just symbols identified
-    opportunity_scores: tuple[float, ...]  # Confidence scores
-    market_trend: Literal["bullish", "bearish", "sideways"]
-    # Context for next stage
-    market_data: MarketData
-    constraints: PortfolioConstraints
+    insights: QuantInsights  # AI-generated analysis insights
+    market_data: MarketData  # Original data for downstream stages
+    constraints: PortfolioConstraints  # Constraints for subsequent nodes
 
-# ❌ BAD: God-object with too much data
+# Where QuantInsights is a focused model:
+@dataclass(frozen=True)
+class QuantInsights:
+    market_trend: Literal["bullish", "bearish", "neutral"]
+    confidence: float
+    top_signals: Sequence[MarketSignal]
+    volatility_index: float
+
+# ❌ BAD: God-object with everything embedded
 class AnalysisCompleteEvent(Event):
     all_analysis_data: dict  # Everything in one place
     full_market_data: MarketData
-    complete_insights: QuantInsights
+    complete_insights: dict  # Unstructured data
     # Too much responsibility!
 ```
 
 ## Files
 
 - `main.py` - Entry point with DSPy configuration and scenario selection
-- `portfolio_flow.py` - Pure event-driven flow definition (no orchestrators)
-- `messages.py` - Focused event types with immutable Mapping fields
+- `portfolio_flow.py` - Message-driven flow definition (no orchestrators)
+- `messages.py` - Immutable message types with structured data models
 - `nodes.py` - Specialist nodes with DSPy predictors (no console logging)
 - `market_data.py` - Market data generation for different scenarios
 - `specialists/` - DSPy signatures and models for each specialist
 
-## Comparison with Legacy Approach
+## Design Philosophy
 
-### Legacy (Node-Flow-State)
-
-- Accumulates state as it flows
-- Nodes mutate shared state
-- Implicit data dependencies
-
-### Message-Driven (This Example)
+### Message-Driven Architecture
 
 - Events carry only essential data
 - Nodes produce new events without mutation
 - Explicit data flow via messages
+- Type-safe routing based on message types
+- Single responsibility per node

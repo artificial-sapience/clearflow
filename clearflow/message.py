@@ -26,22 +26,17 @@ def _utc_now() -> AwareDatetime:
 
 
 class Message(StrictBaseModel, ABC):
-    """Base message class for message-driven AI orchestration.
+    """Abstract base class for Commands and Events in message-driven flows.
 
-    Messages enable type-safe, immutable data flow between nodes with full causality tracking.
-    Each message carries metadata for tracing, debugging, and understanding AI decision chains.
+    A Message is an immutable data structure that flows between nodes, carrying
+    both domain data and metadata for causality tracking and flow isolation.
 
-    Why use Message:
-    - Type-safe routing: Route on message types, not strings
-    - Causality tracking: Trace AI decisions through triggered_by chains
-    - Immutable state: Prevent unintended mutations in complex flows
-    - Session isolation: run_id ensures messages stay within their flow
+    Attributes:
+        id: Unique identifier for this message instance
+        triggered_by_id: ID of the message that caused this one (None for root commands)
+        timestamp: UTC time when this message was created
+        run_id: Session identifier linking all messages in a single flow execution
 
-    Perfect for:
-    - LLM orchestration with traceable decision chains
-    - Multi-agent workflows requiring audit trails
-    - RAG pipelines with clear data lineage
-    - Any AI system requiring reproducible execution paths
     """
 
     id: uuid.UUID = Field(
@@ -62,24 +57,19 @@ class Message(StrictBaseModel, ABC):
 
 
 class Event(Message):
-    """Immutable fact representing something that has occurred in the AI workflow.
+    """An immutable record of something that has occurred.
 
-    Events capture completed actions, state transitions, and outcomes from AI operations.
-    Every event MUST be triggered by another message, ensuring complete causality chains.
+    Events represent facts about state changes or completed actions in the system.
+    They are named in past tense (e.g., OrderPlaced, DocumentProcessed) and
+    must always have a triggered_by_id linking to the message that caused them.
 
-    Why use Event:
-    - Past-tense facts: Events describe what HAS happened, not what should happen
-    - Required causality: triggered_by_id is mandatory, ensuring traceable AI decisions
-    - Immutable history: Once created, events form an unchangeable audit trail
-    - Type-based routing: Different event types trigger different downstream actions
+    Events cannot be rejected or modified - they represent what has already happened.
+    If an error occurs, emit a new event describing the failure rather than
+    trying to undo the original event.
 
-    Example event types for AI systems:
-    - LLMResponseGenerated: Captures model output with metadata
-    - DocumentIndexed: Records successful vector storage operation
-    - ValidationFailed: Documents why an AI output was rejected
-    - ThresholdExceeded: Signals when metrics cross boundaries
-
-    This is an abstract base - create domain-specific events for your AI workflow.
+    Constraints:
+        - Must have triggered_by_id (cannot be None)
+        - Cannot be instantiated directly (create concrete subclasses)
     """
 
     @model_validator(mode="after")
@@ -111,24 +101,20 @@ class Event(Message):
 
 
 class Command(Message):
-    """Imperative request for an action to be performed in the AI workflow.
+    """An imperative request to perform an action that may change state.
 
-    Commands express intent and trigger operations like LLM calls, data retrieval, or analysis.
-    Initial commands (triggered_by_id=None) start new flow executions.
+    Commands express intent to transform or process data. They are named
+    using imperative verbs (e.g., ProcessOrder, ValidateDocument) and are
+    processed by a single node that decides how to fulfill the request.
 
-    Why use Command:
-    - Clear intent: Commands use imperative language (ProcessDocument, GenerateResponse)
-    - Flow initiation: Commands with triggered_by_id=None start new workflows
-    - Decoupled execution: Nodes decide HOW to fulfill commands independently
-    - Request/response pattern: Commands trigger events upon completion
+    Commands may result in:
+        - One or more events describing what happened
+        - Error events if the operation fails
 
-    Example command types for AI systems:
-    - AnalyzeDocument: Request document understanding via LLM
-    - RetrieveContext: Fetch relevant vectors from embedding store
-    - GenerateSummary: Produce condensed output from source material
-    - ValidateOutput: Check AI response against quality criteria
+    Root commands (triggered_by_id=None) initiate new flow executions.
 
-    This is an abstract base - create domain-specific commands for your AI operations.
+    Constraints:
+        - Cannot be instantiated directly (create concrete subclasses)
     """
 
     @model_validator(mode="after")
