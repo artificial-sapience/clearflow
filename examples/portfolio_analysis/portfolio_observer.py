@@ -82,18 +82,27 @@ def _print_risk_assessment(event: RiskAssessedEvent) -> None:
     print(f"   ⚠️ Risk Status: {assessment.risk_level.upper()}")
 
 
+def _calculate_rebalancing_totals(changes: Sequence[AllocationChange]) -> tuple[float, float]:
+    """Calculate total buy and sell percentages.
+
+    Returns:
+        Tuple of (total_buy, total_sell)
+
+    """
+    total_buy = sum(c.new_weight - c.current_weight for c in changes if c.new_weight > c.current_weight)
+    total_sell = sum(c.current_weight - c.new_weight for c in changes if c.new_weight < c.current_weight)
+    return total_buy, total_sell
+
+
 def _print_portfolio_recommendations(event: RecommendationsGeneratedEvent) -> None:
     """Print portfolio manager recommendations."""
     recs = event.recommendations
-    if recs.allocation_changes:
-        print(f"   💼 Proposed Changes: {len(recs.allocation_changes)}")
-        total_buy = sum(
-            c.new_weight - c.current_weight for c in recs.allocation_changes if c.new_weight > c.current_weight
-        )
-        total_sell = sum(
-            c.current_weight - c.new_weight for c in recs.allocation_changes if c.new_weight < c.current_weight
-        )
-        print(f"   💼 Rebalancing: +{total_buy:.0f}% / -{total_sell:.0f}%")
+    if not recs.allocation_changes:
+        return
+
+    print(f"   💼 Proposed Changes: {len(recs.allocation_changes)}")
+    total_buy, total_sell = _calculate_rebalancing_totals(recs.allocation_changes)
+    print(f"   💼 Rebalancing: +{total_buy:.0f}% / -{total_sell:.0f}%")
 
 
 def _print_compliance_review(event: ComplianceReviewedEvent) -> None:
@@ -138,21 +147,35 @@ def _print_risk_warnings(warnings: Sequence[str]) -> None:
             print(f"   • {warning}")
 
 
+def _group_allocation_changes(
+    changes: Sequence[AllocationChange],
+) -> tuple[Sequence[AllocationChange], Sequence[AllocationChange]]:
+    """Group allocation changes into buys and sells.
+
+    Returns:
+        Tuple of (buys, sells)
+
+    """
+    buys = [c for c in changes if c.new_weight > c.current_weight]
+    sells = [c for c in changes if c.new_weight < c.current_weight]
+    return buys, sells
+
+
+def _print_approved_allocations(changes: Sequence[AllocationChange]) -> None:
+    """Print approved allocation changes."""
+    print(f"\n📊 APPROVED ALLOCATIONS ({len(changes)} changes):")
+    buys, sells = _group_allocation_changes(changes)
+    _print_buys(buys)
+    _print_sells(sells)
+
+
 def _print_decision_summary(event: DecisionMadeEvent) -> None:
     """Print final trading decision summary."""
     decision = event.decision
-
     print(f"\n🎯 FINAL DECISION: {decision.decision_status.upper()}")
 
     if decision.approved_changes:
-        print(f"\n📊 APPROVED ALLOCATIONS ({len(decision.approved_changes)} changes):")
-
-        # Group by action type
-        buys = [c for c in decision.approved_changes if c.new_weight > c.current_weight]
-        sells = [c for c in decision.approved_changes if c.new_weight < c.current_weight]
-
-        _print_buys(buys)
-        _print_sells(sells)
+        _print_approved_allocations(decision.approved_changes)
 
     _print_execution_notes(decision.execution_instructions)
     _print_risk_warnings(decision.risk_warnings)
@@ -287,6 +310,35 @@ class PortfolioAnalysisObserver(Observer):
         )
         self._current_spinner.start()
 
+    def _stop_spinner(self) -> None:
+        """Stop the current spinner if it exists."""
+        if self._current_spinner:
+            self._current_spinner.stop()
+            self._current_spinner = None
+
+    def _print_node_status(self, node_name: str, error: Exception | None) -> None:
+        """Print node completion status."""
+        icon = _get_node_icon(node_name)
+        formatted_name = _format_node_name(node_name)
+
+        if error:
+            self.console.print(f"{icon} {formatted_name}: [red]❌ Failed[/red]")
+            self.console.print(f"   Error: {error}")
+        else:
+            self.console.print(f"{icon} {formatted_name}: [green]✓[/green]")
+
+    @staticmethod
+    def _print_node_insights(message: Message) -> None:
+        """Print insights based on message type."""
+        if isinstance(message, MarketAnalyzedEvent):
+            _print_quant_insights(message)
+        elif isinstance(message, RiskAssessedEvent):
+            _print_risk_assessment(message)
+        elif isinstance(message, RecommendationsGeneratedEvent):
+            _print_portfolio_recommendations(message)
+        elif isinstance(message, ComplianceReviewedEvent):
+            _print_compliance_review(message)
+
     @override
     async def on_node_end(self, node_name: str, message: Message, error: Exception | None) -> None:
         """Display node analysis results.
@@ -297,25 +349,8 @@ class PortfolioAnalysisObserver(Observer):
             error: Exception if node failed
 
         """
-        # Stop spinner
-        if self._current_spinner:
-            self._current_spinner.stop()
-            self._current_spinner = None
+        self._stop_spinner()
+        self._print_node_status(node_name, error)
 
-        # Display result
-        icon = _get_node_icon(node_name)
-        if error:
-            self.console.print(f"{icon} {_format_node_name(node_name)}: [red]❌ Failed[/red]")
-            self.console.print(f"   Error: {error}")
-        else:
-            self.console.print(f"{icon} {_format_node_name(node_name)}: [green]✓[/green]")
-
-            # Print node insights
-            if isinstance(message, MarketAnalyzedEvent):
-                _print_quant_insights(message)
-            elif isinstance(message, RiskAssessedEvent):
-                _print_risk_assessment(message)
-            elif isinstance(message, RecommendationsGeneratedEvent):
-                _print_portfolio_recommendations(message)
-            elif isinstance(message, ComplianceReviewedEvent):
-                _print_compliance_review(message)
+        if not error:
+            self._print_node_insights(message)
