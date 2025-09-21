@@ -31,7 +31,7 @@ cp .env.example .env
 uv sync --all-extras
 
 # 3. Run the example
-cd examples/portfolio_analysis_message_driven
+cd examples/portfolio_analysis
 python main.py  # If venv is activated
 # Or: uv run python main.py
 ```
@@ -72,18 +72,23 @@ Each node uses DSPy for structured LLM outputs with comprehensive error handling
 # ✅ GOOD: Focused events with single responsibility
 @dataclass(frozen=True)
 class MarketAnalyzedEvent(Event):
-    opportunities: tuple[str, ...]  # Just symbols identified
-    opportunity_scores: tuple[float, ...]  # Confidence scores
-    market_trend: Literal["bullish", "bearish", "sideways"]
-    # Context for next stage
-    market_data: MarketData
-    constraints: PortfolioConstraints
+    insights: QuantInsights  # AI-generated analysis insights
+    market_data: MarketData  # Original data for downstream stages
+    constraints: PortfolioConstraints  # Constraints for subsequent nodes
 
-# ❌ BAD: God-object with too much data
+# Where QuantInsights is a focused model:
+@dataclass(frozen=True)
+class QuantInsights:
+    market_trend: Literal["bullish", "bearish", "neutral"]
+    confidence: float
+    top_signals: Sequence[MarketSignal]
+    volatility_index: float
+
+# ❌ BAD: God-object with everything embedded
 class AnalysisCompleteEvent(Event):
     all_analysis_data: dict  # Everything in one place
     full_market_data: MarketData
-    complete_insights: QuantInsights
+    complete_insights: dict  # Unstructured data
     # Too much responsibility!
 ```
 
@@ -91,7 +96,7 @@ class AnalysisCompleteEvent(Event):
 
 - `main.py` - Entry point with DSPy configuration and scenario selection
 - `portfolio_flow.py` - Message-driven flow definition (no orchestrators)
-- `messages.py` - Focused event types with immutable Mapping fields
+- `messages.py` - Immutable message types with structured data models
 - `nodes.py` - Specialist nodes with DSPy predictors (no console logging)
 - `market_data.py` - Market data generation for different scenarios
 - `specialists/` - DSPy signatures and models for each specialist
@@ -103,5 +108,5 @@ class AnalysisCompleteEvent(Event):
 - Events carry only essential data
 - Nodes produce new events without mutation
 - Explicit data flow via messages
-- Type-safe routing based on event types
+- Type-safe routing based on message types
 - Single responsibility per node
