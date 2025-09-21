@@ -4,6 +4,9 @@ import asyncio
 import sys
 import uuid
 from pathlib import Path
+from types import TracebackType
+
+from rich.console import Console
 
 from examples.portfolio_analysis.market_data import (
     create_bullish_market_data,
@@ -16,7 +19,37 @@ from examples.portfolio_analysis.messages import (
 )
 from examples.portfolio_analysis.portfolio_flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.shared.config import configure_dspy
-from examples.shared import SpinnerContext
+
+
+class SpinnerContext:
+    """Simple spinner context manager for async operations."""
+
+    def __init__(self, message: str = "Processing") -> None:
+        """Initialize spinner with a message."""
+        self.message = message
+        self._console = Console()
+        self._status = None
+
+    async def __aenter__(self) -> "SpinnerContext":
+        """Start the spinner.
+
+        Returns:
+            Self for context manager protocol.
+
+        """
+        self._status = self._console.status(self.message, spinner="dots")
+        self._status.__enter__()
+        return self
+
+    async def __aexit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: TracebackType | None,
+    ) -> None:
+        """Stop the spinner."""
+        if self._status:
+            self._status.__exit__(None, None, None)
 
 
 def create_market_scenario(scenario: str = "normal") -> StartAnalysisCommand:
