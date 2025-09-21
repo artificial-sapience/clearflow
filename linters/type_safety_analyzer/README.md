@@ -144,7 +144,7 @@ $ uv run python -m main stress_test_cases.py
 📝 Parsing Python code...
 ✓ Found 454 string literals to analyze
 
-🤖 Analyzing with LLM for type safety issues...
+🤖 Analyzing for type safety issues...
 ⚠️  Found 21 type safety issues:
   🟡 21 warnings
 
@@ -177,7 +177,7 @@ The `stress_test_cases.py` file contains comprehensive test patterns:
 - HTTP methods and status codes
 - Environment modes (`"production"`, `"staging"`)
 - Complex nested patterns
-- All pass static analysis but need LLM intelligence to detect
+- All pass static analysis but require AI-powered analysis to detect
 
 ```bash
 # Test the analyzer on the stress test file

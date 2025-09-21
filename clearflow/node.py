@@ -52,7 +52,7 @@ class Node[TMessageIn: Message, TMessageOut: Message](StrictBaseModel, NodeInter
     """Concrete message processing node for AI workflows.
 
     Nodes are the building blocks of AI orchestration, each performing a specific
-    operation: generating with LLMs, retrieving from vectors, validating outputs,
+    operation: AI generation, vector retrieval, output validation,
     or transforming data between AI services.
 
     Why use Node:

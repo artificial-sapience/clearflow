@@ -1,4 +1,4 @@
-"""Main entry point for message-driven portfolio analysis with LLM intelligence."""
+"""Main entry point for message-driven portfolio analysis with AI-powered decisions."""
 
 import asyncio
 import sys

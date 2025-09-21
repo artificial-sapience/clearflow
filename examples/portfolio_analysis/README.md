@@ -1,6 +1,6 @@
-# Portfolio Analysis Example (DSPy-powered)
+# Portfolio Analysis Example (DSPy-enabled)
 
-Multi-specialist workflow for portfolio allocation decisions using event-driven architecture with real LLM intelligence.
+Multi-specialist workflow for portfolio allocation decisions using event-driven architecture with DSPy-powered analysis.
 
 ## Flow
 
@@ -40,18 +40,18 @@ python main.py  # If venv is activated
 
 This example demonstrates a pure event-driven workflow where each specialist node analyzes data and publishes events describing outcomes:
 
-1. **QuantAnalyst** - Analyzes market data using LLM, publishes opportunities found
-2. **RiskAnalyst** - Assesses risk using LLM, publishes acceptable positions
-3. **PortfolioManager** - Optimizes portfolio using LLM, publishes recommendations
-4. **ComplianceOfficer** - Reviews compliance using LLM, publishes approved allocations
-5. **DecisionMaker** - Makes final decision using LLM, publishes executable orders
+1. **QuantAnalyst** - Analyzes market data and publishes identified opportunities
+2. **RiskAnalyst** - Assesses portfolio risk and publishes risk metrics
+3. **PortfolioManager** - Optimizes allocations and publishes recommendations
+4. **ComplianceOfficer** - Reviews compliance and publishes approved allocations
+5. **DecisionMaker** - Makes final decision and publishes executable orders
 
 Each node uses DSPy for structured LLM outputs with comprehensive error handling.
 
 ## Key Features
 
 - **Pure event-driven** - Single command starts flow, all subsequent messages are events
-- **LLM intelligence** - Real OpenAI/DSPy integration, not simulated logic
+- **AI-powered analysis** - OpenAI/DSPy integration for structured outputs
 - **Type-safe messages** - Immutable dataclasses with Mapping types
 - **Error recovery** - AnalysisFailedEvent routes to DecisionMaker for conservative handling
 - **No orchestrators** - Direct event routing, flow definition is the sole orchestrator
@@ -96,16 +96,12 @@ class AnalysisCompleteEvent(Event):
 - `market_data.py` - Market data generation for different scenarios
 - `specialists/` - DSPy signatures and models for each specialist
 
-## Comparison with Legacy Approach
+## Design Philosophy
 
-### Legacy (Node-Flow-State)
-
-- Accumulates state as it flows
-- Nodes mutate shared state
-- Implicit data dependencies
-
-### Message-Driven (This Example)
+### Message-Driven Architecture
 
 - Events carry only essential data
 - Nodes produce new events without mutation
 - Explicit data flow via messages
+- Type-safe routing based on event types
+- Single responsibility per node

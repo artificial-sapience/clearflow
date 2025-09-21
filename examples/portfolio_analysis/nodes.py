@@ -1,4 +1,4 @@
-"""Message nodes for portfolio analysis specialists with DSPy LLM intelligence.
+"""Message nodes for portfolio analysis specialists with DSPy integration.
 
 Pure business logic implementation without console logging.
 Observability will be handled separately via Observer pattern.
@@ -31,20 +31,20 @@ from examples.portfolio_analysis.specialists.risk.signature import RiskAnalystSi
 class QuantAnalystNode(Node[StartAnalysisCommand, MarketAnalyzedEvent | AnalysisFailedEvent]):
     """Quantitative analyst that identifies market opportunities using DSPy.
 
-    Uses LLM to analyze market data and identify investment opportunities.
+    Analyzes market data to identify investment opportunities using DSPy.
     """
 
     name: str = "quant_analyst"
 
     @override
     async def process(self, message: StartAnalysisCommand) -> MarketAnalyzedEvent | AnalysisFailedEvent:
-        """Analyze market data using LLM to identify opportunities.
+        """Analyze market data to identify opportunities.
 
         Args:
             message: Command containing market data and constraints.
 
         Returns:
-            MarketAnalyzedEvent with LLM-identified opportunities or AnalysisFailedEvent.
+            MarketAnalyzedEvent with identified opportunities or AnalysisFailedEvent.
 
         """
         try:
@@ -78,20 +78,20 @@ class QuantAnalystNode(Node[StartAnalysisCommand, MarketAnalyzedEvent | Analysis
 class RiskAnalystNode(Node[MarketAnalyzedEvent, RiskAssessedEvent | AnalysisFailedEvent]):
     """Risk analyst that evaluates risk using DSPy.
 
-    Uses LLM to assess risk for identified opportunities.
+    Assesses risk for identified opportunities using DSPy.
     """
 
     name: str = "risk_analyst"
 
     @override
     async def process(self, message: MarketAnalyzedEvent) -> RiskAssessedEvent | AnalysisFailedEvent:
-        """Assess risk using LLM for identified opportunities.
+        """Assess risk for identified opportunities.
 
         Args:
             message: Event containing market analysis results.
 
         Returns:
-            RiskAssessedEvent with LLM risk assessment or AnalysisFailedEvent.
+            RiskAssessedEvent with risk assessment or AnalysisFailedEvent.
 
         """
         try:
@@ -128,20 +128,20 @@ class RiskAnalystNode(Node[MarketAnalyzedEvent, RiskAssessedEvent | AnalysisFail
 class PortfolioManagerNode(Node[RiskAssessedEvent, RecommendationsGeneratedEvent | AnalysisFailedEvent]):
     """Portfolio manager that generates recommendations using DSPy.
 
-    Uses LLM to optimize portfolio allocations.
+    Optimizes portfolio allocations using DSPy.
     """
 
     name: str = "portfolio_manager"
 
     @override
     async def process(self, message: RiskAssessedEvent) -> RecommendationsGeneratedEvent | AnalysisFailedEvent:
-        """Generate portfolio recommendations using LLM.
+        """Generate portfolio recommendations.
 
         Args:
             message: Event containing risk assessment results.
 
         Returns:
-            RecommendationsGeneratedEvent with LLM recommendations or AnalysisFailedEvent.
+            RecommendationsGeneratedEvent with portfolio recommendations or AnalysisFailedEvent.
 
         """
         try:
@@ -179,14 +179,14 @@ class PortfolioManagerNode(Node[RiskAssessedEvent, RecommendationsGeneratedEvent
 class ComplianceOfficerNode(Node[RecommendationsGeneratedEvent, ComplianceReviewedEvent | AnalysisFailedEvent]):
     """Compliance officer that reviews recommendations using DSPy.
 
-    Uses LLM to ensure regulatory and policy compliance.
+    Ensures regulatory and policy compliance using DSPy.
     """
 
     name: str = "compliance_officer"
 
     @override
     async def process(self, message: RecommendationsGeneratedEvent) -> ComplianceReviewedEvent | AnalysisFailedEvent:
-        """Review recommendations for compliance using LLM.
+        """Review recommendations for compliance.
 
         Args:
             message: Event containing portfolio recommendations.
@@ -228,14 +228,14 @@ class ComplianceOfficerNode(Node[RecommendationsGeneratedEvent, ComplianceReview
 class DecisionMakerNode(Node[ComplianceReviewedEvent | AnalysisFailedEvent, DecisionMadeEvent]):
     """Decision maker that makes final trading decisions using DSPy.
 
-    Uses LLM to make the final go/no-go decision.
+    Makes the final go/no-go decision using DSPy.
     """
 
     name: str = "decision_maker"
 
     @override
     async def process(self, message: ComplianceReviewedEvent | AnalysisFailedEvent) -> DecisionMadeEvent:
-        """Make final trading decision using LLM.
+        """Make final trading decision.
 
         Args:
             message: Event containing compliance review or analysis failure.
