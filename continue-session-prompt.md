@@ -5,12 +5,12 @@ Please read `session-context.md` for the full technical context of our coverage 
 ## Current Status
 We're at 98% test coverage after removing defensive exception handlers from ClearFlow's type validation. We have 4 lines uncovered that handle edge cases for nodes without proper type annotations.
 
-## Immediate Decision Required
-Should ClearFlow enforce strict typing on all nodes? Please review the philosophical decision point in `session-context.md` and decide between:
-
-**Option A: Strict Typing** - Remove remaining edge case handling, fail fast on any node without complete type annotations
-
-**Option B: Flexible Typing** - Keep edge case handling and add tests for TypeVars and missing type hints
+## Decision Made: Enforce Strict Typing
+You have decided that ClearFlow must enforce strict typing on all nodes. This means:
+- Remove ALL edge case handling for missing type hints
+- Remove TypeVar special handling
+- Fail fast on any node without complete, concrete type annotations
+- No generic nodes allowed - all types must be concrete
 
 ## Your Stated Philosophy
 - "We must remove dead code and defensive programming"

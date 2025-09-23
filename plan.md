@@ -5,11 +5,11 @@
 ### Immediate Tasks
 - [x] Added `branch = true` to workspace coverage config
 - [x] Removed defensive exception handlers from type validation
-- [ ] **Achieve 100% coverage**: Currently at 98% with 4 lines uncovered
-  - Lines 33, 39: Handle missing type hints and TypeVars in output validation
-  - Lines 57, 67: Handle missing type hints and Union types in input validation
-  - Decision needed: Remove these edge cases entirely or add tests for them
-  - Philosophy: Enforce strict typing (fail fast) vs allow flexibility for generic nodes
+- [x] **Decision made**: Enforce strict typing (fail fast, no generic nodes)
+- [ ] **Achieve 100% coverage**: Currently at 98% with 4 lines to remove
+  - Remove lines 33, 39: Edge cases for missing type hints and TypeVars in output validation
+  - Remove lines 57, 67: Edge cases for missing type hints and Union types in input validation
+  - These lines violate strict typing principle and should be removed entirely
 
 ### Final Workspace Migration Steps
 - [ ] Push coverage fix to stigmergic-mvp branch

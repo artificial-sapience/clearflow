@@ -32,20 +32,20 @@ We discovered and partially fixed a test coverage regression in the workspace st
 3. "We do want coverage of all lines of code including exception handlers"
 4. "We do not want to count documentation as lines of code"
 
-### The Question
-Should ClearFlow allow nodes without proper type annotations?
+### The Decision: Strict Typing (Fail Fast)
+**Decision made**: ClearFlow will enforce strict typing on all nodes.
 
-**Option A: Strict Typing (Fail Fast)**
-- Remove all edge case handling
-- Require all nodes to have complete type annotations
-- Any node without proper types causes immediate failure
+**Rationale**:
+- Aligns with "fail fast" principle
+- Removes all defensive programming
+- Ensures type safety throughout the system
 - Achieves 100% coverage by removing untestable defensive code
 
-**Option B: Flexible Typing (Current)**
-- Keep edge case handling for TypeVars and missing hints
-- Allows generic nodes and gradual typing
-- Need to add tests for these edge cases to achieve 100% coverage
-- More permissive but potentially hides typing errors
+**Implementation**:
+- Remove all edge case handling for missing type hints
+- Remove TypeVar special handling
+- Any node without complete, concrete type annotations will cause immediate failure
+- This means no generic nodes with TypeVars - all types must be concrete
 
 ## Technical Context
 
