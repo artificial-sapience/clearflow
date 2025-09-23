@@ -130,6 +130,7 @@ skips = ["B101", "B601"]  # Allow asserts and shell usage in controlled contexts
 # Coverage configuration
 [tool.coverage.run]
 source = ["packages/clearflow/clearflow", "packages/stigmergic/stigmergic"]
+branch = true
 omit = [
     "*/tests/*",
     "*/test_*.py",
