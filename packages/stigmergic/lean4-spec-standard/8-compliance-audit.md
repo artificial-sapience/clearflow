@@ -1,7 +1,7 @@
 # 8. Compliance Scorecard and Audit Guide
 
-> Version: 0.1.0-draft  
-> Status: Section 1 Draft for Review  
+> Version: 0.1.0-draft
+> Status: Section 1 Draft for Review
 > Part of: Lean 4 Specification Standard
 
 ## Core Philosophy Reminder
@@ -46,37 +46,40 @@ Use this scorecard to quickly assess compliance level:
 ### Phase 1: Compiler-Enforced Properties (CRITICAL)
 
 1. **For each typeclass**, ask:
-   - Are ALL laws expressed as fields requiring proofs?
-   - Can I create an instance that violates the laws? (Try it!)
-   - Example test: Try to create `instance : InformationSpace Unit` without proving laws
+
+    - Are ALL laws expressed as fields requiring proofs?
+    - Can I create an instance that violates the laws? (Try it!)
+    - Example test: Try to create `instance : InformationSpace Unit` without proving laws
 
 2. **For each operation**, ask:
-   - What properties should it have? (associativity? commutativity? identity?)
-   - Are these properties stated as theorems?
-   - Are the theorems proven (not `sorry`)?
+
+    - What properties should it have? (associativity? commutativity? identity?)
+    - Are these properties stated as theorems?
+    - Are the theorems proven (not `sorry`)?
 
 3. **For each structure with invariants**, ask:
-   - Can I construct an invalid instance?
-   - Are the fields private with smart constructors?
-   - Do operations preserve invariants?
+
+    - Can I construct an invalid instance?
+    - Are the fields private with smart constructors?
+    - Do operations preserve invariants?
 
 ### Phase 2: Theorem Coverage (IMPORTANT)
 
 1. **Check operation coverage**:
 
-   ```lean
-   -- For any binary operation like `compose`, expect:
-   theorem compose_assoc : ...
-   theorem compose_id_left : ...  
-   theorem compose_id_right : ...
-   ```
+    ```lean
+    -- For any binary operation like `compose`, expect:
+    theorem compose_assoc : ...
+    theorem compose_id_left : ...
+    theorem compose_id_right : ...
+    ```
 
 2. **Check preservation theorems**:
 
-   ```lean
-   -- For any operation on constrained types:
-   theorem operation_preserves_invariant : ...
-   ```
+    ```lean
+    -- For any operation on constrained types:
+    theorem operation_preserves_invariant : ...
+    ```
 
 ### Phase 3: Documentation Review
 
@@ -154,4 +157,4 @@ Be especially alert for:
 
 This audit guide focuses on what matters most: ensuring that if a property matters, the compiler checks it. Use the scorecard for quick assessment, follow the audit phases for thorough review, and watch for common pitfalls.
 
-Remember: The goal is not just clean code or good documentation - it's mathematical certainty about protocol behavior. Every compromise on these standards is a compromise on that certainty.
+Remember: The goal is not just clean code or good documentation - it's mathematical certainty about system behavior. Every compromise on these standards is a compromise on that certainty.

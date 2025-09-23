@@ -1,7 +1,7 @@
 # 7. Multi-Epistemic Considerations and Living Specifications
 
-> Version: 0.1.0-draft  
-> Status: Section 1 Draft for Review  
+> Version: 0.1.0-draft
+> Status: Section 1 Draft for Review
 > Part of: Lean 4 Specification Standard
 
 ## Core Philosophy Reminder
@@ -12,7 +12,7 @@
 
 **Principle**: Specifications ARE implementations. They compile, execute, and evolve.
 
-**Rationale**: Traditional specifications are static documents that inevitably drift from the code. By making our specifications executable in Lean 4, we create a **living mathematical object** that serves as the core logical implementation of the protocol. This reference implementation:
+**Rationale**: Traditional specifications are static documents that inevitably drift from the code. By making our specifications executable in Lean 4, we create a **living mathematical object** that serves as the core logical implementation of the system. This reference implementation:
 
 - Cannot drift from its own logic, as it is self-defining
 - Guarantees that any production system built to interface with it must respect its proven properties
@@ -33,10 +33,10 @@
 **Implementation Pattern**:
 
 ```lean
-/-- 
+/--
 # Sacred Friction
 
-The protocol's mechanism for slowing decisions to wisdom's pace.
+The system's mechanism for slowing decisions to wisdom's pace.
 
 ## Multi-Epistemic Note
 
@@ -50,9 +50,9 @@ We formalize what we can (minimum durations, thresholds) while acknowledging
 that the heart of sacred friction lives in embodied practice, not code.
 -/
 structure SacredFriction where
-  minimumDeliberation : Duration  -- What we can formalize
-  /-- The felt, embodied, and sacred aspects live in practice, not code -/
-  -- Communities must develop their own practices for sensing readiness
+ minimumDeliberation : Duration -- What we can formalize
+ /-- The felt, embodied, and sacred aspects live in practice, not code -/
+ -- Communities must develop their own practices for sensing readiness
 ```
 
 **Requirements**:
@@ -66,28 +66,28 @@ structure SacredFriction where
 
 **Pattern**: Mark where formal mathematics meets informal practice.
 
-**Rationale**: The protocol operates through both computational processes and human/more-than-human sensing. We must be explicit about these interface points.
+**Rationale**: The system operates through both computational processes and human/more-than-human sensing. We must be explicit about these interface points.
 
 **Example**:
 
 ```lean
 /-- Determines if a proposal requires a period of collective sensing.
-    
-    # Multi-Epistemic Interface Point
-    
-    This function's return value is a formal trigger for an informal,
-    non-algorithmic community process. While the function itself may be
-    a simple check (e.g., based on proposal scope), the "collective sensing"
-    it initiates is a living practice that transcends formalization.
-    
-    The protocol does not define *how* to sense; it only provides a
-    formal hook to require that such sensing takes place. The boolean
-    return is a compression of a rich, multidimensional context into a
-    binary decision point for the formal system.
+
+ # Multi-Epistemic Interface Point
+
+ This function's return value is a formal trigger for an informal,
+ non-algorithmic community process. While the function itself may be
+ a simple check (e.g., based on proposal scope), the "collective sensing"
+ it initiates is a living practice that transcends formalization.
+
+ The system does not define *how* to sense; it only provides a
+ formal hook to require that such sensing takes place. The boolean
+ return is a compression of a rich, multidimensional context into a
+ binary decision point for the formal system.
 -/
 def requiresCollectiveSensing (p : Proposal) : Bool :=
-  -- The formal trigger might be based on specified tags or scope.
-  p.tags.contains "world-shaping"
+ -- The formal trigger might be based on specified tags or scope.
+ p.tags.contains "world-shaping"
 ```
 
 ## 7.4 Evolution Through Practice
@@ -103,14 +103,14 @@ To enable safe experimentation, features MAY be marked as experimental.
 - Experimental features MUST be defined within a dedicated `Experimental` namespace
 - The module name MUST contain `.Experimental.`
 - The feature's documentation string MUST begin with `## EXPERIMENTAL FEATURE`
-- No stable part of the protocol may depend on an experimental feature
+- No stable part of the system may depend on an experimental feature
 - See [project-governance.md](project-governance.md) for versioning and backward compatibility policies
 
 **Example**:
 
 ```lean
--- in Flourishing/Core/Experimental/ConsentV2.lean
-namespace Flourishing.Core.Experimental
+-- in /Core/Experimental/ConsentV2.lean
+namespace .Core.Experimental
 
 /--
 ## EXPERIMENTAL FEATURE
@@ -134,11 +134,11 @@ captures some nuances, critical decisions often exhibit
 discontinuous "flip" behavior that resists smooth modeling.
 -/
 structure GradientConsent where
-  level : {r : ℝ // 0 ≤ r ∧ r ≤ 1}
-  confidence : {r : ℝ // 0 ≤ r ∧ r ≤ 1}
-  tags : List String
+ level : {r : ℝ // 0 ≤ r ∧ r ≤ 1}
+ confidence : {r : ℝ // 0 ≤ r ∧ r ≤ 1}
+ tags : List String
 
-end Flourishing.Core.Experimental
+end .Core.Experimental
 ```
 
 **Evolution Tracking Requirements**:
@@ -161,22 +161,22 @@ end Flourishing.Core.Experimental
 The following aspects of this module exist in practice but not in code:
 
 1. **The quality of presence** in collective deliberation
-   - How deeply participants listen to each other
-   - The sacred space created by authentic gathering
-   - The difference between rushing and ripeness
+ - How deeply participants listen to each other
+ - The sacred space created by authentic gathering
+ - The difference between rushing and ripeness
 
 2. **Emergent wisdom** that arises from patient process
-   - Insights that come from sitting with difficulty
-   - Solutions that emerge rather than being forced
-   - The intelligence of the collective field
+ - Insights that come from sitting with difficulty
+ - Solutions that emerge rather than being forced
+ - The intelligence of the collective field
 
 3. **Sacred timing** that can be felt but not measured
-   - When a decision is "ripe"
-   - The rhythm of natural cycles
-   - Alignment with larger patterns of life
+ - When a decision is "ripe"
+ - The rhythm of natural cycles
+ - Alignment with larger patterns of life
 
 These are not failures of formalization but recognitions of its boundaries.
-They point to where human and more-than-human wisdom must guide the protocol.
+They point to where human and more-than-human wisdom must guide the system.
 -/
 ```
 
@@ -192,29 +192,29 @@ When reviewing specifications, verify:
 - [ ] **Community Voice**: Are there mechanisms for practitioner feedback?
 - [ ] **Living Documentation**: Do the docs evolve with understanding?
 
-## 7.7 Reinforcing the Firewall: Protocol Purity vs Implementation Bridges
+## 7.7 Reinforcing the Firewall: System Purity vs Implementation Bridges
 
-**Principle**: The protocol defines mathematical ideals. Bridges to computational reality belong in implementations.
+**Principle**: The system defines mathematical ideals. Bridges to computational reality belong in implementations.
 
-**What Belongs in Protocol**:
+**What Belongs in System**:
 
 ```lean
 -- ✓ CORRECT: Pure mathematical specification
 def distance (p q : Space) : ℝ :=
-  Real.sqrt ((p.x - q.x)^2 + (p.y - q.y)^2 + (p.z - q.z)^2)
+ Real.sqrt ((p.x - q.x)^2 + (p.y - q.y)^2 + (p.z - q.z)^2)
 ```
 
 **What Belongs in Implementation** (FDK):
 
 ```lean
--- ✗ WRONG in protocol - this belongs in implementation
+-- ✗ WRONG in system - this belongs in implementation
 def Space.toComputational (s : Space) : ComputationalSpace :=
-  { x := s.x.toFloat, y := s.y.toFloat, z := s.z.toFloat }
+ { x := s.x.toFloat, y := s.y.toFloat, z := s.z.toFloat }
 ```
 
 **Requirements**:
 
-- Protocol specifications MUST remain mathematically pure
-- Bridge functions MUST NOT appear in protocol specs
+- Formal specifications MUST remain mathematically pure
+- Bridge functions MUST NOT appear in system specs
 - Implementation concerns MUST be handled in FDK layer
-- The protocol defines WHAT, implementations handle HOW
+- The system defines WHAT, implementations handle HOW

@@ -1,7 +1,7 @@
 # 6. Code Organization
 
-> Version: 0.1.0-draft  
-> Status: Section 1 Draft for Review  
+> Version: 0.1.0-draft
+> Status: Section 1 Draft for Review
 > Part of: Lean 4 Specification Standard
 
 ## Core Philosophy Reminder
@@ -10,7 +10,7 @@
 
 ## Overview
 
-This section establishes patterns for organizing large protocol specifications to ensure maintainability, clear dependencies, and systematic growth.
+This section establishes patterns for organizing large formal specifications to ensure maintainability, clear dependencies, and systematic growth.
 
 ## 6.1 Layer Dependencies
 
@@ -22,15 +22,15 @@ This section establishes patterns for organizing large protocol specifications t
 
 ```lean
 /-
-  Properties     (Proofs about the system)
-       ↑
-     Meta         (Reflection and meta-programming)
-       ↑
-    Network       (Distributed operations)
-       ↑
-     Core         (Domain objects)
-       ↑
-   Foundation     (Mathematical primitives)
+ Properties (Proofs about the system)
+ ↑
+ Meta (Reflection and meta-programming)
+ ↑
+ Network (Distributed operations)
+ ↑
+ Core (Domain objects)
+ ↑
+ Foundation (Mathematical primitives)
 -/
 ```
 
@@ -43,30 +43,30 @@ import Mathlib.Data.Real.Basic
 /-- Time as a non-negative real number -/
 def Time := {t : ℝ // 0 ≤ t}
 
--- Core/Entity.lean  
-import Flourishing.Foundation.Time  -- Depends on Foundation layer
+-- Core/Entity.lean
+import .Foundation.Time -- Depends on Foundation layer
 
 /-- Core domain object depending on Foundation -/
 structure Entity where
-  id : Id
-  createdAt : Time  -- Uses Foundation layer
+ id : Id
+ createdAt : Time -- Uses Foundation layer
 
 -- Network/Consensus.lean
-import Flourishing.Core.Entity  -- Depends on Core layer
+import .Core.Entity -- Depends on Core layer
 
 /-- Network operation depending on Core -/
 def consensusRequired (entities : List Entity) : Bool :=
-  entities.length ≥ 3  -- Uses Core layer
+ entities.length ≥ 3 -- Uses Core layer
 
 -- Properties/Safety.lean
-import Flourishing.Network.Consensus  -- Depends on Network layer
+import .Network.Consensus -- Depends on Network layer
 
 /-- Property about the system -/
-theorem consensus_requires_multiple : 
-    ∀ es, consensusRequired es → es.length > 1 := by
-  intro es h
-  unfold consensusRequired at h
-  linarith
+theorem consensus_requires_multiple :
+ ∀ es, consensusRequired es → es.length > 1 := by
+ intro es h
+ unfold consensusRequired at h
+ linarith
 ```
 
 ## 6.2 Module Structure
@@ -76,32 +76,32 @@ theorem consensus_requires_multiple :
 **Module Organization Patterns**:
 
 ```text
-Flourishing/
+/
 ├── Foundation/
-│   ├── Time.lean                -- Temporal primitives
-│   ├── Space.lean              -- Spatial primitives
-│   ├── Algebra.lean            -- Algebraic structures
-│   ├── Primitives.lean         -- Basic types
-│   └── PrimitivesDecisions.lean -- Normative decisions for Primitives
+│ ├── Time.lean -- Temporal primitives
+│ ├── Space.lean -- Spatial primitives
+│ ├── Algebra.lean -- Algebraic structures
+│ ├── Primitives.lean -- Basic types
+│ └── PrimitivesDecisions.lean -- Normative decisions for Primitives
 ├── Core/
-│   ├── Entity.lean             -- Basic entities
-│   ├── EntityDecisions.lean    -- Normative decisions for Entity
-│   ├── Knowledge.lean          -- Knowledge representation
-│   ├── KnowledgeDecisions.lean -- Normative decisions for Knowledge
-│   └── Resources.lean          -- Resource management
+│ ├── Entity.lean -- Basic entities
+│ ├── EntityDecisions.lean -- Normative decisions for Entity
+│ ├── Knowledge.lean -- Knowledge representation
+│ ├── KnowledgeDecisions.lean -- Normative decisions for Knowledge
+│ └── Resources.lean -- Resource management
 ├── Network/
-│   ├── Consensus.lean          -- Consensus mechanisms
-│   ├── Communication.lean      -- Message passing
-│   └── Synchronization.lean    -- Time sync
+│ ├── Consensus.lean -- Consensus mechanisms
+│ ├── Communication.lean -- Message passing
+│ └── Synchronization.lean -- Time sync
 ├── Meta/
-│   ├── Decision.lean           -- Normative decision framework
-│   ├── AllDecisions.lean       -- Decision aggregator (optional)
-│   ├── Governance.lean         -- Meta-governance
-│   └── Evolution.lean          -- Protocol evolution
+│ ├── Decision.lean -- Normative decision framework
+│ ├── AllDecisions.lean -- Decision aggregator (optional)
+│ ├── Governance.lean -- Meta-governance
+│ └── Evolution.lean -- System evolution
 └── Properties/
-    ├── Safety.lean             -- Safety proofs
-    ├── Liveness.lean           -- Liveness proofs
-    └── Fairness.lean           -- Fairness proofs
+ ├── Safety.lean -- Safety proofs
+ ├── Liveness.lean -- Liveness proofs
+ └── Fairness.lean -- Fairness proofs
 ```
 
 **Decision File Pattern**: Each major module has an associated `*Decisions.lean` file that captures all normative (value-laden) choices as typed values. This co-locates decisions with the code they affect and enables version tracking, dependency analysis, and machine processing of design rationale.
@@ -110,13 +110,13 @@ Flourishing/
 
 ```lean
 -- Good: Minimal, explicit imports
-import Flourishing.Foundation.Time
-import Flourishing.Core.Entity
+import .Foundation.Time
+import .Core.Entity
 import Mathlib.Data.List.Basic
 
 -- Bad: Wildcard imports
-import Flourishing.Core  -- Imports everything!
-import Mathlib           -- Far too much!
+import .Core -- Imports everything!
+import Mathlib -- Far too much!
 ```
 
 **Linter Compliance**:
@@ -134,10 +134,10 @@ import Mathlib           -- Far too much!
 -- Types: UpperCamelCase
 structure ProposalVote where ...
 inductive ConsentState where ...
-class Flourishable (α : Type) where ...
+class Measurable (α : Type) where ...
 
--- Functions/Values: lowerCamelCase  
-def calculateFlourishing : Entity → ℝ := ...
+-- Functions/Values: lowerCamelCase
+def calculateMetric : Entity → ℝ := ...
 def minVotingThreshold : ℚ := 2/3
 
 -- Theorems: snake_case describing the property
@@ -149,11 +149,11 @@ class Decidable (p : Prop) where ...
 class Measurable (α : Type) where ...
 
 -- Namespaces: Match module structure
-namespace Flourishing.Core.Entity
-  def update : Entity → Entity := ...
-end Flourishing.Core.Entity
+namespace .Core.Entity
+ def update : Entity → Entity := ...
+end .Core.Entity
 
--- Constants for protocol parameters: UPPER_SNAKE_CASE
+-- Constants for system parameters: UPPER_SNAKE_CASE
 abbrev MAX_PROPOSAL_SIZE : ℕ := 10000
 abbrev DEFAULT_VOTING_WINDOW : Duration := ⟨259200⟩
 ```
@@ -178,18 +178,18 @@ import Mathlib.Algebra.Group.Defs
 import Mathlib.Data.Real.Basic
 import Mathlib.Order.Lattice
 
-import Flourishing.Foundation.Time
-import Flourishing.Foundation.Space
+import .Foundation.Time
+import .Foundation.Space
 
-import Flourishing.Core.Entity
-import Flourishing.Core.Knowledge
+import .Core.Entity
+import .Core.Knowledge
 
-import Flourishing.Network.Messages
+import .Network.Messages
 
 -- Bad: Disorganized imports
-import Flourishing.Core.Entity
+import .Core.Entity
 import Mathlib.Data.Real.Basic
-import Flourishing.Foundation.Time
+import .Foundation.Time
 import Mathlib.Algebra.Group.Defs
 ```
 
@@ -200,12 +200,12 @@ import Mathlib.Algebra.Group.Defs
 -- A.lean
 import B
 structure A where
-  b : B
+ b : B
 
--- B.lean  
-import A  -- Cycle!
+-- B.lean
+import A -- Cycle!
 structure B where
-  a : A
+ a : A
 
 -- Solution: Extract common interface
 -- Common.lean
@@ -215,12 +215,12 @@ structure BInterface where ...
 -- A.lean
 import Common
 structure A extends AInterface where
-  b : BInterface
+ b : BInterface
 
 -- B.lean
 import Common
 structure B extends BInterface where
-  a : AInterface
+ a : AInterface
 ```
 
 ## 6.5 File Organization
@@ -231,7 +231,7 @@ structure B extends BInterface where
 
 ```lean
 import Mathlib.Data.Real.Basic
-import Flourishing.Foundation.Time
+import .Foundation.Time
 
 /-!
 # File Title
@@ -252,23 +252,23 @@ Any important implementation details.
 - [Ref2024] Academic reference
 -/
 
-namespace Flourishing.Layer.Module
+namespace .Layer.Module
 
-open OtherNamespace  -- If needed
+open OtherNamespace -- If needed
 
 section Definitions
-  -- Core type definitions
+ -- Core type definitions
 end Definitions
 
-section Operations  
-  -- Functions operating on the types
+section Operations
+ -- Functions operating on the types
 end Operations
 
 section Properties
-  -- Theorems about the definitions
+ -- Theorems about the definitions
 end Properties
 
-end Flourishing.Layer.Module
+end .Layer.Module
 ```
 
 ## 6.6 Visibility and Encapsulation
@@ -278,25 +278,25 @@ end Flourishing.Layer.Module
 **Visibility Patterns**:
 
 ```lean
-namespace Flourishing.Core
+namespace .Core
 
 -- Private implementation detail: pure calculation
 private def calculateWeight (e : Entity) : ℚ :=
-  -- Complex internal logic that should not be exposed
-  (e.reputation * e.stake) / 100
+ -- Complex internal logic that should not be exposed
+ (e.reputation * e.stake) / 100
 
 -- Public API: visible outside namespace
 /-- Public function to get an entity's voting power -/
 def votingPower (e : Entity) : ℚ :=
-  let weight := calculateWeight e
-  -- Additional public logic
-  if e.isActive then weight else weight / 2
+ let weight := calculateWeight e
+ -- Additional public logic
+ if e.isActive then weight else weight / 2
 
 -- Protected pattern using sections
 section InternalHelpers
-  -- These are only for this file
-  private def validateName (n : String) : Bool :=
-    n.length > 0 ∧ n.all Char.isAlphanum
+ -- These are only for this file
+ private def validateName (n : String) : Bool :=
+ n.length > 0 ∧ n.all Char.isAlphanum
 end InternalHelpers
 
 -- Opaque types hide implementation
@@ -306,9 +306,9 @@ opaque ResourceImpl : Type := List Resource
 def Resources := ResourceImpl
 
 def Resources.empty : Resources :=
-  cast (by rfl) []
+ cast (by rfl) []
 
-end Flourishing.Core
+end .Core
 ```
 
 ## Summary of Code Organization

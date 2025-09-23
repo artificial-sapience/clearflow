@@ -1,7 +1,7 @@
 # 2. Type Design Patterns
 
-> Version: 0.1.0-draft  
-> Status: Section 1 Draft for Review  
+> Version: 0.1.0-draft
+> Status: Section 1 Draft for Review
 > Part of: Lean 4 Specification Standard
 
 ## Core Philosophy Reminder
@@ -30,34 +30,34 @@ This section provides concrete patterns for implementing the principles from Sec
 ```lean
 import Mathlib.Data.Finset.Basic
 
-/-- Semantic types for different entity roles in the protocol -/
+/-- Semantic types for different entity roles in the system -/
 inductive EntityRole
-  | proposer      /-- Can create proposals -/
-  | reviewer      /-- Can review but not propose -/
-  | observer      /-- Read-only access -/
-  | administrator /-- Meta-governance rights -/
-  deriving Repr, DecidableEq
+ | proposer /-- Can create proposals -/
+ | reviewer /-- Can review but not propose -/
+ | observer /-- Read-only access -/
+ | administrator /-- Meta-governance rights -/
+ deriving Repr, DecidableEq
 
 /-- Permissions are derived from roles, not string parsing -/
 def EntityRole.canPropose : EntityRole → Bool
-  | .proposer => true
-  | .administrator => true
-  | _ => false
+ | .proposer => true
+ | .administrator => true
+ | _ => false
 
 def EntityRole.canReview : EntityRole → Bool
-  | .reviewer => true
-  | .proposer => true
-  | .administrator => true
-  | .observer => false
+ | .reviewer => true
+ | .proposer => true
+ | .administrator => true
+ | .observer => false
 
 /-- Type-safe role assignment with no string parsing -/
 structure Entity where
-  id : Id
-  roles : Finset EntityRole  -- Can have multiple roles
-  
+ id : Id
+ roles : Finset EntityRole -- Can have multiple roles
+
 /-- Check permissions through types, not strings -/
 def Entity.canPropose (e : Entity) : Bool :=
-  e.roles.any (·.canPropose)
+ e.roles.any (·.canPropose)
 ```
 
 **Anti-Pattern to Avoid**:
@@ -65,11 +65,11 @@ def Entity.canPropose (e : Entity) : Bool :=
 ```lean
 -- NEVER DO THIS: Encoding semantics in strings
 structure BadEntity where
-  id : Id
-  roleString : String  -- "proposer", "reviewer", etc.
-  
+ id : Id
+ roleString : String -- "proposer", "reviewer", etc.
+
 def BadEntity.canPropose (e : BadEntity) : Bool :=
-  e.roleString.contains "proposer" || e.roleString.contains "admin"  -- String parsing!
+ e.roleString.contains "proposer" || e.roleString.contains "admin" -- String parsing!
 ```
 
 ## 2.2 Dependent Types for Invariants
@@ -100,35 +100,35 @@ def mkProbability (p : ℝ) (h : 0 ≤ p ∧ p ≤ 1) : Probability := ⟨p, h�
 
 /-- Operations preserve the invariant -/
 def Probability.complement (p : Probability) : Probability :=
-  ⟨1 - p.val, by
-    obtain ⟨hp₀, hp₁⟩ := p.property
-    constructor <;> linarith⟩
+ ⟨1 - p.val, by
+ obtain ⟨hp₀, hp₁⟩ := p.property
+ constructor <;> linarith⟩
 
 /-- Valid identifier: non-empty, alphanumeric with underscores -/
 def ValidIdentifier := {s : String // s.length > 0 ∧ s.all (fun c => c.isAlphanum || c = '_')}
 
 /-- Time intervals with proven ordering using structure -/
 structure TimeInterval where
-  start : Time
-  finish : Time
-  valid : start ≤ finish  -- Proof field ensures validity
+ start : Time
+ finish : Time
+ valid : start ≤ finish -- Proof field ensures validity
 
 /-- Duration is provably non-negative -/
 def TimeInterval.duration (ti : TimeInterval) : {d : ℝ // 0 ≤ d} :=
-  ⟨ti.finish.val - ti.start.val, by linarith [ti.valid]⟩
+ ⟨ti.finish.val - ti.start.val, by linarith [ti.valid]⟩
 
 /-- Bounded collections with size guarantees -/
 def BoundedList (α : Type) (n : ℕ) := {l : List α // l.length ≤ n}
 
 /-- Adding requires proof we won't exceed bound -/
-def BoundedList.cons {α : Type} {n : ℕ} (x : α) (bl : BoundedList α n) 
-    (h : bl.val.length < n) : BoundedList α n :=
-  ⟨x :: bl.val, by
-    simp only [List.length_cons]  -- New length is (old length + 1)
-    -- We need to prove: bl.val.length + 1 ≤ n
-    -- We know from h: bl.val.length < n
-    -- This is equivalent to: bl.val.length + 1 ≤ n
-    exact Nat.succ_le_of_lt h⟩
+def BoundedList.cons {α : Type} {n : ℕ} (x : α) (bl : BoundedList α n)
+ (h : bl.val.length < n) : BoundedList α n :=
+ ⟨x :: bl.val, by
+ simp only [List.length_cons] -- New length is (old length + 1)
+ -- We need to prove: bl.val.length + 1 ≤ n
+ -- We know from h: bl.val.length < n
+ -- This is equivalent to: bl.val.length + 1 ≤ n
+ exact Nat.succ_le_of_lt h⟩
 ```
 
 ## 2.3 Phantom Types for Disambiguation
@@ -149,8 +149,8 @@ def BoundedList.cons {α : Type} {n : ℕ} (x : α) (bl : BoundedList α n)
 ```lean
 /-- Generic ID type parameterized by phantom type -/
 structure Id (entity : Type) where
-  value : String
-  deriving Repr
+ value : String
+ deriving Repr
 
 /-- Phantom tags - these types are never instantiated -/
 inductive UserTag
@@ -160,7 +160,7 @@ inductive ContentTag
 
 /-- Type-safe ID aliases -/
 def UserId := Id UserTag
-def ProposalId := Id ProposalTag  
+def ProposalId := Id ProposalTag
 def EntityId := Id EntityTag
 def ContentId := Id ContentTag
 
@@ -171,35 +171,35 @@ def submitProposal (author : UserId) (proposal : ProposalId) : Bool := sorry
 
 /-- Example: Type error at compile time -/
 def example_type_safety (uid : UserId) (pid : ProposalId) : Unit :=
-  -- let _ := getUser pid  -- COMPILE ERROR! Expected UserId, got ProposalId
-  let _ := getUser uid  -- This compiles  
-  let _ := submitProposal uid pid  -- Correct types
-  ()  -- Return Unit
+ -- let _ := getUser pid -- COMPILE ERROR! Expected UserId, got ProposalId
+ let _ := getUser uid -- This compiles
+ let _ := submitProposal uid pid -- Correct types
+ () -- Return Unit
 
 /-- Phantom types for units of measure -/
 structure Quantity (unit : Type) where
-  value : ℝ
+ value : ℝ
 
 inductive Meters
 inductive Seconds
 inductive MetersPerSecond
 
 def Distance := Quantity Meters
-def Duration := Quantity Seconds  
+def Duration := Quantity Seconds
 def Velocity := Quantity MetersPerSecond
 
 /-- Type-safe operations -/
 def velocity (d : Distance) (t : Duration) : Velocity :=
-  ⟨d.value / t.value⟩
+ ⟨d.value / t.value⟩
 
--- velocity t d  -- Would be a compile error! (wrong argument order)
+-- velocity t d -- Would be a compile error! (wrong argument order)
 ```
 
 ## 2.4 Abstract Mathematical Models
 
-**Pattern**: Define protocol concepts using abstract mathematical types, leaving concrete representations to implementations.
+**Pattern**: Define system concepts using abstract mathematical types, leaving concrete representations to implementations.
 
-**Rationale**: A protocol specification must be timeless and independent of any specific technology. By defining interfaces as abstract mathematical structures (e.g., an "append-only log" with certain proven properties), we avoid tying the protocol to a specific implementation (like a Merkle Tree, a Git repository, or a blockchain). This ensures the protocol remains valid and can be implemented by future technologies we cannot yet imagine, while guaranteeing that any compliant implementation will have the mathematically proven properties required for safety and interoperability.
+**Rationale**: A formal specification must be timeless and independent of any specific technology. By defining interfaces as abstract mathematical structures (e.g., an "append-only log" with certain proven properties), we avoid tying the system to a specific implementation (like a Merkle Tree, a Git repository, or a blockchain). This ensures the system remains valid and can be implemented by future technologies we cannot yet imagine, while guaranteeing that any compliant implementation will have the mathematically proven properties required for safety and interoperability.
 
 **Implementation Strategy**:
 
@@ -218,23 +218,23 @@ constant Content : Type
 
 /-- Abstract storage with mathematical specification -/
 structure ContentStore where
-  /-- The set of stored content -/
-  contents : Set Content
-  /-- Retrieval function (mathematical, not algorithmic) -/
-  retrieve : Content → Prop
-  /-- Consistency: can only retrieve what's stored -/
-  retrieve_subset : ∀ c, retrieve c → c ∈ contents
+ /-- The set of stored content -/
+ contents : Set Content
+ /-- Retrieval function (mathematical, not algorithmic) -/
+ retrieve : Content → Prop
+ /-- Consistency: can only retrieve what's stored -/
+ retrieve_subset : ∀ c, retrieve c → c ∈ contents
 
 /-- Merkle tree specified abstractly as properties, not structure -/
 structure MerkleTree where
-  /-- Root hash is an abstract identifier -/
-  root : Id
-  /-- Verification is a mathematical relation, not an algorithm -/
-  verifies : Content → Id → Prop
-  /-- Completeness property -/
-  complete : ∀ c h, verifies c h → ∃ path, validPath path root h
-  /-- Soundness property -/
-  sound : ∀ c₁ c₂ h, verifies c₁ h → verifies c₂ h → c₁ = c₂
+ /-- Root hash is an abstract identifier -/
+ root : Id
+ /-- Verification is a mathematical relation, not an algorithm -/
+ verifies : Content → Id → Prop
+ /-- Completeness property -/
+ complete : ∀ c h, verifies c h → ∃ path, validPath path root h
+ /-- Soundness property -/
+ sound : ∀ c₁ c₂ h, verifies c₁ h → verifies c₂ h → c₁ = c₂
 
 -- Note: No commitment to binary trees, hash functions, or other implementation details
 ```
@@ -244,10 +244,10 @@ structure MerkleTree where
 ```lean
 -- NEVER DO THIS: Exposing implementation details
 structure BadMerkleTree where
-  root : ByteArray  -- Implementation detail!
-  hashFn : ByteArray → ByteArray  -- Algorithm, not property!
-  leftChild : Option BadMerkleTree  -- Forces binary tree structure!
-  rightChild : Option BadMerkleTree
+ root : ByteArray -- Implementation detail!
+ hashFn : ByteArray → ByteArray -- Algorithm, not property!
+ leftChild : Option BadMerkleTree -- Forces binary tree structure!
+ rightChild : Option BadMerkleTree
 ```
 
 ## Summary of Type Design Patterns

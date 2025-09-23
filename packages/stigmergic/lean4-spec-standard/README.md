@@ -1,7 +1,7 @@
 # Lean 4 Specification Standard
 
-> Version: 0.1.0-draft  
-> Status: Section 1 Draft for Review  
+> Version: 0.1.0-draft
+> Status: Section 1 Draft for Review
 > Purpose: Unified standard for mathematically rigorous, type-safe Lean 4 specifications
 
 ## Overview

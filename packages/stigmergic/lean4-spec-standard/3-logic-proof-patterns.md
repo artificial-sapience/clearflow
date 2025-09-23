@@ -1,7 +1,7 @@
 # 3. Logic and Proof Patterns
 
-> Version: 0.1.0-draft  
-> Status: Section 1 Draft for Review  
+> Version: 0.1.0-draft
+> Status: Section 1 Draft for Review
 > Part of: Lean 4 Specification Standard
 
 ## Core Philosophy Reminder
@@ -14,14 +14,14 @@ This section establishes patterns and requirements for proofs that ensure every 
 
 ## 3.1 What Must Be Proven
 
-**Requirement**: Every claim about protocol behavior MUST be accompanied by a machine-checkable proof.
+**Requirement**: Every claim about system behavior MUST be accompanied by a machine-checkable proof.
 
 **Categories of Required Proofs**:
 
 1. **Invariant Preservation**: Functions that operate on constrained types must prove they maintain invariants
 2. **Totality**: All functions must handle all possible inputs (no partial functions without explicit domains)
 3. **Termination**: Recursive functions must prove they terminate
-4. **Composition Properties**: Prove that composing protocol operations maintains safety properties
+4. **Composition Properties**: Prove that composing system operations maintains safety properties
 5. **Impossibility Results**: Prove that certain bad states cannot be reached
 
 **Example - Comprehensive Proof Requirements**:
@@ -30,42 +30,42 @@ This section establishes patterns and requirements for proofs that ensure every 
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.List.Basic
 
-/-- A protocol state that must maintain invariants -/
+/-- A system state that must maintain invariants -/
 structure ProtocolState where
-  participants : ℕ
-  activeProposals : ℕ
-  -- Invariant: can't have more proposals than participants
-  inv : activeProposals ≤ participants
+ participants : ℕ
+ activeProposals : ℕ
+ -- Invariant: can't have more proposals than participants
+ inv : activeProposals ≤ participants
 
 /-- Adding a participant maintains the invariant -/
 theorem addParticipant_preserves_inv (s : ProtocolState) :
-    let s' : ProtocolState := {
-      participants := s.participants + 1,
-      activeProposals := s.activeProposals,
-      inv := by
-        -- Proof that invariant is maintained
-        have h := s.inv
-        linarith
-    }
-    s'.activeProposals ≤ s'.participants := by
-  -- Proof is immediate from construction
-  exact s'.inv
+ let s' : ProtocolState := {
+ participants := s.participants + 1,
+ activeProposals := s.activeProposals,
+ inv := by
+ -- Proof that invariant is maintained
+ have h := s.inv
+ linarith
+ }
+ s'.activeProposals ≤ s'.participants := by
+ -- Proof is immediate from construction
+ exact s'.inv
 
 /-- Composition preserves invariants -/
-theorem compose_preserves_safety 
-    (f g : ProtocolState → ProtocolState)
-    (hf : ∀ s, (f s).activeProposals ≤ (f s).participants)
-    (hg : ∀ s, (g s).activeProposals ≤ (g s).participants) :
-    ∀ s, ((f ∘ g) s).activeProposals ≤ ((f ∘ g) s).participants := by
-  intro s
-  exact hf (g s)
+theorem compose_preserves_safety
+ (f g : ProtocolState → ProtocolState)
+ (hf : ∀ s, (f s).activeProposals ≤ (f s).participants)
+ (hg : ∀ s, (g s).activeProposals ≤ (g s).participants) :
+ ∀ s, ((f ∘ g) s).activeProposals ≤ ((f ∘ g) s).participants := by
+ intro s
+ exact hf (g s)
 
 /-- Prove certain states are impossible -/
 theorem no_negative_participants : ¬∃ (s : ProtocolState), s.participants = 0 ∧ s.activeProposals > 0 := by
-  intro ⟨s, hp, ha⟩
-  have : s.activeProposals ≤ s.participants := s.inv
-  rw [hp] at this
-  linarith
+ intro ⟨s, hp, ha⟩
+ have : s.activeProposals ≤ s.participants := s.inv
+ rw [hp] at this
+ linarith
 ```
 
 ## 3.2 Proof Patterns
@@ -81,7 +81,7 @@ theorem no_negative_participants : ¬∃ (s : ProtocolState), s.participants = 0
 
 ### 3.2.1 Totality and Termination by Construction
 
-**Rationale**: Non-terminating functions are not just theoretical concerns—they represent critical vulnerabilities. In a distributed protocol, non-terminating functions can be triggered by malicious inputs, leading to denial-of-service attacks that consume infinite computational resources. Proving termination for all functions is therefore a fundamental security requirement.
+**Rationale**: Non-terminating functions are not just theoretical concerns—they represent critical vulnerabilities. In a distributed system, non-terminating functions can be triggered by malicious inputs, leading to denial-of-service attacks that consume infinite computational resources. Proving termination for all functions is therefore a fundamental security requirement.
 
 **Example - Termination Patterns**:
 
@@ -91,21 +91,21 @@ import Mathlib.Data.Nat.Basic
 
 /-- Structural recursion: automatically terminating -/
 def sum : List ℕ → ℕ
-  | [] => 0
-  | x :: xs => x + sum xs  -- Lean proves termination automatically
+ | [] => 0
+ | x :: xs => x + sum xs -- Lean proves termination automatically
 
 /-- Well-founded recursion: manual termination proof -/
 def ackermann : ℕ → ℕ → ℕ
-  | 0, n => n + 1
-  | m + 1, 0 => ackermann m 1
-  | m + 1, n + 1 => ackermann m (ackermann (m + 1) n)
-  termination_by m n => (m, n)  -- Lexicographic ordering
+ | 0, n => n + 1
+ | m + 1, 0 => ackermann m 1
+ | m + 1, n + 1 => ackermann m (ackermann (m + 1) n)
+ termination_by m n => (m, n) -- Lexicographic ordering
 
 /-- Partial functions must be explicit about their domain -/
 def safeDiv (a b : ℕ) (h : b ≠ 0) : ℕ := a / b
 
 -- This would be rejected: partial function without domain restriction
--- def unsafeDiv (a b : ℕ) : ℕ := a / b  -- What if b = 0?
+-- def unsafeDiv (a b : ℕ) : ℕ := a / b -- What if b = 0?
 ```
 
 ### 3.2.2 Property-Based Testing as Proof Discovery
@@ -116,11 +116,11 @@ def safeDiv (a b : ℕ) (h : b ≠ 0) : ℕ := a / b
 
 ```lean
 import Mathlib.Data.List.Basic
-import Plausible  -- For QuickCheck-style testing
+import Plausible -- For QuickCheck-style testing
 
 -- Step 1: Hypothesis (incorrect)
 #test_impl reverse_append_wrong :=
-  ∀ (l₁ l₂ : List ℕ), (l₁ ++ l₂).reverse = l₁.reverse ++ l₂.reverse
+ ∀ (l₁ l₂ : List ℕ), (l₁ ++ l₂).reverse = l₁.reverse ++ l₂.reverse
 
 -- Step 2: Testing finds counterexample
 -- Result: Found counterexample!
@@ -129,14 +129,14 @@ import Plausible  -- For QuickCheck-style testing
 
 -- Step 3: Corrected theorem
 theorem reverse_append_correct (l₁ l₂ : List ℕ) :
-    (l₁ ++ l₂).reverse = l₂.reverse ++ l₁.reverse := by
-  induction l₁ with
-  | nil => simp
-  | cons x xs ih => simp [ih]
+ (l₁ ++ l₂).reverse = l₂.reverse ++ l₁.reverse := by
+ induction l₁ with
+ | nil => simp
+ | cons x xs ih => simp [ih]
 
 -- Step 4: Test the corrected version
 #test_impl reverse_append_correct_test :=
-  ∀ (l₁ l₂ : List ℕ), (l₁ ++ l₂).reverse = l₂.reverse ++ l₁.reverse
+ ∀ (l₁ l₂ : List ℕ), (l₁ ++ l₂).reverse = l₂.reverse ++ l₁.reverse
 -- Result: Passed 100 tests ✓
 ```
 
@@ -152,63 +152,63 @@ theorem reverse_append_correct (l₁ l₂ : List ℕ) :
 
 ```lean
 -- ❌ CRITICAL VIOLATION: Laws only in documentation
-class BadFlourishing (α : Type) where
-  enhance : α → α → α
-  measure : α → ℝ
-  /-- Law: enhance is associative -/
-  /-- Law: measure is monotone -/
-  -- These "laws" are just comments! Any instance can violate them!
+class BadComposable (α : Type) where
+ compose : α → α → α
+ measure : α → ℝ
+ /-- Law: compose is associative -/
+ /-- Law: measure is monotone -/
+ -- These "laws" are just comments! Any instance can violate them!
 
 -- This violating instance compiles fine:
-instance : BadFlourishing ℝ where
-  enhance := (· - ·)  -- Not associative!
-  measure := (fun x => -x)  -- Not monotone!
-  -- No compiler error because laws aren't enforced
+instance : BadComposable ℝ where
+ compose := (· - ·) -- Not associative!
+ measure := (fun x => -x) -- Not monotone!
+ -- No compiler error because laws aren't enforced
 
 -- ✅ CORRECT: Laws as proof-requiring fields
-class Flourishable (α : Type) extends LE α where
-  enhance : α → α → α
-  measure : α → ℝ
-  -- Laws that MUST be proven for every instance
-  enhance_assoc : ∀ a b c, enhance (enhance a b) c = enhance a (enhance b c)
-  measure_monotone : ∀ a b, a ≤ b → measure a ≤ measure b
+class Composable (α : Type) extends LE α where
+ compose : α → α → α
+ measure : α → ℝ
+ -- Laws that MUST be proven for every instance
+ compose_assoc : ∀ a b c, compose (compose a b) c = compose a (compose b c)
+ measure_monotone : ∀ a b, a ≤ b → measure a ≤ measure b
 
 -- Now violations are impossible - this won't compile:
--- instance : Flourishable ℝ where
---   enhance := (· - ·)
---   measure := (fun x => -x)
---   enhance_assoc := sorry  -- MUST provide actual proof!
---   measure_monotone := sorry  -- MUST provide actual proof!
+-- instance : Composable ℝ where
+-- compose := (· - ·)
+-- measure := (fun x => -x)
+-- compose_assoc := sorry -- MUST provide actual proof!
+-- measure_monotone := sorry -- MUST provide actual proof!
 ```
 
-**Example - Lawful Protocol Abstraction**:
+**Example - Lawful System Abstraction**:
 
 ```lean
 import Mathlib.Algebra.Order.Group.Defs
 
-/-- A lawful abstraction for types that can flourish -/
-class Flourishable (α : Type) extends LE α where
-  -- Operations
-  enhance : α → α → α
-  diminish : α → α → α
-  measure : α → ℝ
-  
-  -- Laws that MUST be proven for every instance
-  enhance_increases : ∀ a b, a ≤ enhance a b
-  diminish_decreases : ∀ a b, diminish a b ≤ a
-  measure_monotone : ∀ a b, a ≤ b → measure a ≤ measure b
-  enhance_diminish : ∀ a b, enhance (diminish a b) b = a
+/-- A lawful abstraction for types that support composition and decomposition -/
+class Composable (α : Type) extends LE α where
+ -- Operations
+ compose : α → α → α
+ decompose : α → α → α
+ measure : α → ℝ
+
+ -- Laws that MUST be proven for every instance
+ compose_increases : ∀ a b, a ≤ compose a b
+ decompose_decreases : ∀ a b, decompose a b ≤ a
+ measure_monotone : ∀ a b, a ≤ b → measure a ≤ measure b
+ compose_decompose : ∀ a b, compose (decompose a b) b = a
 
 /-- Concrete instance with ALL laws proven -/
-instance : Flourishable ℝ where
-  enhance := (· + ·)
-  diminish := (· - ·)
-  measure := id
-  
-  enhance_increases := fun a b => le_add_of_nonneg_right (le_refl b)
-  diminish_decreases := fun a b => sub_le a b
-  measure_monotone := fun a b h => h
-  enhance_diminish := fun a b => add_sub_cancel a b
+instance : Composable ℝ where
+ compose := (· + ·)
+ decompose := (· - ·)
+ measure := id
+
+ compose_increases := fun a b => le_add_of_nonneg_right (le_refl b)
+ decompose_decreases := fun a b => sub_le a b
+ measure_monotone := fun a b h => h
+ compose_decompose := fun a b => add_sub_cancel a b
 ```
 
 ### 3.2.4 Decidability for Computable Predicates
@@ -222,18 +222,18 @@ import Mathlib.Data.List.Basic
 
 /-- A logical predicate (not computable by default) -/
 def hasQuorum (n : ℕ) (total : ℕ) : Prop :=
-  3 * n > 2 * total
+ 3 * n > 2 * total
 
 /-- Proof that the predicate is decidable (computable) -/
 instance (n total : ℕ) : Decidable (hasQuorum n total) :=
-  inferInstanceAs (Decidable (3 * n > 2 * total))
+ inferInstanceAs (Decidable (3 * n > 2 * total))
 
 /-- Now we can use it in computation -/
 def canProceed (votes total : ℕ) : String :=
-  if hasQuorum votes total then
-    "Proceed with proposal"
-  else
-    "Insufficient votes"
+ if hasQuorum votes total then
+ "Proceed with proposal"
+ else
+ "Insufficient votes"
 
 -- The predicate is both logically precise and computationally usable
 example : canProceed 7 10 = "Proceed with proposal" := rfl
@@ -258,36 +258,36 @@ import Mathlib.Data.Vector.Basic
 
 /-- Return a value with its proof of property -/
 def findPositive (l : List ℝ) : Option {x : ℝ // x > 0 ∧ x ∈ l} :=
-  match l.find? (· > 0) with
-  | none => none
-  | some x => 
-    if h : x > 0 then
-      some ⟨x, h, List.find?_some _ _ ▸ rfl⟩
-    else none
+ match l.find? (· > 0) with
+ | none => none
+ | some x =>
+ if h : x > 0 then
+ some ⟨x, h, List.find?_some _ _ ▸ rfl⟩
+ else none
 
 /-- Bounded access with compile-time bounds checking -/
 def safeGet {n : ℕ} (v : Vector α n) (i : Fin n) : α :=
-  v.get i  -- No runtime bounds check needed!
+ v.get i -- No runtime bounds check needed!
 
 /-- Witness-bearing comparison -/
 inductive CompareResult (a b : ℝ) : Type
-  | lt (h : a < b) : CompareResult a b
-  | eq (h : a = b) : CompareResult a b  
-  | gt (h : a > b) : CompareResult a b
+ | lt (h : a < b) : CompareResult a b
+ | eq (h : a = b) : CompareResult a b
+ | gt (h : a > b) : CompareResult a b
 
 def compare (a b : ℝ) : CompareResult a b :=
-  if h : a < b then .lt h
-  else if h : a = b then .eq h
-  else .gt (by linarith)
+ if h : a < b then .lt h
+ else if h : a = b then .eq h
+ else .gt (by linarith)
 
 /-- Type-level state machine with compile-time transition checking -/
 inductive State : Type
-  | ready | running | done
+ | ready | running | done
 
 inductive ValidTransition : State → State → Type
-  | start : ValidTransition .ready .running
-  | finish : ValidTransition .running .done
-  | reset : ValidTransition .done .ready
+ | start : ValidTransition .ready .running
+ | finish : ValidTransition .running .done
+ | reset : ValidTransition .done .ready
 
 def transition {s₁ s₂ : State} (_ : ValidTransition s₁ s₂) : State := s₂
 
@@ -304,66 +304,68 @@ def transition {s₁ s₂ : State} (_ : ValidTransition s₁ s₂) : State := s�
 
 1. Axioms MUST be declared in a dedicated `Axioms.lean` file
 2. Each axiom MUST include:
-   - Formal statement
-   - Justification referencing published mathematics
-   - Impact analysis on system consistency
-   - Review approval documentation
+
+    - Formal statement
+    - Justification referencing published mathematics
+    - Impact analysis on system consistency
+    - Review approval documentation
+
 3. Axioms SHOULD be eliminable through future mathematical development
 
 **Example - Properly Governed Axioms**:
 
 ```lean
 /-!
-# Protocol Axioms
+# System Axioms
 
-This file contains all axioms used in the protocol specification.
+This file contains all axioms used in the formal specification.
 Each axiom is justified and has undergone independent review.
 -/
 
-/-- The protocol assumes classical logic for decidability.
-    
-    JUSTIFICATION: While constructive proofs are preferred,
-    certain protocol properties require classical reasoning,
-    particularly for proving impossibility results.
-    
-    REFERENCE: Classical logic is consistent with Lean's
-    type theory (see Lean documentation, section 3.4).
-    
-    IMPACT: Enables use of excluded middle and choice.
+/-- The system assumes classical logic for decidability.
 
-    ELIMINATION PATH: Could be removed if all proofs
-    are reconstructed constructively.
+ JUSTIFICATION: While constructive proofs are preferred,
+ certain system properties require classical reasoning,
+ particularly for proving impossibility results.
+
+ REFERENCE: Classical logic is consistent with Lean's
+ type theory (see Lean documentation, section 3.4).
+
+ IMPACT: Enables use of excluded middle and choice.
+
+ ELIMINATION PATH: Could be removed if all proofs
+ are reconstructed constructively.
 -/
 open Classical
 
 /-- Content equality is decidable.
-    
-    JUSTIFICATION: The protocol requires comparing content
-    for deduplication. While content is abstract, we assume
-    a decision procedure exists in any implementation.
-    
-    REFERENCE: Standard assumption in distributed systems
-    (see Lamport, "Time, Clocks..." section 2).
-    
-    IMPACT: Enables content-addressed storage proofs.
-    
-    NOTE: While this is stated as a global axiom, a more modular
-    pattern is to add `[DecidableEq Content]` as a parameter to
-    functions that require it. This makes the dependency explicit
-    at the function level. This global axiom can then be used to
-    satisfy that parameter where needed.
+
+ JUSTIFICATION: The system requires comparing content
+ for deduplication. While content is abstract, we assume
+ a decision procedure exists in any implementation.
+
+ REFERENCE: Standard assumption in distributed systems
+ (see Lamport, "Time, Clocks..." section 2).
+
+ IMPACT: Enables content-addressed storage proofs.
+
+ NOTE: While this is stated as a global axiom, a more modular
+ pattern is to add `[DecidableEq Content]` as a parameter to
+ functions that require it. This makes the dependency explicit
+ at the function level. This global axiom can then be used to
+ satisfy that parameter where needed.
 -/
 axiom content_decidable : DecidableEq Content
 
 /-- Time is continuous (not discrete).
-    
-    JUSTIFICATION: Physical time is continuous. Discrete
-    time models introduce artificial synchronization points.
-    
-    REFERENCE: Standard model in real-time systems
-    (see Kopetz, "Real-Time Systems" ch. 3).
-    
-    IMPACT: Enables continuous evolution proofs.
+
+ JUSTIFICATION: Physical time is continuous. Discrete
+ time models introduce artificial synchronization points.
+
+ REFERENCE: Standard model in real-time systems
+ (see Kopetz, "Real-Time Systems" ch. 3).
+
+ IMPACT: Enables continuous evolution proofs.
 -/
 axiom time_continuous : ∀ (t₁ t₂ : Time), t₁ < t₂ → ∃ t, t₁ < t ∧ t < t₂
 ```
@@ -378,8 +380,8 @@ axiom time_continuous : ∀ (t₁ t₂ : Time), t₁ < t₂ → ∃ t, t₁ < t 
 
 A theorem is reasonably anticipated if it:
 
-1. **Addresses the protocol's stated purpose** - Core to agentic flows, or other primary goals
-2. **Enables known use patterns** - Required by distributed execution, consensus, or identified workflows  
+1. **Addresses the system's stated purpose** - Core to agentic flows, or other primary goals
+2. **Enables known use patterns** - Required by distributed execution, consensus, or identified workflows
 3. **Mitigates specific risks** - Prevents resource exhaustion, consent violations, or security vulnerabilities
 4. **Supports planned features** - Needed for roadmap items like collective measurement or learning
 
@@ -405,40 +407,40 @@ Before implementing proofs, conduct domain analysis:
 Based on the above, we must prove:
 - Order independence for consent
 - Resource bound preservation
-- Flourishing aggregation properties
+- aggregation properties
 -/
 ```
 
 ### 3.5.3 Example: Domain-Driven Theorems
 
 ```lean
-namespace Protocol.DomainProperties
+namespace System.DomainProperties
 
-/-! These theorems address specific anticipated scenarios rather than 
-    mathematical completeness for its own sake. -/
+/-! These theorems address specific anticipated scenarios rather than
+ mathematical completeness for its own sake. -/
 
 -- SCENARIO: Distributed agents execute tasks independently
 -- REQUIREMENT: Local reasoning about possibility
-theorem parallel_possibility_local {α β γ δ : Type} 
-    (T₁ : Task α β) (T₂ : Task γ δ) :
-    (T₁ ⊗ T₂).isPossible ↔ T₁.isPossible ∧ T₂.isPossible := by
-  sorry  -- TODO: Enables distributed execution
+theorem parallel_possibility_local {α β γ δ : Type}
+ (T₁ : Task α β) (T₂ : Task γ δ) :
+ (T₁ ⊗ T₂).isPossible ↔ T₁.isPossible ∧ T₂.isPossible := by
+ sorry -- TODO: Enables distributed execution
 
--- SCENARIO: Consent must be preserved through workflow composition  
+-- SCENARIO: Consent must be preserved through workflow composition
 -- REQUIREMENT: Anti-extraction guarantee
-theorem compose_preserves_consent {α β γ : Type} 
-    (T₁ : Task α β) (T₂ : Task β γ) 
-    [ConsentRequired T₁] [ConsentRequired T₂] :
-    ConsentRequired (T₂ ∘ T₁) := by
-  sorry  -- TODO: Core safety property
+theorem compose_preserves_consent {α β γ : Type}
+ (T₁ : Task α β) (T₂ : Task β γ)
+ [ConsentRequired T₁] [ConsentRequired T₂] :
+ ConsentRequired (T₂ ∘ T₁) := by
+ sorry -- TODO: Core safety property
 
 -- SCENARIO: Resource limits in production environments
 -- REQUIREMENT: Prevent denial-of-service
 theorem compose_resource_bounded {α β γ : Type}
-    [ResourceBounded α] [ResourceBounded β] [ResourceBounded γ]
-    (T₁ : Task α β) (T₂ : Task β γ) :
-    resourceCost (T₂ ∘ T₁) ≤ resourceCost T₁ + resourceCost T₂ := by
-  sorry  -- TODO: Security requirement
+ [ResourceBounded α] [ResourceBounded β] [ResourceBounded γ]
+ (T₁ : Task α β) (T₂ : Task β γ) :
+ resourceCost (T₂ ∘ T₁) ≤ resourceCost T₁ + resourceCost T₂ := by
+ sorry -- TODO: Security requirement
 ```
 
 ### 3.5.4 Documenting Domain Context
@@ -447,16 +449,16 @@ Every domain-driven theorem MUST document its scenario:
 
 ```lean
 /-- Parallel tasks can be verified independently by different agents.
-    
-    DOMAIN SCENARIO: In a distributed collective, agents need to verify
-    task possibility without coordinating. Agent A might be checking T₁
-    while Agent B checks T₂, and they need to reason about T₁ ⊗ T₂.
-    
-    USE CASE: Distributed proposal validation where each validator
-    checks a subset of tasks.
-    
-    WITHOUT THIS: Agents would need global coordination, creating a
-    bottleneck and single point of failure. -/
+
+ DOMAIN SCENARIO: In a distributed collective, agents need to verify
+ task possibility without coordinating. Agent A might be checking T₁
+ while Agent B checks T₂, and they need to reason about T₁ ⊗ T₂.
+
+ USE CASE: Distributed proposal validation where each validator
+ checks a subset of tasks.
+
+ WITHOUT THIS: Agents would need global coordination, creating a
+ bottleneck and single point of failure. -/
 theorem parallel_possibility_local ...
 ```
 
@@ -481,7 +483,7 @@ theorem compose_admissible_characterization ...
 
 When reviewing for domain completeness, verify:
 
-- [ ] Core protocol goals have corresponding theorems
+- [ ] Core system goals have corresponding theorems
 - [ ] Each anticipated workflow has safety properties proven
 - [ ] Security vulnerabilities have prevention theorems
 - [ ] Performance constraints have preservation proofs
@@ -496,7 +498,7 @@ These patterns ensure that:
 - Proofs are structured for human comprehension
 - Verification happens at compile time when possible
 - Axioms are governed and minimal
-- The protocol's safety properties are mathematically guaranteed
+- The system's safety properties are mathematically guaranteed
 - **Domain requirements drive theorem selection beyond pure mathematical completeness**
 
 By following these patterns, we implement the core philosophy: if a property matters, it must be proven, not merely tested or hoped for. We prove what matters to the domain, not just what's mathematically interesting.

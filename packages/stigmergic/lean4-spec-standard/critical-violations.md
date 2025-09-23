@@ -1,7 +1,7 @@
 # Critical Violations to Check First
 
-> Version: 0.1.0-draft  
-> Status: Section 1 Draft for Review  
+> Version: 0.1.0-draft
+> Status: Section 1 Draft for Review
 > Part of: Lean 4 Specification Standard
 
 ## Core Philosophy Reminder
@@ -19,16 +19,16 @@ Before any other review, check for these most common and critical violations. Th
 ```lean
 -- ❌ VIOLATION: Laws as documentation only
 class InformationSpace (ι : Type) where
-  copy : ι → ι × ι
-  erase : ι → Unit
-  /-- Law: Copy preserves information. -/
-  copy_preserves : ∀ i, (copy i).1 = i ∧ (copy i).2 = i  -- This is just a comment!
+ copy : ι → ι × ι
+ erase : ι → Unit
+ /-- Law: Copy preserves information. -/
+ copy_preserves : ∀ i, (copy i).1 = i ∧ (copy i).2 = i -- This is just a comment!
 
 -- ✅ CORRECT: Laws as required proof fields
 class InformationSpace (ι : Type) where
-  copy : ι → ι × ι
-  erase : ι → Unit
-  copy_preserves : ∀ i, (copy i).1 = i ∧ (copy i).2 = i  -- Must prove this!
+ copy : ι → ι × ι
+ erase : ι → Unit
+ copy_preserves : ∀ i, (copy i).1 = i ∧ (copy i).2 = i -- Must prove this!
 ```
 
 **Why Critical**: Without proof fields, any instance can violate the laws. The compiler cannot help you.
@@ -55,13 +55,13 @@ theorem Task.compose_id_left : id ∘ T = T := ...
 ```lean
 -- ❌ VIOLATION: Hidden use of classical logic
 theorem Task.possible_or_impossible := by
-  exact Classical.em _  -- No justification!
+ exact Classical.em _ -- No justification!
 
 -- ✅ CORRECT: Documented use with justification
-/-- Uses classical logic (excluded middle) as impossibility 
-    results require classical reasoning. See Axioms.lean. -/
+/-- Uses classical logic (excluded middle) as impossibility
+ results require classical reasoning. See Axioms.lean. -/
 theorem Task.possible_or_impossible := by
-  exact Classical.em _
+ exact Classical.em _
 ```
 
 ## Quick Detection Guide

@@ -5,7 +5,7 @@
 This means:
 
 - ❌ Documentation claiming a law holds → ✅ Type system forcing the law to be proven
-- ❌ Comments saying "preserves invariants" → ✅ Return types that make violations impossible  
+- ❌ Comments saying "preserves invariants" → ✅ Return types that make violations impossible
 - ❌ "We follow pattern X" → ✅ Compilation fails if pattern X is violated
 - ❌ Testing for correctness → ✅ Proving the absence of failure
 
@@ -22,7 +22,7 @@ This core philosophy represents a fundamental paradigm shift:
 
 ## How to Apply This Philosophy
 
-When designing any part of the protocol:
+When designing any part of a system:
 
 1. **Ask first**: What properties must this guarantee?
 2. **Then ask**: How can the type system enforce these properties?
@@ -32,4 +32,4 @@ This is theorem-driven development: properties precede implementation.
 
 ## Summary
 
-If a property matters to the protocol's correctness, safety, or purpose, it must be expressible in a way that the Lean 4 compiler can verify. No exceptions. No compromises. This is how we build systems worthy of trust.
+If a property matters to the system's correctness, safety, or purpose, it must be expressible in a way that the Lean 4 compiler can verify. No exceptions. No compromises. This is how we build systems worthy of trust.
