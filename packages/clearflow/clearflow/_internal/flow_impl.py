@@ -24,18 +24,26 @@ def _get_node_output_types(node: NodeInterface[Message, Message]) -> tuple[type[
     """Get valid output types for a node.
 
     Returns:
-        Tuple of valid output message types, empty if not determinable.
+        Tuple of valid output message types.
+
+    Raises:
+        TypeError: If node lacks proper type annotations.
 
     """
     hints = get_type_hints(node.process)
 
     if "return" not in hints:
-        return ()
+        raise TypeError(f"Node {node.name} lacks return type annotation")
 
     return_type = hints["return"]
 
-    # Skip validation for TypeVars (generic parameters)
+    # TypeVars are not concrete types - fail fast (except for _Flow which is internal)
     if isinstance(return_type, TypeVar):
+        # Allow _Flow to use generics - it's an internal component
+        # Check if it's a _Flow by looking at the class hierarchy
+        if not any(cls.__name__ == "_Flow" for cls in type(node).__mro__):
+            raise TypeError(f"Node {node.name} uses TypeVar in return type - concrete types required")
+        # For _Flow with TypeVar, skip validation
         return ()
 
     # Python 3.10+ union syntax (X | Y) creates types.UnionType
@@ -48,18 +56,26 @@ def _get_node_input_types(node: NodeInterface[Message, Message]) -> tuple[type[M
     """Get expected input types for a node.
 
     Returns:
-        Tuple of valid input message types, empty if not determinable.
+        Tuple of valid input message types.
+
+    Raises:
+        TypeError: If node lacks proper type annotations.
 
     """
     hints = get_type_hints(node.process)
 
     if "message" not in hints:
-        return ()
+        raise TypeError(f"Node {node.name} lacks message parameter type annotation")
 
     input_type = hints["message"]
 
-    # Skip validation for TypeVars (generic parameters)
+    # TypeVars are not concrete types - fail fast (except for _Flow which is internal)
     if isinstance(input_type, TypeVar):
+        # Allow _Flow to use generics - it's an internal component
+        # Check if it's a _Flow by looking at the class hierarchy
+        if not any(cls.__name__ == "_Flow" for cls in type(node).__mro__):
+            raise TypeError(f"Node {node.name} uses TypeVar in message parameter - concrete types required")
+        # For _Flow with TypeVar, skip validation
         return ()
 
     # Python 3.10+ union syntax (X | Y) creates types.UnionType

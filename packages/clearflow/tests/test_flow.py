@@ -564,3 +564,154 @@ def test_single_responsibility_principle() -> None:
     assert preparation_flow.name == "prepare_validation"
     assert validation_success_flow.name == "ensure_valid"
     assert error_flow.name == "handle_error"
+
+
+def test_strict_typing_no_return_annotation() -> None:
+    """Test that nodes without return type annotations fail fast."""
+    from typing import Any
+
+    class NoReturnTypeNode(Node[ProcessCommand, ProcessedEvent]):
+        @override
+        async def process(self, message):  # type: ignore[no-untyped-def]
+            return ProcessedEvent(
+                result="test",
+                processing_time_ms=1.0,
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )
+
+    node = NoReturnTypeNode(name="no_return")
+    next_node = TransformNode(name="next")
+
+    # Should fail when routing due to missing return annotation
+    with pytest.raises(TypeError, match="lacks return type annotation"):
+        create_flow("strict", node).route(node, ProcessedEvent, next_node)
+
+
+def test_strict_typing_no_message_annotation() -> None:
+    """Test that nodes without message parameter annotations fail fast."""
+
+    class NoMessageTypeNode(Node[ProcessCommand, ProcessedEvent]):
+        @override
+        async def process(self, message) -> ProcessedEvent:  # type: ignore[override]
+            return ProcessedEvent(
+                result="test",
+                processing_time_ms=1.0,
+                triggered_by_id="test",
+                run_id=None,
+            )
+
+    start_node = StartNode(name="start")
+    node = NoMessageTypeNode(name="no_message")
+
+    # Should fail when routing TO a node with no message annotation
+    with pytest.raises(TypeError, match="lacks message parameter type annotation"):
+        create_flow("strict", start_node).route(start_node, ProcessedEvent, node)
+
+
+def test_strict_typing_typevar_return() -> None:
+    """Test that nodes using TypeVar in return type fail fast."""
+    from typing import TypeVar
+
+    T = TypeVar("T")
+
+    class GenericReturnNode(Node[ProcessCommand, ProcessedEvent]):
+        @override
+        async def process(self, message: ProcessCommand) -> T:  # type: ignore[override, type-var]
+            return ProcessedEvent(
+                result="test",
+                processing_time_ms=1.0,
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )  # type: ignore[return-value]
+
+    node = GenericReturnNode(name="generic_return")
+    next_node = TransformNode(name="next")
+
+    # Should fail when routing due to TypeVar in return type
+    with pytest.raises(TypeError, match="uses TypeVar in return type - concrete types required"):
+        create_flow("strict", node).route(node, ProcessedEvent, next_node)
+
+
+def test_strict_typing_typevar_message() -> None:
+    """Test that nodes using TypeVar in message parameter fail fast."""
+    from typing import TypeVar
+
+    T = TypeVar("T")
+
+    class GenericMessageNode(Node[ProcessCommand, ProcessedEvent]):
+        @override
+        async def process(self, message: T) -> ProcessedEvent:  # type: ignore[override]
+            return ProcessedEvent(
+                result="test",
+                processing_time_ms=1.0,
+                triggered_by_id="test",
+                run_id=None,
+            )
+
+    start_node = StartNode(name="start")
+    node = GenericMessageNode(name="generic_message")
+
+    # Should fail when routing due to TypeVar in message parameter
+    with pytest.raises(TypeError, match="uses TypeVar in message parameter - concrete types required"):
+        create_flow("strict", start_node).route(start_node, ProcessedEvent, node)
+
+
+def test_flow_output_validation_with_generics() -> None:
+    """Test that flows with generic types skip validation properly."""
+    # Create a flow with generic types
+    validate = ValidateNode(name="validate")
+    inner_flow = create_flow("generic_flow", validate).end_flow(ValidationPassedEvent)
+
+    # Create a node that will route FROM the inner flow
+    finalize = FinalizeNode(name="finalize")
+
+    # This should work - _Flow with TypeVar should skip validation
+    outer = (
+        create_flow("outer", inner_flow)
+        .route(inner_flow, ValidationPassedEvent, finalize)
+        .end_flow(AnalysisCompleteEvent)
+    )
+
+    assert outer.name == "outer"
+
+
+def test_union_type_input_validation() -> None:
+    """Test that nodes with union type inputs are properly validated."""
+
+    class UnionInputNode(Node[ProcessedEvent | ErrorEvent, AnalysisCompleteEvent]):
+        """Node that accepts union of message types."""
+
+        @override
+        async def process(self, message: ProcessedEvent | ErrorEvent) -> AnalysisCompleteEvent:
+            return AnalysisCompleteEvent(
+                summary="Handled union input",
+                triggered_by_id=message.id,
+                run_id=message.run_id,
+            )
+
+    start = StartNode(name="start")
+    union_node = UnionInputNode(name="union_input")
+    transform = TransformNode(name="transform")
+
+    # Should accept ProcessedEvent (part of union)
+    flow1 = (
+        create_flow("union_test1", start)
+        .route(start, ProcessedEvent, union_node)
+        .end_flow(AnalysisCompleteEvent)
+    )
+
+    # Should accept ErrorEvent (part of union)
+    flow2 = (
+        create_flow("union_test2", start)
+        .route(start, ErrorEvent, union_node)
+        .end_flow(AnalysisCompleteEvent)
+    )
+
+    # Should reject ValidateCommand (not in union)
+    with pytest.raises(TypeError, match="cannot accept ValidateCommand"):
+        (
+            create_flow("union_test3", transform)
+            .route(transform, ValidateCommand, union_node)
+            .end_flow(AnalysisCompleteEvent)
+        )
