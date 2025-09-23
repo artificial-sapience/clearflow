@@ -7,7 +7,6 @@ Events describe outcomes, not instructions.
 from collections.abc import Mapping
 from typing import Literal
 
-from clearflow import Command, Event, StrictBaseModel
 from examples.portfolio_analysis.shared.models import ErrorType, MarketData, NodeName
 from examples.portfolio_analysis.specialists.compliance.models import ComplianceReview
 from examples.portfolio_analysis.specialists.decision.models import TradingDecision
@@ -15,6 +14,8 @@ from examples.portfolio_analysis.specialists.portfolio.models import PortfolioRe
 from examples.portfolio_analysis.specialists.quant.models import QuantInsights
 from examples.portfolio_analysis.specialists.risk.models import RiskAssessment
 from pydantic import Field
+
+from clearflow import Command, Event, StrictBaseModel
 
 # ============================================================================
 # PORTFOLIO CONSTRAINTS

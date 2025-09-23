@@ -2,8 +2,9 @@
 
 from typing import Literal
 
-from clearflow import Command, Event, StrictBaseModel
 from pydantic import Field
+
+from clearflow import Command, Event, StrictBaseModel
 
 
 class ChatMessage(StrictBaseModel):

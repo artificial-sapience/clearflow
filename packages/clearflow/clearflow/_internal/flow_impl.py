@@ -33,7 +33,9 @@ def _get_node_output_types(node: NodeInterface[Message, Message]) -> tuple[type[
     hints = get_type_hints(node.process)
 
     if "return" not in hints:
-        raise TypeError(f"Node {node.name} lacks return type annotation")
+        node_name = getattr(node, "name", type(node).__name__)
+        msg = f"Node {node_name} lacks return type annotation"
+        raise TypeError(msg)
 
     return_type = hints["return"]
 
@@ -42,7 +44,9 @@ def _get_node_output_types(node: NodeInterface[Message, Message]) -> tuple[type[
         # Allow _Flow to use generics - it's an internal component
         # Check if it's a _Flow by looking at the class hierarchy
         if not any(cls.__name__ == "_Flow" for cls in type(node).__mro__):
-            raise TypeError(f"Node {node.name} uses TypeVar in return type - concrete types required")
+            node_name = getattr(node, "name", type(node).__name__)
+            msg = f"Node {node_name} uses TypeVar in return type - concrete types required"
+            raise TypeError(msg)
         # For _Flow with TypeVar, skip validation
         return ()
 
@@ -65,7 +69,9 @@ def _get_node_input_types(node: NodeInterface[Message, Message]) -> tuple[type[M
     hints = get_type_hints(node.process)
 
     if "message" not in hints:
-        raise TypeError(f"Node {node.name} lacks message parameter type annotation")
+        node_name = getattr(node, "name", type(node).__name__)
+        msg = f"Node {node_name} lacks message parameter type annotation"
+        raise TypeError(msg)
 
     input_type = hints["message"]
 
@@ -74,7 +80,9 @@ def _get_node_input_types(node: NodeInterface[Message, Message]) -> tuple[type[M
         # Allow _Flow to use generics - it's an internal component
         # Check if it's a _Flow by looking at the class hierarchy
         if not any(cls.__name__ == "_Flow" for cls in type(node).__mro__):
-            raise TypeError(f"Node {node.name} uses TypeVar in message parameter - concrete types required")
+            node_name = getattr(node, "name", type(node).__name__)
+            msg = f"Node {node_name} uses TypeVar in message parameter - concrete types required"
+            raise TypeError(msg)
         # For _Flow with TypeVar, skip validation
         return ()
 

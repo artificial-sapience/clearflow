@@ -9,9 +9,9 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
-from clearflow import Command, Event, Message
 from pydantic import ValidationError
 
+from clearflow import Command, Event, Message
 from tests.conftest import (
     ProcessCommand,
     ProcessedEvent,

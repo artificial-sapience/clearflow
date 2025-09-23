@@ -10,6 +10,7 @@ from typing import cast, override
 from uuid import uuid4
 
 import pytest
+
 from clearflow import (
     Command,
     Event,

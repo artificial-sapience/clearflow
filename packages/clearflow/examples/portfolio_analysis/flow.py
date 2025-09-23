@@ -4,7 +4,6 @@ Direct message-to-node routing without orchestrators.
 The flow definition is the single source of routing truth.
 """
 
-from clearflow import Node, create_flow
 from examples.portfolio_analysis.messages import (
     AnalysisFailedEvent,
     ComplianceReviewedEvent,
@@ -22,6 +21,8 @@ from examples.portfolio_analysis.nodes import (
     RiskAnalystNode,
 )
 from examples.portfolio_analysis.portfolio_observer import PortfolioAnalysisObserver
+
+from clearflow import Node, create_flow
 
 
 def create_portfolio_analysis_flow() -> Node[StartAnalysisCommand, DecisionMadeEvent]:

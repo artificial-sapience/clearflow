@@ -2,7 +2,6 @@
 
 from typing import override
 
-from clearflow import Message, Node, Observer, create_flow
 from examples.chat.messages import (
     AssistantMessageReceived,
     ChatCompleted,
@@ -11,6 +10,8 @@ from examples.chat.messages import (
 )
 from examples.chat.nodes import AssistantNode, UserNode
 from rich.console import Console
+
+from clearflow import Message, Node, Observer, create_flow
 
 
 class SimpleSpinnerObserver(Observer):

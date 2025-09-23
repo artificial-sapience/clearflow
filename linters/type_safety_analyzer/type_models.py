@@ -7,8 +7,9 @@ both for DSPy signatures and message formats.
 from collections.abc import Sequence
 from typing import Literal
 
-from clearflow import StrictBaseModel
 from pydantic import Field
+
+from clearflow import StrictBaseModel
 
 
 class TypeSafetyIssue(StrictBaseModel):

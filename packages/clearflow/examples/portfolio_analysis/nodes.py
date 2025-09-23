@@ -8,7 +8,6 @@ from typing import override
 
 import dspy
 import openai
-from clearflow import Node
 from examples.portfolio_analysis.messages import (
     AnalysisFailedEvent,
     ComplianceReviewedEvent,
@@ -25,6 +24,8 @@ from examples.portfolio_analysis.specialists.portfolio.signature import Portfoli
 from examples.portfolio_analysis.specialists.quant.signature import QuantAnalystSignature
 from examples.portfolio_analysis.specialists.risk.signature import RiskAnalystSignature
 from pydantic import ValidationError
+
+from clearflow import Node
 
 
 class QuantAnalystNode(Node[StartAnalysisCommand, MarketAnalyzedEvent | AnalysisFailedEvent]):

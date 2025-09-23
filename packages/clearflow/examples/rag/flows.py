@@ -2,7 +2,6 @@
 
 from typing import override
 
-from clearflow import Message, Node, Observer, create_flow
 from examples.rag.messages import (
     AnswerGeneratedEvent,
     ChunksEmbeddedEvent,
@@ -22,6 +21,8 @@ from examples.rag.nodes import (
     QueryEmbedderNode,
 )
 from rich.console import Console
+
+from clearflow import Message, Node, Observer, create_flow
 
 
 class SimpleSpinnerObserver(Observer):

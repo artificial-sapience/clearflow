@@ -3,7 +3,6 @@
 import asyncio
 from typing import override
 
-from clearflow import Node
 from examples.chat.messages import (
     AssistantMessageReceived,
     ChatCompleted,
@@ -13,6 +12,8 @@ from examples.chat.messages import (
 )
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
+
+from clearflow import Node
 
 
 def _to_openai_messages(history: tuple[ChatMessage, ...]) -> tuple[ChatCompletionMessageParam, ...]:

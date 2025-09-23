@@ -130,7 +130,8 @@ skips = ["B101", "B601"]  # Allow asserts and shell usage in controlled contexts
 # Coverage configuration
 [tool.coverage.run]
 source = ["packages/clearflow/clearflow", "packages/stigmergic/stigmergic"]
-branch = true
+branch = true  # Measure branch coverage, not just statement coverage
+parallel = true  # Support parallel test execution
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -139,6 +140,19 @@ omit = [
 ]
 
 [tool.coverage.report]
+# Fail if coverage drops below 100%
+fail_under = 100
+# Show missing line numbers in report
+show_missing = true
+# Number of decimal places for coverage percentages
+precision = 2
+# Skip files with 100% coverage in report (cleaner output)
+skip_covered = false  # Keep false to see all files
+# Skip empty files
+skip_empty = true
+# Sort report by coverage percentage (ascending, so uncovered files appear first)
+sort = "Cover"
+
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -151,9 +165,39 @@ exclude_lines = [
     "Protocol",
 ]
 
+# Also exclude these patterns (in addition to exclude_lines)
+exclude_also = [
+    "if self.debug",
+    "if settings.DEBUG",
+    "def __str__",
+    "def __unicode__",
+    "except ImportError:",
+    "pass",
+    "if 0:",
+    "if False:",
+    "if typing.TYPE_CHECKING:",
+]
+
+# Patterns for partial branch coverage (branches we consider OK if not fully covered)
+partial_branches = [
+    "pragma: no branch",
+    "if __debug__:",
+]
+
 # Pytest configuration
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["packages/clearflow/tests", "packages/stigmergic/tests"]
 python_files = ["test_*.py"]
+# Strict test markers and configuration
+addopts = """
+    --strict-markers
+    --strict-config
+"""
+# Treat warnings as errors
+filterwarnings = [
+    "error",
+    # Allow specific warnings if needed
+    "ignore::DeprecationWarning:pytest_asyncio",
+]

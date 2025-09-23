@@ -7,8 +7,8 @@ The LLM analyzes complete files naturally for optimal pattern recognition.
 from typing import cast, override
 
 import dspy
-from clearflow import Node
 
+from clearflow import Node
 from linters.type_safety_analyzer.messages import AnalysisCompleteEvent, StartAnalysisCommand
 from linters.type_safety_analyzer.type_models import TypeSafetyAnalysisResult
 

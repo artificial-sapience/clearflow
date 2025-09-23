@@ -5,12 +5,12 @@ for mission-critical AI orchestration with type-safe message routing.
 
 """
 
-from typing import override
+from typing import TypeVar, override
 
 import pytest
-from clearflow import Node, create_flow
 from pydantic import ValidationError
 
+from clearflow import Node, create_flow
 from tests.conftest import (
     AnalysisCompleteEvent,
     ErrorEvent,
@@ -568,11 +568,10 @@ def test_single_responsibility_principle() -> None:
 
 def test_strict_typing_no_return_annotation() -> None:
     """Test that nodes without return type annotations fail fast."""
-    from typing import Any
 
     class NoReturnTypeNode(Node[ProcessCommand, ProcessedEvent]):
         @override
-        async def process(self, message):  # type: ignore[no-untyped-def]
+        async def process(self, message):  # type: ignore[no-untyped-def] # noqa: ANN001, ANN202
             return ProcessedEvent(
                 result="test",
                 processing_time_ms=1.0,
@@ -593,12 +592,12 @@ def test_strict_typing_no_message_annotation() -> None:
 
     class NoMessageTypeNode(Node[ProcessCommand, ProcessedEvent]):
         @override
-        async def process(self, message) -> ProcessedEvent:  # type: ignore[override]
+        async def process(self, message) -> ProcessedEvent:  # type: ignore[override] # noqa: ANN001
             return ProcessedEvent(
                 result="test",
                 processing_time_ms=1.0,
-                triggered_by_id="test",
-                run_id=None,
+                triggered_by_id=message.id,
+                run_id=message.run_id,
             )
 
     start_node = StartNode(name="start")
@@ -611,8 +610,6 @@ def test_strict_typing_no_message_annotation() -> None:
 
 def test_strict_typing_typevar_return() -> None:
     """Test that nodes using TypeVar in return type fail fast."""
-    from typing import TypeVar
-
     T = TypeVar("T")
 
     class GenericReturnNode(Node[ProcessCommand, ProcessedEvent]):
@@ -635,8 +632,6 @@ def test_strict_typing_typevar_return() -> None:
 
 def test_strict_typing_typevar_message() -> None:
     """Test that nodes using TypeVar in message parameter fail fast."""
-    from typing import TypeVar
-
     T = TypeVar("T")
 
     class GenericMessageNode(Node[ProcessCommand, ProcessedEvent]):
@@ -645,8 +640,8 @@ def test_strict_typing_typevar_message() -> None:
             return ProcessedEvent(
                 result="test",
                 processing_time_ms=1.0,
-                triggered_by_id="test",
-                run_id=None,
+                triggered_by_id=None,  # type: ignore[arg-type]
+                run_id=None,  # type: ignore[arg-type]
             )
 
     start_node = StartNode(name="start")
@@ -685,7 +680,7 @@ def test_union_type_input_validation() -> None:
         @override
         async def process(self, message: ProcessedEvent | ErrorEvent) -> AnalysisCompleteEvent:
             return AnalysisCompleteEvent(
-                summary="Handled union input",
+                findings="Handled union input",
                 triggered_by_id=message.id,
                 run_id=message.run_id,
             )
@@ -695,18 +690,10 @@ def test_union_type_input_validation() -> None:
     transform = TransformNode(name="transform")
 
     # Should accept ProcessedEvent (part of union)
-    flow1 = (
-        create_flow("union_test1", start)
-        .route(start, ProcessedEvent, union_node)
-        .end_flow(AnalysisCompleteEvent)
-    )
+    _ = create_flow("union_test1", start).route(start, ProcessedEvent, union_node).end_flow(AnalysisCompleteEvent)
 
     # Should accept ErrorEvent (part of union)
-    flow2 = (
-        create_flow("union_test2", start)
-        .route(start, ErrorEvent, union_node)
-        .end_flow(AnalysisCompleteEvent)
-    )
+    _ = create_flow("union_test2", start).route(start, ErrorEvent, union_node).end_flow(AnalysisCompleteEvent)
 
     # Should reject ValidateCommand (not in union)
     with pytest.raises(TypeError, match="cannot accept ValidateCommand"):

@@ -8,9 +8,9 @@ process method and message transformation patterns.
 from typing import override
 
 import pytest
-from clearflow import Node
 from pydantic import ValidationError
 
+from clearflow import Node
 from tests.conftest import (
     AnalysisCompleteEvent,
     AnalyzeCommand,

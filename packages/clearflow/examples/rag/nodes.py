@@ -4,7 +4,6 @@ from typing import override
 
 import faiss
 import numpy as np
-from clearflow import Node
 from examples.rag.messages import (
     AnswerGeneratedEvent,
     ChunksEmbeddedEvent,
@@ -16,6 +15,8 @@ from examples.rag.messages import (
     QueryEmbeddedEvent,
 )
 from examples.rag.utils import call_llm, fixed_size_chunk, get_embedding
+
+from clearflow import Node
 
 
 class DocumentChunkerNode(Node[IndexDocumentsCommand, DocumentsChunkedEvent]):

@@ -8,7 +8,6 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import override
 
-from clearflow import Message, Observer
 from examples.portfolio_analysis.messages import (
     AnalysisFailedEvent,
     ComplianceReviewedEvent,
@@ -20,6 +19,8 @@ from examples.portfolio_analysis.messages import (
 )
 from examples.portfolio_analysis.specialists.portfolio.models import AllocationChange
 from rich.console import Console
+
+from clearflow import Message, Observer
 
 
 def _print_header() -> None:

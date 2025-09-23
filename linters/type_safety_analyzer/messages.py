@@ -6,9 +6,9 @@ analysis workflow, following ClearFlow's message-driven architecture.
 
 from collections.abc import Mapping, Sequence
 
-from clearflow import Command, Event
 from pydantic import Field
 
+from clearflow import Command, Event
 from linters.type_safety_analyzer.type_models import TypeSafetyFix, TypeSafetyIssue
 
 
