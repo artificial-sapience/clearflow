@@ -51,14 +51,14 @@ import Mathlib.Data.Real.Basic
  The structure is private and HOLDS THE PROOF of its own invariant. -/
 private structure Resource where
  capacity : ℝ
- proof : 0 ≤ capacity -- The proof is now a field in the structure
+ proof : 0 ≤ capacity -- The proof is a field in the structure
 
 /-- Public-facing opaque type -/
 def ResourceType : Type := Resource
 
 /-- Smart constructor requiring proof of non-negativity -/
 def mkResource (c : ℝ) (h : 0 ≤ c) : ResourceType :=
- ⟨c, h⟩ -- The proof `h` is now stored within the object
+ ⟨c, h⟩ -- The proof `h` is stored within the object
 
 /-- Accessor function that provides BOTH the value and the proof of the invariant.
  There is no `sorry` because the proof is retrieved from the structure. -/
@@ -360,41 +360,7 @@ structure BadObjection where
 
 ## Summary of Section 1: Core Principles
 
-This section establishes five strengthened principles that create "nuclear-grade" assurance:
-
-### Key Enhancements from Review
-
-1. **Global Mathlib Mandate** - Now explicitly requires using Mathlib's battle-tested definitions rather than reimplementing mathematical structures
-
-2. **1.1: The Principle of Representational Correctness** (formerly "Type Safety Above All")
-
-    - Added smart constructor pattern requirement
-    - Explicit axiom governance with isolation and review requirements
-    - Focus on making invalid states unrepresentable
-
-3. **1.2: Theorem-Driven Development** (formerly "Proof-Driven Development")
-
-    - Formalized theorem-first workflow
-    - Added proof readability requirements
-    - Explicit handling of non-terminating functions
-
-4. **1.3: The Specification/Implementation Firewall** (formerly "System Purity")
-
-    - Explicit monad separation (pure vs IO)
-    - Clear boundaries for bridge code
-    - Stronger requirements on mathematical types
-
-5. **1.4: Principled Mathematical Modeling** (formerly "Mathematical Rigor")
-
-    - Mandatory use of Mathlib structures
-    - Justification requirements for mathematical choices
-    - Custom definitions need review and upstream plan
-
-6. **1.5: Provably Governed Normative Parameters** (formerly "Normative Transparency")
-
-    - Type-safe governance using dependent types
-    - Enumerated parameters preventing string errors
-    - Comprehensive documentation requirements
+This section establishes five strengthened principles that create formally verified assurance.
 
 ### What This Achieves: Proving the Absence of Failure
 

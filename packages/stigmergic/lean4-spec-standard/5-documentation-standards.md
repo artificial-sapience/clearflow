@@ -285,7 +285,7 @@ def DC_KNOW_1 : NormativeDecision := {
  rationale := "In Constructor Theory, knowledge is defined by what transformations it enables. Making this explicit ensures knowledge actively participates in the system rather than being passive data."
  dependencies := []
  status := .Active
- context := some "This was the critical missing piece identified in the first-principles review"
+ context := some "Knowledge must be defined by the transformations it enables"
  supersededBy := none
 }
 
