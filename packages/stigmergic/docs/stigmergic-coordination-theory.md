@@ -527,7 +527,7 @@ But NOT:
 
 A stigmergic system can be formally defined as:
 
-```
+```math
 S = (A, M, E, W, τ, δ)
 ```
 
@@ -544,7 +544,7 @@ Where:
 
 The attraction between agent *a* and message *m* is:
 
-```
+```math
 A(a,m) = σ(W_sem · V_sim(a,m) + W_tmp · e^(-t/τ) + W_grph · (1/d(a,m)) + b)
 ```
 
@@ -1043,6 +1043,7 @@ success = system.run_until_complete()
 This minimal system can grow by adding:
 
 #### Phase 1: Better Attraction (Weeks 1-2)
+
 ```python
 class ImprovedAgent(StigmergicAgent):
     def __init__(self, role: str):
@@ -1066,6 +1067,7 @@ class ImprovedAgent(StigmergicAgent):
 ```
 
 #### Phase 2: Feedback Learning (Weeks 3-4)
+
 ```python
 class LearningAgent(ImprovedAgent):
     def __init__(self, role: str):
@@ -1086,6 +1088,7 @@ class LearningAgent(ImprovedAgent):
 ```
 
 #### Phase 3: Dynamic Specialization (Weeks 5-6)
+
 ```python
 class SpecializingAgent(LearningAgent):
     def discover_specialization(self, env: Environment):

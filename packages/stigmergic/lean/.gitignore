@@ -1,0 +1,28 @@
+# Lean 4 build artifacts
+/.lake/
+/build/
+/lake-packages/
+
+# Lake manifest (auto-generated)
+/lake-manifest.json
+
+# Lean intermediate files
+*.olean
+*.ilean
+*.trace
+*.hash
+
+# C compilation artifacts
+*.c
+*.o
+
+# Editor backup files
+*~
+*.swp
+*.swo
+
+# macOS files
+.DS_Store
+
+# VS Code
+.vscode/

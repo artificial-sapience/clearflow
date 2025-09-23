@@ -144,3 +144,5 @@ audit.json
 git-sync-remote.sh
 
 .ruff_cache/
+
+reference/
