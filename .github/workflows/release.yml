@@ -2,6 +2,14 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to release'
+        required: true
+        type: choice
+        options:
+          - clearflow
+          - stigmergic
 
 env:
   PYTHON_VERSION: "3.13"
@@ -65,31 +73,38 @@ jobs:
       run: |
         uv sync --all-extras
         
-    - name: Update version in pyproject.toml
+    - name: Update version in package pyproject.toml
       run: |
-        # Update the version in pyproject.toml
-        sed -i "s/^version = \".*\"/version = \"${{ needs.version.outputs.versionTag }}\"/" pyproject.toml
-        echo "Building release version: ${{ needs.version.outputs.versionTag }}"
+        # Update the version in the selected package's pyproject.toml
+        PACKAGE="${{ github.event.inputs.package }}"
+        sed -i "s/^version = \".*\"/version = \"${{ needs.version.outputs.versionTag }}\"/" packages/$PACKAGE/pyproject.toml
+        echo "Building $PACKAGE release version: ${{ needs.version.outputs.versionTag }}"
         
     - name: Build package
       run: |
+        # Build the selected package
+        PACKAGE="${{ github.event.inputs.package }}"
+        cd packages/$PACKAGE
         uv build
         
     - name: Check dist contents
       run: |
-        ls -la dist/
+        PACKAGE="${{ github.event.inputs.package }}"
+        ls -la packages/$PACKAGE/dist/
         
     - name: Create and push tag
       run: |
         git config --local user.name "github-actions[bot]"
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        TAG="v${{ needs.version.outputs.versionTag }}"
-        git tag -a "$TAG" -m "Release $TAG"
+        PACKAGE="${{ github.event.inputs.package }}"
+        TAG="$PACKAGE-v${{ needs.version.outputs.versionTag }}"
+        git tag -a "$TAG" -m "Release $PACKAGE ${{ needs.version.outputs.versionTag }}"
         git push origin "$TAG"
         
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        packages-dir: packages/${{ github.event.inputs.package }}/dist/
         skip-existing: true
         
     - name: Publish GitHub Release

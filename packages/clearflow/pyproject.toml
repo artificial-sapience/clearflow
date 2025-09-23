@@ -1,0 +1,71 @@
+[build-system]
+requires = ["hatchling >= 1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clearflow"
+version = "0.0.0"  # Version dynamically set by CI/CD pipeline
+description = "Correctness-first orchestration for emergent AI. Type-safe, deeply immutable, 100% code coverage."
+authors = [
+  {name = "Richard Beauchamp", email = "rbeauchamp@users.noreply.github.com"}
+]
+maintainers = [
+  {name = "ClearFlow Contributors"}
+]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.13"
+
+keywords = [
+    "message-driven", "observability", "event-sourcing", "language-models",
+    "ai-agents", "ai-orchestration", "agents", "type-safe", "mission-critical",
+    "pydantic", "validation", "immutability", "functional-programming"
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "pydantic>=2.11.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/artificial-sapience/clearflow"
+Repository = "https://github.com/artificial-sapience/clearflow.git"
+Source = "https://github.com/artificial-sapience/clearflow"
+Issues = "https://github.com/artificial-sapience/clearflow/issues"
+Examples = "https://github.com/artificial-sapience/clearflow/tree/main/packages/clearflow/examples"
+Inspiration = "https://github.com/The-Pocket/PocketFlow"
+
+[project.optional-dependencies]
+examples = [
+    # Union of all example dependencies
+    "openai>=1.107.0",
+    "python-dotenv>=1.1.0",
+    "dspy>=3.0.3",
+    "pydantic>=2.11.0",
+    "rich>=13.7.1",  # Required by dspy 3.0.3
+    "faiss-cpu>=1.12.0",
+    "numpy>=2.3.0",
+]
+
+[tool.hatch.build]
+# Exclude development and session files from package distributions
+exclude = [
+  "tests/",
+  "examples/",
+  "*.sh",
+  "*.md",
+  ".env*",
+]

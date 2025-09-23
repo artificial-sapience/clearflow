@@ -1,19 +1,29 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-The core package lives in `clearflow/` with flow orchestration (`flow.py`), node definitions (`node.py`), immutable message models (`message.py`), and shared internals under `_internal/`. Public types are re-exported via `clearflow/__init__.py`. Tests mirror the package inside `tests/`, sharing fixtures in `tests/conftest.py`. Reference examples sit under `examples/`, while `docs/` and `linters/` hold assistant-facing docs and custom compliance scripts. Keep CLI helpers in `scripts/` and infrastructure configuration (coverage, linting) in `pyproject.toml`.
+
+Core runtime lives in `clearflow/`: `flow.py` orchestrates flows, `node.py` defines nodes, `message.py` carries immutable payloads, and `_internal/` houses shared internals. Public APIs are re-exported in `clearflow/__init__.py`. Tests mirror the package in `tests/` with reusable factories in `tests/conftest.py`. Reference flows sit in `examples/`, assistant-facing docs land in `docs/`, and compliance tooling stays in `linters/`. CLI helpers reside in `scripts/`, while project-wide configuration (coverage, linting, tooling) is tracked in `pyproject.toml`.
 
 ## Build, Test, and Development Commands
-Create or refresh the local environment with `uv sync --all-extras`. Run the full gate with `./quality-check.sh`, which bootstraps a `.venv` and executes linting, typing, security, and coverage checks. For targeted work, `uv run ruff check clearflow` lints, `uv run ruff format` enforces formatting, and `uv run pyright clearflow tests` performs type analysis. Execute the test suite (enforcing 100% coverage) via `uv run pytest -xv --cov=clearflow --cov-report=term-missing --cov-fail-under=100`.
+
+- `uv sync --all-extras` bootstraps the environment with all optional dependencies.
+- `./quality-check.sh` provisions a managed `.venv` and runs lint, type, security, and coverage gates.
+- `uv run ruff check clearflow` lints; pair with `uv run ruff format` before committing.
+- `uv run pyright clearflow tests` performs static type analysis across code and tests.
+- `uv run pytest -xv --cov=clearflow --cov-report=term-missing --cov-fail-under=100` executes the full test suite with strict coverage.
 
 ## Coding Style & Naming Conventions
-Code targets Python 3.13+, 4-space indentation, and 120-character lines. Ruff’s formatter enforces double quotes and import ordering, so always run it before committing. Keep modules pure and free of runtime side effects—state is immutable by design. Every public function, method, and module must be fully type-annotated; prefer explicit generics for flow nodes. Follow Pydantic model naming (`*Model`) and favour descriptive node names that match their branch outcome.
+
+Target Python 3.13+, four-space indentation, and 120-character lines. Ruff enforces double quotes and import ordering—run the formatter after edits. Keep modules pure with no side effects and prefer immutable patterns throughout. Annotate every public function, method, and module, using explicit generics for flow nodes. Name Pydantic models with a `*Model` suffix and choose node identifiers that reflect their branch outcome.
 
 ## Testing Guidelines
-Write pytest tests in `tests/` using `test_<unit>.py` files and descriptive function names like `test_route_validates_branch`. Maintain branch parity between tests and production modules. Avoid fixtures with global state; rely on dataclass or Pydantic factories in `conftest.py`. The default quality script also runs bespoke guards (`linters/check-test-suite-compliance.py`)—tests must pass without relying on `# pragma: no cover` or muted assertions.
+
+Write pytest tests under `tests/` using filenames like `test_flow_routing.py` and descriptive function names (e.g., `test_route_validates_branch`). Mirror production modules with matching test coverage. Avoid global fixtures; use factories provided in `tests/conftest.py`. Keep total coverage at 100% and leave no gaps—bespoke guards in `linters/check-test-suite-compliance.py` enforce these rules.
 
 ## Commit & Pull Request Guidelines
-Adopt Conventional Commit prefixes (e.g., `feat(flow): ...`, `refactor(node): ...`). Commits should compile, type-check, and keep coverage at 100%. PRs need a clear summary, linked issues, and relevant screenshots or transcripts when UI or agent prompts change. Highlight risk areas and note any follow-up work. Request reviews only after `./quality-check.sh` succeeds locally.
+
+Follow Conventional Commits (e.g., `feat(flow): add dynamic branch` or `fix(node): guard empty payload`). Ensure each commit formats, lints, type-checks, and passes tests. Pull requests should summarise intent, reference issues, and include transcripts or screenshots when agent prompts or outputs change. Highlight risks, note follow-up items, and request review only after `./quality-check.sh` succeeds locally.
 
 ## Quality & Security Gates
-Architecture and immutability linters (`linters/check-architecture-compliance.py`, `linters/check-immutability.py`) must stay green. Security scans (`uv run bandit`, `uv run pip-audit`) run automatically in the quality script; address findings rather than suppressing them. Complexity is enforced with `uv run xenon` at grade A—refactor high-complexity nodes instead of relaxing thresholds.
+
+Stay ahead of automated guards: `linters/check-architecture-compliance.py` and `linters/check-immutability.py` validate design constraints, while `uv run bandit` and `uv run pip-audit` scan for security issues. Complexity must remain at Xenon grade A; refactor high-complexity nodes instead of silencing warnings. Treat findings as blockers until resolved.

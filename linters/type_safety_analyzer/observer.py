@@ -11,6 +11,7 @@ import sys
 from typing import override
 
 from clearflow import Message, Observer
+
 from linters.type_safety_analyzer.messages import AnalysisCompleteEvent, StartAnalysisCommand
 from linters.type_safety_analyzer.type_models import TypeSafetyFix, TypeSafetyIssue
 
