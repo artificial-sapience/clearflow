@@ -1,19 +1,27 @@
 # Continue Session Prompt
 
-Please read `session-context.md` for full context on our journey from ClearFlow to stigmergic coordination.
+Please read `session-context.md` for the full technical context of our coverage fix work.
 
-We've designed a minimal viable stigmergic system to replace ClearFlow, using just three core capabilities: Traces (persistent environmental modifications), Attraction (agents finding relevant traces), and Action (DSPy-powered processing).
+## Current Status
+We're at 98% test coverage after removing defensive exception handlers from ClearFlow's type validation. We have 4 lines uncovered that handle edge cases for nodes without proper type annotations.
 
-Key documents to review:
-- `docs/stigmergic-coordination-theory.md` - Contains the MVP implementation
-- `spec/StigmergicCoordination.lean` - Formal specification
-- `plan.md` - Implementation roadmap
+## Immediate Decision Required
+Should ClearFlow enforce strict typing on all nodes? Please review the philosophical decision point in `session-context.md` and decide between:
 
-Our next task is to begin Phase 1 of the implementation plan: creating the MVP foundation with basic Python package structure, core Trace/Environment/Agent classes, and DSPy integration.
+**Option A: Strict Typing** - Remove remaining edge case handling, fail fast on any node without complete type annotations
 
-Please help me:
-1. Set up the Python package structure for the stigmergic system
-2. Implement the minimal Trace, Environment, and StigmergicAgent classes as specified in the MVP section
-3. Create a simple test that demonstrates replacing a basic ClearFlow workflow with stigmergic coordination
+**Option B: Flexible Typing** - Keep edge case handling and add tests for TypeVars and missing type hints
 
-The goal is to have a working proof-of-concept that shows stigmergic coordination achieving the same result as ClearFlow but through environmental traces rather than explicit routing.
+## Your Stated Philosophy
+- "We must remove dead code and defensive programming"
+- "We must fail fast unless this code is with regard to observability"
+- "We do want coverage of all lines of code"
+
+## To Complete
+1. Make the typing philosophy decision
+2. Either remove the remaining edge cases OR add tests for them
+3. Achieve 100% test coverage
+4. Commit and push changes to `stigmergic-mvp` branch
+5. Verify CI passes and merge to main
+
+The workspace migration is nearly complete - we just need 100% coverage to maintain our quality standards.

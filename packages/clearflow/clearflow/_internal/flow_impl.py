@@ -27,10 +27,7 @@ def _get_node_output_types(node: NodeInterface[Message, Message]) -> tuple[type[
         Tuple of valid output message types, empty if not determinable.
 
     """
-    try:
-        hints = get_type_hints(node.process)
-    except (NameError, AttributeError):
-        return ()
+    hints = get_type_hints(node.process)
 
     if "return" not in hints:
         return ()
@@ -54,10 +51,7 @@ def _get_node_input_types(node: NodeInterface[Message, Message]) -> tuple[type[M
         Tuple of valid input message types, empty if not determinable.
 
     """
-    try:
-        hints = get_type_hints(node.process)
-    except (NameError, AttributeError):
-        return ()
+    hints = get_type_hints(node.process)
 
     if "message" not in hints:
         return ()

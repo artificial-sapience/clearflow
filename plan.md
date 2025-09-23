@@ -1,21 +1,18 @@
 # Development Plan
 
-## Current Priority: Workspace Migration
+## Current Priority: Complete Coverage Fix
 
-### Immediate Issue to Resolve
-- [ ] **Fix coverage regression**: Tests pass with 100% coverage in original structure but only 97% in workspace structure
-  - Missing coverage in `clearflow/_internal/flow_impl.py` lines 32-33, 36, 42, 59-60, 63, 73
-  - These are exception handlers and edge cases that were previously covered
-  - Need to determine why moving to packages/ breaks this coverage
+### Immediate Tasks
+- [x] Added `branch = true` to workspace coverage config
+- [x] Removed defensive exception handlers from type validation
+- [ ] **Achieve 100% coverage**: Currently at 98% with 4 lines uncovered
+  - Lines 33, 39: Handle missing type hints and TypeVars in output validation
+  - Lines 57, 67: Handle missing type hints and Union types in input validation
+  - Decision needed: Remove these edge cases entirely or add tests for them
+  - Philosophy: Enforce strict typing (fail fast) vs allow flexibility for generic nodes
 
-### Workspace Setup Tasks
-- [x] Create root workspace pyproject.toml with shared dependencies
-- [x] Move ClearFlow to packages/clearflow/
-- [x] Move stigmergic-related docs and specs to packages/stigmergic/
-- [x] Update quality-check.sh for workspace paths
-- [x] Update GitHub workflows for multi-package support
-- [ ] Resolve test coverage regression in workspace structure
-- [ ] Create feature branch for workspace migration
+### Final Workspace Migration Steps
+- [ ] Push coverage fix to stigmergic-mvp branch
 - [ ] Ensure CI passes with workspace structure
 - [ ] Merge workspace migration to main
 
