@@ -10,7 +10,7 @@ This document presents a progressive design for reinforcement in stigmergic syst
 
 The MVP implements a complete learning system with:
 
-- **Open economy**: Daily budget adjustments inject new attention above baseline (tracked via `totalInjected`)
+- **Open economy**: Daily budget adjustments change system capacity (tracked via `totalNetAdjustments`)
 - **Signal decay**: Both initial strength and reinforcements decay over time
 - **External grounding**: Outcomes update agent credibility and signal penalty factors
 - **Resource constraints**: Agents have finite budgets (can't spend more than allocated)
@@ -163,17 +163,18 @@ structure ReinforcementDetail where
 /-- Smart constructors to enforce invariants -/
 
 /-- Create MVPAgent with validated invariants -/
-def mkMVPAgent (id : AgentId) (cred : Credibility) (baseline : AttentionMinutes) : MVPAgent :=
+def mkMVPAgent (id : AgentId) (cred : Credibility) (baseline : AttentionMinutes)
+    : Except String MVPAgent :=
   if baseline.val = 0 then
-    panic! "Agent must have positive baseline budget"
+    .error "Agent must have positive baseline budget"
   else
-    { id := id,
-      credibility := cred,
-      baselineBudget := baseline,
-      dailyBudget := baseline,  -- Initially same as baseline
-      spent := ⟨0, by norm_num⟩,
-      cumulativeSpent := ⟨0, by norm_num⟩,
-      lastReset := 0 }
+    .ok { id := id,
+          credibility := cred,
+          baselineBudget := baseline,
+          dailyBudget := baseline,  -- Initially same as baseline
+          spent := ⟨0, by norm_num⟩,
+          cumulativeSpent := ⟨0, by norm_num⟩,
+          lastReset := 0 }
 
 /-- Create MVPSignal with validated initial state -/
 def mkMVPSignal (id : SignalId) (emitter : AgentId) (timestamp : Time)
@@ -207,16 +208,17 @@ structure MVPSignalSpace where
   agents : List MVPAgent
   auditLog : List AuditEvent  -- Complete transaction history
   totalProvisioned : AttentionMinutes  -- Initial baseline budgets (agent creation)
-  totalInjected : AttentionMinutes     -- Net positive adjustments only
-  totalReplenished : AttentionMinutes  -- Spent budget made available again
+  totalNetAdjustments : Real           -- Net capacity changes (can be negative)
+  totalReplenished : AttentionMinutes  -- DIAGNOSTIC: recycled attention (not in conservation)
   currentTime : Time
   nextSignalCounter : Nat  -- Monotonic counter for unique signal IDs
 
 /-- Accounting Invariant:
-    Total attention in system = totalProvisioned + totalInjected
-    This equals: totalInvested + totalAvailable + totalReplenished
-    where totalInvested = signals + reinforcements
+    Current capacity = totalProvisioned + totalNetAdjustments
+    This equals: totalInvested + totalAvailable
+    where totalInvested = sum of attention in signals + reinforcements
           totalAvailable = sum of (dailyBudget - spent) for all agents
+    Note: totalReplenished is a diagnostic counter (not part of conservation)
 -/
 
 /-- Calculate current influence (can be negative for inhibited signals) -/
@@ -484,9 +486,10 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
 
 /-- Reset agent budgets daily with pro-rating to prevent burst exploitation -/
 def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
-  let (reversedAgents, reversedAuditEvents, newReplenished, newInjected) :=
-    space.agents.foldl (fun (agents, audits, replenished, injected) agent =>
+  let (reversedAgents, reversedAuditEvents, newReplenished, newAdjustments) :=
+    space.agents.foldl (fun (agents, audits, replenished, adjustments : Real) agent =>
       if now - agent.lastReset ≥ Constants.DAY_IN_SECONDS then
+        let prevBudget := agent.dailyBudget  -- Capture BEFORE reset
         -- Pro-rate new budget based on unspent portion to prevent burst gaming
         let unspent := agent.dailyBudget - agent.spent
         let unspentRatio : Real :=
@@ -499,13 +502,9 @@ def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
         let multiplier := 0.5 + 1.5 * unspentRatio  -- Range: [0.5, 2.0]
         let newBudget := NNReal.ofReal (agent.baselineBudget.val * multiplier)
 
-        -- Separate replenishment from true injection (fixes double-counting)
+        -- Track actual capacity change from previous budget
         let replenishedAmount := agent.spent  -- Spent becoming available again (recycled)
-        let netAdjustment : Real := newBudget.val - agent.baselineBudget.val  -- Adjustment from baseline
-        let injection := if netAdjustment > 0 then
-          NNReal.ofReal netAdjustment  -- Only count NET NEW attention above baseline
-        else
-          ⟨0, by norm_num⟩  -- No injection if adjustment is negative
+        let netAdjustment : Real := newBudget.val - prevBudget.val  -- Delta from PREVIOUS
 
         let resetAgent := { agent with
           dailyBudget := newBudget,
@@ -522,27 +521,32 @@ def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
           now
 
         (resetAgent :: agents, auditEvent :: audits,
-         replenished + replenishedAmount, injected + injection)
+         replenished + replenishedAmount, adjustments + netAdjustment)  -- Real addition
       else
-        (agent :: agents, audits, replenished, injected))
-    ([], [], ⟨0, by norm_num⟩, ⟨0, by norm_num⟩)  -- Separate accumulators
+        (agent :: agents, audits, replenished, adjustments))
+    ([], [], ⟨0, by norm_num⟩, (0.0 : Real))  -- Real zero for adjustments
 
   let updatedAgents := reversedAgents.reverse  -- Restore original order
   let newAuditEvents := reversedAuditEvents.reverse  -- Restore original order
 
   { space with
     agents := updatedAgents,
-    totalInjected := space.totalInjected + newInjected,
+    totalNetAdjustments := space.totalNetAdjustments + newAdjustments,
     totalReplenished := space.totalReplenished + newReplenished,
     auditLog := newAuditEvents ++ space.auditLog }
 
 /-- Provision a new agent and track initial budget allocation -/
-def provisionAgent (space : MVPSignalSpace) (agent : MVPAgent) : MVPSignalSpace :=
-  let auditEvent := AuditEvent.agentProvisioned agent.id agent.baselineBudget space.currentTime
-  { space with
-    agents := agent :: space.agents,
-    totalProvisioned := space.totalProvisioned + agent.baselineBudget,
-    auditLog := auditEvent :: space.auditLog }
+def provisionAgent (space : MVPSignalSpace) (agentData : AgentId × Credibility × AttentionMinutes)
+    (now : Time) : Except String MVPSignalSpace :=
+  let (id, cred, baseline) := agentData
+  match mkMVPAgent id cred baseline with
+  | .error msg => .error msg
+  | .ok agent =>
+    let auditEvent := AuditEvent.agentProvisioned agent.id agent.baselineBudget now
+    .ok { space with
+          agents := agent :: space.agents,
+          totalProvisioned := space.totalProvisioned + agent.baselineBudget,
+          auditLog := auditEvent :: space.auditLog }
 ```
 
 ### MVP Correctness Properties
@@ -571,22 +575,20 @@ theorem accounting_integrity (space : MVPSignalSpace) :
   -- Sum audit events matches sum of actual allocations
   sorry  -- TODO: Implement audit log invariant proof
 
-/-- Open Economy: Total attention in system properly accounts for all flows -/
+/-- Open Economy: Current capacity equals invested plus available attention -/
 theorem open_economy (space : MVPSignalSpace) :
   let totalAvailable := space.agents.map (fun a => a.dailyBudget - a.spent) |>.sum
   let totalInvested := (space.signals.map (·.initialStrength) |>.sum) +
                        (space.reinforcements.map (·.attentionSpent) |>.sum)
-  -- Accounting identity:
-  -- Total ever added to system = provisioned (initial) + injected (net new above baseline)
-  -- Current state breakdown = invested (locked) + available (unspent)
-  -- Note: totalReplenished is just a counter for recycled attention (not new)
-  space.totalProvisioned + space.totalInjected = totalInvested + totalAvailable := by
+  -- Conservation law with explicit .val coercions for type alignment
+  space.totalProvisioned.val + space.totalNetAdjustments =
+    totalInvested.val + totalAvailable.val := by
   -- Proof outline:
-  -- 1. totalProvisioned = sum of all agent baseline budgets at creation
-  -- 2. totalInjected = sum of all positive adjustments above baseline (from resets)
-  -- 3. totalInvested = attention locked in signals and reinforcements
-  -- 4. totalAvailable = current unspent budgets across all agents
-  -- 5. Conservation: what was added = what is locked + what remains available
+  -- 1. totalProvisioned.val = Real value of initial baseline budgets
+  -- 2. totalNetAdjustments = sum of all budget changes (can be negative)
+  -- 3. totalInvested.val = Real value of locked attention
+  -- 4. totalAvailable.val = Real value of unspent budgets
+  -- 5. Conservation: initial + changes = locked + available
   sorry
 
 /-- Total attention invested is non-negative -/
@@ -678,10 +680,10 @@ theorem reinforcement_preserves_history (space space' : MVPSignalSpace)
 
 ✅ **Open Economy Accounting (FIXED):**
 
-- **Correct injection tracking**: Only counts net new attention above baseline (not replenishment)
-- **Complete audit**: Tracks replenishment, positive adjustments, and negative adjustments separately
+- **Correct delta tracking**: Uses budget changes not baseline distance
+- **Complete audit**: Tracks totalNetAdjustments (can be negative)
 - **Recovery floor**: 0.5x-2.0x budget range based on conservation
-- **Per-agent audit**: Individual budget reset events with full component tracking
+- **Diagnostic counters**: totalReplenished tracked separately (not in conservation)
 
 ✅ **Correct Mathematical Properties:**
 
@@ -845,6 +847,12 @@ def resetBudgetsWithCredibility (space : MVPSignalSpace) (now : Time)
 ```
 
 ## Part 3: Orthogonal Dimensions (Week 3)
+
+**⚠️ WARNING: This section contains known issues and is NOT part of MVP:**
+- Type coercion issues: NNReal * Real operations are ill-typed in Lean
+- Progress accumulation: Currently overwrites instead of aggregating
+- Bounds enforcement: progressPercentage can exceed 100
+These will be addressed in future iterations.
 
 ### Three Independent Channels
 
@@ -1088,8 +1096,12 @@ def informationTheoreticDecayRate (signal : DimensionalSignal)
 
 ## Part 6: Causal Credit Assignment (Month 3)
 
-**NOTE: This section describes future work (NOT part of MVP).**
-CausalOutcome is a separate type from MVPOutcome and requires migration for compatibility.
+**⚠️ WARNING: This section is incomplete and NOT part of MVP:**
+- agentContributions field is completely ignored (all agents get uniform credit)
+- CausalOutcome is not persisted alongside MVPOutcome
+- Migration path needs proper sum type or separate field
+- Credit propagation doesn't use contribution weights
+These issues are deferred to future phases.
 
 ### Full Causal Chain Tracking
 
