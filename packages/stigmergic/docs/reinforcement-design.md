@@ -10,7 +10,7 @@ This document presents a progressive design for reinforcement in stigmergic syst
 
 The MVP implements a complete learning system with:
 
-- **Open economy**: Daily budget resets inject new attention (tracked via `totalInjected`)
+- **Open economy**: Daily budget adjustments inject new attention above baseline (tracked via `totalInjected`)
 - **Signal decay**: Both initial strength and reinforcements decay over time
 - **External grounding**: Outcomes update agent credibility and signal penalty factors
 - **Resource constraints**: Agents have finite budgets (can't spend more than allocated)
@@ -21,6 +21,7 @@ The MVP implements a complete learning system with:
 The `penaltyFactor` mechanism applies ONLY to signals (not reinforcements):
 
 - Affects signal's initial strength decay only
+- Starts at 1.0 (no penalty), decreases to 0.7 on success (30% boost), increases to 1.3 on failure (30% penalty)
 - Allows a "disproven" signal (high penalty) to persist if the collective continues investing
 - Enables ideas to "pivot" from flawed premises through continued collective support
 - This is intentional: the system distinguishes between "originally wrong" and "currently valuable"
@@ -158,6 +159,41 @@ structure ReinforcementDetail where
   totalInfluence : Influence  -- Raw sum of influence
   weightedInfluence : Real    -- Sum of (influence * credibilityAtTime)
   totalAttention : AttentionMinutes  -- Sum of attention spent
+
+/-- Smart constructors to enforce invariants -/
+
+/-- Create MVPAgent with validated invariants -/
+def mkMVPAgent (id : AgentId) (cred : Credibility) (baseline : AttentionMinutes) : MVPAgent :=
+  if baseline.val = 0 then
+    panic! "Agent must have positive baseline budget"
+  else
+    { id := id,
+      credibility := cred,
+      baselineBudget := baseline,
+      dailyBudget := baseline,  -- Initially same as baseline
+      spent := ⟨0, by norm_num⟩,
+      cumulativeSpent := ⟨0, by norm_num⟩,
+      lastReset := 0 }
+
+/-- Create MVPSignal with validated initial state -/
+def mkMVPSignal (id : SignalId) (emitter : AgentId) (timestamp : Time)
+    (strength : AttentionMinutes) : MVPSignal :=
+  { id := id,
+    emitter := emitter,
+    timestamp := timestamp,
+    initialStrength := strength,
+    penaltyFactor := ⟨1.0, by norm_num⟩ }  -- Always starts at 1.0
+
+/-- Create MVPReinforcement with enforced invariant -/
+def mkMVPReinforcement (signalId : SignalId) (by : AgentId) (influence : Influence)
+    (credibility : Credibility) (at : Time) : MVPReinforcement :=
+  let attentionCost := NNReal.ofReal (abs influence)
+  { signalId := signalId,
+    by := by,
+    influence := influence,
+    attentionSpent := attentionCost,  -- Enforces invariant
+    credibilityAtTime := credibility,
+    at := at }
 ```
 
 ### MVP Operations
@@ -338,8 +374,8 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
   -- 1. Update ONLY signal with feedback (not reinforcements, to avoid double penalty)
   let updatedSignals := space.signals.map (fun signal =>
     if signal.id = outcome.signalId then
-      -- Bidirectional adjustment: reward success, penalize failure
-      let adjustment := if outcome.success then 1.3 else 0.7  -- ±30%
+      -- Bidirectional adjustment: reduce penalty on success, increase on failure
+      let adjustment := if outcome.success then 0.7 else 1.3  -- Success reduces penalty
       let newPenalty := NNReal.ofReal (min 2.0 (max 0.1 (signal.penaltyFactor.val * adjustment)))
       { signal with penaltyFactor := newPenalty }
     else signal)
@@ -347,18 +383,22 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
   -- 2. Keep reinforcements unchanged (avoid double penalty)
   let updatedReinforcements := space.reinforcements
 
-  -- 3. Track detailed reinforcement patterns with weighted influence
+  -- 3. Track detailed reinforcement patterns with DELIVERED influence
+  let halfLife := Constants.SIGNAL_HALF_LIFE.val
   let agentDetails : List ReinforcementDetail :=
     relevantReinforcements
       .foldl (fun acc r =>
-        let weighted := r.influence * r.credibilityAtTime.toReal
+        -- Calculate actual delivered influence (including decay)
+        let rAge := Real.ofNat (space'.currentTime - r.at)
+        let decayFactor := Real.rpow 0.5 (rAge / halfLife)
+        let deliveredInfluence := r.influence * r.credibilityAtTime.toReal * decayFactor
         match acc.find? (·.agentId = r.by) with
         | none =>
           { agentId := r.by,
             positiveCount := if r.influence > 0 then 1 else 0,
             negativeCount := if r.influence < 0 then 1 else 0,
             totalInfluence := r.influence,
-            weightedInfluence := weighted,
+            weightedInfluence := deliveredInfluence,  -- Use delivered influence
             totalAttention := r.attentionSpent } :: acc
         | some detail =>
           acc.map (fun d =>
@@ -367,7 +407,7 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
                 positiveCount := d.positiveCount + if r.influence > 0 then 1 else 0,
                 negativeCount := d.negativeCount + if r.influence < 0 then 1 else 0,
                 totalInfluence := d.totalInfluence + r.influence,
-                weightedInfluence := d.weightedInfluence + weighted,
+                weightedInfluence := d.weightedInfluence + deliveredInfluence,  -- Use delivered
                 totalAttention := d.totalAttention + r.attentionSpent }
             else d))
       []
@@ -455,17 +495,17 @@ def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
           else
             0  -- No budget means no bonus
 
-        -- Reward conservative spending, penalize burst spending
-        let multiplier := 1.0 + unspentRatio * Constants.BUDGET_BURST_PENALTY
+        -- Recovery floor: 0.5x minimum, 2.0x maximum based on conservation
+        let multiplier := 0.5 + 1.5 * unspentRatio  -- Range: [0.5, 2.0]
         let newBudget := NNReal.ofReal (agent.baselineBudget.val * multiplier)
 
-        -- Separate replenishment from true injection
-        let replenishedAmount := agent.spent  -- Spent becoming available (not new)
-        let netAdjustment : Real := newBudget.val - agent.dailyBudget.val  -- Can be negative
+        -- Separate replenishment from true injection (fixes double-counting)
+        let replenishedAmount := agent.spent  -- Spent becoming available again (recycled)
+        let netAdjustment : Real := newBudget.val - agent.baselineBudget.val  -- Adjustment from baseline
         let injection := if netAdjustment > 0 then
-          NNReal.ofReal netAdjustment
+          NNReal.ofReal netAdjustment  -- Only count NET NEW attention above baseline
         else
-          ⟨0, by norm_num⟩
+          ⟨0, by norm_num⟩  -- No injection if adjustment is negative
 
         let resetAgent := { agent with
           dailyBudget := newBudget,
@@ -531,19 +571,22 @@ theorem accounting_integrity (space : MVPSignalSpace) :
   -- Sum audit events matches sum of actual allocations
   sorry  -- TODO: Implement audit log invariant proof
 
-/-- Open Economy: Total system attention reconciles without double-counting -/
+/-- Open Economy: Total attention in system properly accounts for all flows -/
 theorem open_economy (space : MVPSignalSpace) :
   let totalAvailable := space.agents.map (fun a => a.dailyBudget - a.spent) |>.sum
   let totalInvested := (space.signals.map (·.initialStrength) |>.sum) +
                        (space.reinforcements.map (·.attentionSpent) |>.sum)
-  -- Correct accounting equation (no double-counting):
-  -- Total in system = provisioned + injected
-  -- This equals: invested + available + replenished
-  ∃ (totalSystemAttention : AttentionMinutes),
-    totalSystemAttention = space.totalProvisioned + space.totalInjected ∧
-    totalSystemAttention = totalInvested + totalAvailable + space.totalReplenished := by
-  -- This properly accounts for all attention flows without double-counting
-  -- Replenishment is tracked separately from new injection
+  -- Accounting identity:
+  -- Total ever added to system = provisioned (initial) + injected (net new above baseline)
+  -- Current state breakdown = invested (locked) + available (unspent)
+  -- Note: totalReplenished is just a counter for recycled attention (not new)
+  space.totalProvisioned + space.totalInjected = totalInvested + totalAvailable := by
+  -- Proof outline:
+  -- 1. totalProvisioned = sum of all agent baseline budgets at creation
+  -- 2. totalInjected = sum of all positive adjustments above baseline (from resets)
+  -- 3. totalInvested = attention locked in signals and reinforcements
+  -- 4. totalAvailable = current unspent budgets across all agents
+  -- 5. Conservation: what was added = what is locked + what remains available
   sorry
 
 /-- Total attention invested is non-negative -/
@@ -628,25 +671,25 @@ theorem reinforcement_preserves_history (space space' : MVPSignalSpace)
 ✅ **Complete Learning Loop:**
 
 - **Emitter included**: Signal creators learn from outcomes
-- **Detailed tracking**: Counts positive/negative reinforcements
+- **Delivered influence**: Learning based on actual decayed influence (not raw amounts)
 - **Conviction bonus**: Rewards one-sided (convicted) behavior
 - **Static credibility**: Past influence based on immutable historical credibility (predictable decay)
-- **Zombie recovery**: Escape path from zero credibility
+- **Zombie recovery**: Escape path from zero credibility via epsilon learning
 
-✅ **Open Economy Accounting:**
+✅ **Open Economy Accounting (FIXED):**
 
-- **Honest model**: Acknowledges daily attention injection
-- **Complete audit**: Tracks `totalInjected` and all transactions
-- **Recovery floor**: 0.5x minimum budget for redemption
-- **Per-agent audit**: Individual budget reset events with replenishment tracking
+- **Correct injection tracking**: Only counts net new attention above baseline (not replenishment)
+- **Complete audit**: Tracks replenishment, positive adjustments, and negative adjustments separately
+- **Recovery floor**: 0.5x-2.0x budget range based on conservation
+- **Per-agent audit**: Individual budget reset events with full component tracking
 
 ✅ **Correct Mathematical Properties:**
 
 - **Factorization proof**: Valid now with static credibility
 - **Monotonic decay**: Influence strictly decreases over time
-- **Type-enforced bounds**: Credibility constraints guaranteed
+- **Type-enforced bounds**: Credibility constraints guaranteed via smart constructors
 - **Single-level penalties**: No double punishment
-- **Bidirectional rewards**: Success boosts by 1.3x
+- **Correct penalty semantics**: Success reduces penalty (×0.7), failure increases (×1.3)
 
 ✅ **Nuanced Aggregation:**
 
