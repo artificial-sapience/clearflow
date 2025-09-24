@@ -4,23 +4,68 @@
 
 This document captures our pragmatic, LLM-first approach to building stigmergic coordination. By leveraging LLM intelligence for all semantic evaluation and keeping signal spaces small and ephemeral, we can prove the core concepts without unnecessary complexity.
 
+## Critical Design Decisions (Updated)
+
+### 1. Signal as Minimal Abstract Interface
+
+Following ClearFlow's successful pattern, `Signal` is an abstract base with only stigmergic essentials:
+
+- **Required fields**: `id`, `emitter`, `timestamp`, `initialStrength` (initial emission strength)
+- **NO prescribed content**: Users extend with domain-specific fields
+- **NO forced "content" field**: Users choose natural names (`text` for chat, `ticker` for markets)
+- **NO built-in types**: Users define what signal types mean in their domain
+
+### 2. Environment Calculates Current Strength
+
+In true stigmergic systems, signals don't control their own strength:
+
+- **Signal carries**: Initial emission strength (`initialStrength`) set by emitter - immutable
+- **SignalSpace computes**: Current strength `S(t)` based on decay + reinforcements
+- **Any agent can reinforce**: Cumulative strength emerges from collective action
+- **No owner control**: Once emitted, environment physics determines signal fate
+
+This mirrors biology where pheromone evaporation/diffusion is environmental, not controlled by the ant that laid it.
+
+### 3. MVP Scope Boundaries
+
+**Include (Essential for stigmergic coordination):**
+
+- Minimal Signal interface (4 fields)
+- Basic age-based decay in SignalSpace
+- Simple in-memory signal collection
+- LLM-based relevance evaluation
+
+**Defer (Post-MVP complexity):**
+
+- Complex decay models (exponential, linear, custom)
+- Reinforcement mechanisms
+- Embedding vectors for semantic search
+- Persistence/database layer
+- Signal metadata field (reconsider if truly needed)
+
 ## Core Principles
 
 ### 1. Agents as LLM Proxies
+
 Agents don't contain complex logic - they're thin wrappers that delegate all intelligence to LLMs:
+
 - **Relevance evaluation**: LLM decides what signals matter
 - **Action selection**: LLM chooses how to respond
 - **Role discovery**: LLM determines specialization from experience
 - **Goal decomposition**: LLM breaks down objectives
 
 ### 2. Relevance Over Attraction
+
 We've moved beyond physical metaphors:
+
 - **Not**: "Attraction" like ants to pheromones
 - **But**: "Relevance" like developers to issues
 - **Result**: Semantic understanding, not mathematical forces
 
 ### 3. Simplicity First
+
 Start with the simplest thing that could work:
+
 - In-memory signal spaces
 - Brute-force LLM evaluation
 - No persistence between sessions
@@ -33,6 +78,27 @@ Start with the simplest thing that could work:
 The Lean specification captures the concept of "LLM-powered" without implementation details:
 
 ```lean
+/-- Minimal signal properties for coordination.
+    Users implement concrete signal types with domain-specific fields.
+-/
+class Signal (α : Type) where
+  id : α → SignalId
+  emitter : α → AgentId
+  timestamp : α → Time
+  initialStrength : α → NNReal  -- Initial strength when emitted (immutable)
+  -- No prescribed content structure!
+
+/-- Signal space manages environmental dynamics -/
+structure SignalSpace where
+  signals : List (Σ α, Signal α)
+  currentTime : Time
+
+  /-- Environment calculates current strength with decay -/
+  getCurrentStrength (signalId : SignalId) (now : Time) : NNReal
+
+  /-- Any agent can reinforce existing signals -/
+  reinforce (signalId : SignalId) (amount : NNReal) (by : AgentId) : SignalSpace
+
 /-- Abstract intelligence provider interface.
     Models external intelligence (LLM) without implementation details.
 -/
@@ -45,15 +111,6 @@ structure IntelligenceProvider where
 
   /-- Discover specialization from history -/
   discoverRole : List (Signal × Bool) → IO Role
-
-/-- Minimal signal properties for coordination.
-    Users implement concrete signal types with domain-specific fields.
--/
-class Signal (α : Type) where
-  id : α → SignalID
-  emitter : α → AgentID
-  timestamp : α → Time
-  -- No prescribed content structure!
 
 /-- Agent with delegated intelligence.
     Key insight: Agent doesn't CONTAIN logic, it DELEGATES to intelligence.
@@ -100,6 +157,7 @@ def IntelligentAgent.learn (agent : IntelligentAgent) : IO IntelligentAgent := d
 ### Properties We Can Still Prove
 
 Even with external intelligence, Lean can verify:
+
 - Agents only act on relevant signals
 - Agent identity preserved through learning
 - Causal relationship between observations and emissions
@@ -109,15 +167,34 @@ Even with external intelligence, Lean can verify:
 
 ```python
 class SignalSpace:
-    """Simple in-memory collection of signals."""
+    """Simple in-memory collection with environmental dynamics."""
 
     def __init__(self):
         self.signals: List[Signal] = []  # Just a list!
         self.max_size = 100  # Reasonable limit
+        self.current_time = datetime.now()
 
     def emit(self, signal: Signal):
         """Add signal to space."""
         self.signals.append(signal)
+
+    def get_current_strength(self, signal_id: str, now: datetime) -> float:
+        """Environment calculates current strength with decay.
+
+        This is where the "physics" of the stigmergic environment lives.
+        Signal doesn't control its own decay - environment does.
+        """
+        signal = self._find_signal(signal_id)
+        if not signal:
+            return 0.0
+
+        # Simple exponential decay for MVP
+        age_seconds = (now - signal.timestamp).total_seconds()
+        decay_factor = 0.5 ** (age_seconds / 3600)  # Half-life of 1 hour
+
+        # Start with initial emission strength, apply decay
+        return signal.initialStrength * decay_factor
+        # Future: Add reinforcements here
 
     def get_all(self) -> List[Signal]:
         """Return all signals for LLM evaluation."""
@@ -154,6 +231,12 @@ class Signal(ABC):
         """When the signal was emitted."""
         pass
 
+    @property
+    @abstractmethod
+    def initialStrength(self) -> float:
+        """Initial strength when emitted (immutable)."""
+        pass
+
     # No content field! Users define their own fields
 
 # User code - extends Signal with domain-specific structure
@@ -166,6 +249,7 @@ class ChatMessage(Signal):
     id: str
     emitter: str
     timestamp: datetime
+    initialStrength: float = 1.0  # Default initial strength
     text: str  # Domain-specific field name
     reply_to: Optional[str] = None
 
@@ -175,6 +259,7 @@ class MarketAnalysis(Signal):
     id: str
     emitter: str
     timestamp: datetime
+    initialStrength: float  # Market confidence affects initial strength
     ticker: str = Field(description="Asset being analyzed")
     trend: Literal["bullish", "bearish", "neutral"]
     confidence: float = Field(ge=0.0, le=1.0)
@@ -239,12 +324,14 @@ class StigmergicAgent(dspy.Module):
 ### The Power of DSPy Integration
 
 **Why DSPy instead of raw LLM calls:**
+
 1. **Structured outputs**: Type-safe responses, not string parsing
 2. **Optimization**: Can use DSPy's optimizers to improve performance
 3. **Composability**: Chain multiple reasoning steps easily
 4. **Traceability**: Built-in reasoning chains for debugging
 
 **What DSPy replaces:**
+
 - ❌ Similarity calculations → ✅ `evaluate_relevance`
 - ❌ Attraction functions → ✅ `is_relevant: bool`
 - ❌ Weight learning → ✅ `discover_specialization`
@@ -344,6 +431,7 @@ team = [
 ```
 
 This enables powerful scenarios:
+
 - **Quality control**: Human agents review critical decisions
 - **Training**: Humans demonstrate, LLMs learn
 - **Escalation**: LLMs handle routine, humans handle exceptions
@@ -434,6 +522,7 @@ class PythonIntelligentAgent:
 ```
 
 This architecture ensures:
+
 1. **Lean spec defines the contract** (what agents must do)
 2. **Python implements the contract** (how they do it with DSPy)
 3. **Clean separation** between specification and implementation
@@ -454,6 +543,7 @@ This architecture ensures:
 ### Real-World Examples
 
 **Portfolio Analysis (30-40 signals)**
+
 - Initial goal signal
 - 3-4 market analysis signals
 - 5-6 risk assessment signals
@@ -462,6 +552,7 @@ This architecture ensures:
 - Final recommendation signal
 
 **Code Review (20-50 signals)**
+
 - PR description signal
 - 5-10 issue identification signals
 - 10-20 discussion signals
@@ -469,6 +560,7 @@ This architecture ensures:
 - Approval signal
 
 **Goal Decomposition (20-30 signals)**
+
 - Main goal signal
 - 5-8 subgoal signals
 - 10-15 progress update signals
@@ -477,12 +569,14 @@ This architecture ensures:
 ## Why This Approach Works
 
 ### 1. LLM Context Windows Are Huge
+
 - **GPT-4**: 128k tokens ≈ 100 pages of text
 - **Claude**: 200k tokens ≈ 150 pages of text
 - **100 signals**: ~10k tokens at most
 - **Conclusion**: Can evaluate entire space in one call
 
 ### 2. Brute Force Is Fine at Small Scale
+
 ```python
 # This is perfectly reasonable for 100 signals:
 def find_relevant_signals(agent_role: str, all_signals: List[Signal]) -> List[Signal]:
@@ -496,6 +590,7 @@ def find_relevant_signals(agent_role: str, all_signals: List[Signal]) -> List[Si
 ```
 
 ### 3. Most Coordination Is Naturally Bounded
+
 - **Code review**: Ends when PR is merged
 - **Analysis**: Completes when decision is made
 - **Goal achievement**: Finishes when goal is met
@@ -504,7 +599,9 @@ def find_relevant_signals(agent_role: str, all_signals: List[Signal]) -> List[Si
 ## Implementation Phases
 
 ### Phase 1: Core Stigmergic Loop (Week 1)
+
 Build the minimal working system:
+
 ```python
 class MinimalStigmergicSystem:
     def __init__(self):
@@ -530,6 +627,7 @@ class MinimalStigmergicSystem:
 ```
 
 ### Phase 2: Complete DSPy Integration (Week 2)
+
 Implement the full set of DSPy modules for agent intelligence:
 
 ```python
@@ -611,7 +709,9 @@ class DSPyStigmergicAgent(dspy.Module):
 ```
 
 ### Phase 3: Goal-Driven Coordination (Week 3)
+
 Implement goal decomposition and achievement:
+
 ```python
 class GoalDecomposer(dspy.Module):
     """Break high-level goals into subgoals."""
@@ -635,7 +735,9 @@ class GoalDecomposer(dspy.Module):
 ```
 
 ### Phase 4: Validation Examples (Week 4)
+
 Port existing examples to stigmergic pattern:
+
 - **Chat application** (human + LLM agents)
 - Portfolio analysis via signals
 - Multi-agent code review
@@ -647,14 +749,17 @@ Port existing examples to stigmergic pattern:
 The chat example perfectly demonstrates the paradigm shift from prescribed flows to emergent coordination.
 
 ### ClearFlow Chat (Prescribed)
+
 ```
 StartChat → UserNode → UserMessageReceived → AssistantNode → AssistantMessageReceived → UserNode (loop)
 ```
+
 - Fixed alternation between user and assistant
 - Messages consumed by nodes
 - Breaks if you want multiple participants
 
 ### Stigmergic Chat (Emergent)
+
 ```python
 # User extends Signal with chat-specific fields
 @dataclass(frozen=True)
@@ -663,6 +768,7 @@ class ChatMessage(Signal):
     id: str
     emitter: str  # Who sent it
     timestamp: datetime
+    initialStrength: float = 1.0  # Initial strength
     text: str  # Natural name for chat!
     reply_to: Optional[str] = None
     sentiment: Literal["greeting", "question", "answer", "farewell"] = "question"
@@ -674,6 +780,7 @@ class CodeReviewSignal(Signal):
     id: str
     emitter: str  # Reviewer ID
     timestamp: datetime
+    initialStrength: float  # Severity affects initial strength
     file_path: str
     line_numbers: List[int]
     issue_type: Literal["bug", "style", "performance", "security"]
@@ -715,6 +822,7 @@ while running:
 ### Key Advantages
 
 1. **Natural Multi-Party Chat**: Just add more agents
+
    ```python
    agents = [human, assistant, expert, moderator]
    for agent in agents:
@@ -722,6 +830,7 @@ while running:
    ```
 
 2. **Specialized Responses**: Agents respond based on relevance
+
    ```python
    math_assistant = Agent("math_helper", MathIntelligence())  # Responds to math
    code_assistant = Agent("code_helper", CodeIntelligence())  # Responds to code
@@ -745,6 +854,7 @@ while running:
 | Mixed intelligence | ✅ Human + LLM agents | Same `IntelligenceProvider` interface |
 
 The chat example proves our MVP design:
+
 - **Simple**: ~200 lines of Python
 - **Powerful**: Supports multi-party, mixed human-AI chat
 - **Emergent**: No hardcoded conversation flow
@@ -763,6 +873,7 @@ The chat example proves our MVP design:
 | High LLM costs | Add caching layer | Reuse relevance evaluations |
 
 ### Natural Evolution
+
 1. **MVP**: List of signals, LLM evaluates all
 2. **V2**: Add embeddings for pre-filtering
 3. **V3**: Vector DB for similarity search
@@ -786,6 +897,7 @@ Understanding how stigmergic coordination differs from traditional flow-based sy
 ## What We're NOT Building (MVP)
 
 ### Avoiding Premature Optimization
+
 - ❌ **Vector embeddings**: Not needed for 100 signals
 - ❌ **Similarity calculations**: LLM handles semantic matching
 - ❌ **Decay algorithms**: Sessions are short-lived
@@ -794,6 +906,7 @@ Understanding how stigmergic coordination differs from traditional flow-based sy
 - ❌ **Weight matrices**: LLM determines relevance dynamically
 
 ### Framework vs User Code Separation
+
 - ❌ **Framework-defined signal types**: Users define their own
 - ❌ **Prescribed content structure**: Users choose field names
 - ❌ **Built-in goal/constraint types**: Users create domain-specific types
@@ -801,6 +914,7 @@ Understanding how stigmergic coordination differs from traditional flow-based sy
 - ❌ **Schema in framework**: Schema belongs in user code
 
 Example - Framework stays minimal:
+
 ```python
 # Framework provides only abstract base:
 class Signal(ABC):
@@ -847,6 +961,38 @@ class PullRequestSignal(Signal):
 - System handles 10-100 signals efficiently
 - LLM costs remain reasonable (<$1 per session)
 - Examples demonstrate clear value
+
+## Key Architecture Principles (Consolidated)
+
+### Framework vs User Code Separation
+Following ClearFlow's successful pattern:
+
+**Framework Provides (Minimal abstractions):**
+- `Signal` abstract base with 4 required fields
+- `SignalSpace` with environmental dynamics (decay calculation)
+- `IntelligenceProvider` interface for LLM/human/hybrid intelligence
+- `Agent` that delegates all decisions to intelligence
+
+**Users Provide (Domain specifics):**
+- Concrete signal types extending abstract `Signal`
+- Natural field names (`text`, `ticker`, `objective`)
+- Domain-specific signal semantics
+- DSPy integration if desired
+- Intelligence provider implementations
+
+### Biological Accuracy
+Our design mirrors real stigmergic systems:
+- **Initial emission**: Emitter sets `initialStrength` when broadcasting signal
+- **Environmental decay**: SignalSpace calculates current strength (evaporation)
+- **Collective reinforcement**: Any agent can strengthen signals (trail following)
+- **No owner control**: Signal fate determined by environment, not emitter
+
+### Why This Design Works
+1. **Maximum flexibility**: Users define what signals mean in their domain
+2. **Type safety**: Abstract base ensures required fields, users add rest
+3. **Clean DSPy integration**: User's Pydantic models ARE signals
+4. **True emergence**: No prescribed signal types or flows
+5. **Biological fidelity**: Matches how real stigmergic systems work
 
 ## Design Rationale
 
