@@ -1,9 +1,5 @@
 # 6. Code Organization
 
-> Version: 0.1.0-draft
-> Status: Section 1 Draft for Review
-> Part of: Lean 4 Specification Standard
-
 ## Core Philosophy Reminder
 
 **THE FUNDAMENTAL PRINCIPLE**: If a property matters, the compiler must check it.

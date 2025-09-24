@@ -1,30 +1,35 @@
-# Continue Session: Stigmergic Coordination Lean4 Specification
+# Continue Stigmergic Coordination Development
 
-Please continue our work on formally specifying the Stigmergic Coordination MVP in Lean 4.
+Please continue work on the Stigmergic Coordination Lean4 specification.
 
 ## Context
-Read @session-context.md for the current state of our work. The plan and task list are in @plan.md.
+Read @session-context.md for the full session history and current state.
 
-## Current Issue
-We are fixing compilation errors in `Primitives.lean`. The `Metadata` structure needs its operations updated to work with the new format. We cannot use linter suppressions (except `linter.minImports false`).
+## Current Achievement
+✅ **Level 1 Compliance**: Zero `sorry` statements in all core modules!
+✅ **Clean separation**: Signal strength (intrinsic) vs. relevance (contextual)
+✅ **All core modules build successfully**
 
-## Immediate Task
-Fix the remaining compilation error in `/packages/stigmergic/lean/Stigmergic/Foundation/Primitives.lean`:
+## Next Priority Tasks
+See @plan.md for the complete task list. Focus on:
 
-1. Update all Metadata operations to use the new structure format
-2. Run `lake build` from the lean directory to verify compilation
-3. Once Primitives.lean compiles, create Trace.lean following our Lean4 standards
+1. **Create Properties modules**
+   - Properties/Safety.lean - essential safety theorems
+   - Properties/Emergence.lean - emergence properties
+   - Remember: Only prove essential stigmergic properties, not design choices
 
-## Standards
-Follow @packages/stigmergic/lean4-spec-standard/ exactly:
-- All public declarations need documentation with PURPOSE, PRECONDITIONS, POSTCONDITIONS, INVARIANTS
-- Bijective correspondence between math and English
-- No linter suppressions except minImports
-- Proof-carrying types where properties matter
+2. **Documentation**
+   - Consider adding a README explaining the specification
+   - Document the strength/relevance design pattern
 
-## Important Files
-- Theory: @packages/stigmergic/docs/stigmergic-coordination-theory.md
-- Current work: @packages/stigmergic/lean/Stigmergic/Foundation/Primitives.lean
-- Reference: @packages/stigmergic/lean-reference/lean/ for patterns
+## Key Points to Remember
+- We've finalized the strength/relevance separation - this is the correct design
+- Don't over-prove: Not every design choice needs a theorem
+- This is for LLM agents doing semantic coordination, not spatial ant systems
+- Use `lake -q build` for quiet builds
+- The formatter has issues with match expressions - suppression is already in place
 
-Please proceed methodically, ensuring each type is fully specified and proven correct before moving to the next.
+## Working Directory
+`packages/stigmergic/lean/`
+
+Please start by reviewing the current state with `lake -q build` to confirm everything still builds, then proceed with creating the Properties modules focusing on essential stigmergic properties only.

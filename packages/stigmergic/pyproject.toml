@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "stigmergic"
 version = "0.0.1"  # Early alpha
-description = "Stigmergic coordination for AI agents through environmental traces"
+description = "Stigmergic coordination for AI agents through environmental signals"
 authors = [
   {name = "Richard Beauchamp", email = "rbeauchamp@users.noreply.github.com"}
 ]
@@ -19,7 +19,7 @@ requires-python = ">=3.13"
 keywords = [
     "stigmergy", "coordination", "multi-agent", "swarm-intelligence",
     "environmental-communication", "ai-agents", "emergence", "dspy",
-    "trace-based", "decentralized", "self-organization"
+    "signal-based", "decentralized", "self-organization"
 ]
 
 classifiers = [

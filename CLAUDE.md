@@ -227,3 +227,50 @@ flow = (
 - Every file is production code (including examples)
 - Single responsibility per flow
 - Causality tracking makes debugging possible
+
+## Lean 4 Development (packages/stigmergic/lean)
+
+### Build Commands
+
+```bash
+# Build quietly (suppresses info messages, shows errors/warnings)
+lake -q build
+
+# Full build with diagnostics
+lake build
+
+# Clean rebuild
+lake clean && lake -q build
+```
+
+### Lean 4 Specification Standards
+
+- **No `sorry` in proofs** - All theorems must be proven
+- **Minimal linter suppressions** - Document justification for each suppression
+- **Document all public declarations** - PURPOSE, PRECONDITIONS, POSTCONDITIONS, INVARIANTS
+- **Bijective correspondence** - Math notation paired with English explanation
+- **Properties as theorems** - If it matters, prove it (e.g., `age_monotonic`, `decay_non_increasing`)
+- **Preservation theorems** - All operations need theorems proving field preservation
+- **Document WHERE invariants enforced** - Not just what, but which module enforces them
+
+### Common Lean 4 Issues & Solutions
+
+**Issue**: "upstreamableDecl" linter warnings for simple types
+**Solution**: Add domain-specific theorems/properties or use `set_option linter.upstreamableDecl false`
+
+**Issue**: ppRoundtrip linter with inductive type doc comments
+**Solution**: Use `set_option linter.ppRoundtrip false` - formatting issue with `where` + doc comments
+
+**Issue**: Heartbeat info messages cluttering output
+**Solution**: Use `lake -q build` for quiet mode
+
+**Issue**: Type safety vs flexibility tension (e.g., String types)
+**Solution**: Use inductive types with `custom` escape hatch + smart constructor validation
+
+### Normative Decision Tracking
+
+**REQUIRED**: Every specification module needs a corresponding `*Decisions.lean` file:
+- `Signal.lean` → `SignalDecisions.lean`
+- Document alternatives, rationale, dependencies, status
+- Categories: `DC_STGM_*` (Definitional), `OA_STGM_*` (Ontological), `AD_STGM_*` (Architectural)
+- Mark superseded decisions with `.Superseded` status and reference to replacement

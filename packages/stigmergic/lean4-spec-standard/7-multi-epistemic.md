@@ -1,9 +1,5 @@
 # 7. Multi-Epistemic Considerations and Living Specifications
 
-> Version: 0.1.0-draft
-> Status: Section 1 Draft for Review
-> Part of: Lean 4 Specification Standard
-
 ## Core Philosophy Reminder
 
 **THE FUNDAMENTAL PRINCIPLE**: If a property matters, the compiler must check it.
@@ -186,7 +182,7 @@ When reviewing specifications, verify:
 
 - [ ] **Epistemic Humility**: Does the spec acknowledge what it cannot capture?
 - [ ] **Interface Clarity**: Are boundaries between formal and informal marked?
-- [ ] **Practice Space**: Does the spec leave room for embodied wisdom?
+- [ ] **Practice SignalSignalSpace**: Does the spec leave room for embodied wisdom?
 - [ ] **Evolution Readiness**: Can the spec learn from implementation?
 - [ ] **Sacred Respect**: Does the spec honor what transcends computation?
 - [ ] **Community Voice**: Are there mechanisms for practitioner feedback?
@@ -200,7 +196,7 @@ When reviewing specifications, verify:
 
 ```lean
 -- ✓ CORRECT: Pure mathematical specification
-def distance (p q : Space) : ℝ :=
+def distance (p q : SignalSpace) : ℝ :=
  Real.sqrt ((p.x - q.x)^2 + (p.y - q.y)^2 + (p.z - q.z)^2)
 ```
 
@@ -208,7 +204,7 @@ def distance (p q : Space) : ℝ :=
 
 ```lean
 -- ✗ WRONG in system - this belongs in implementation
-def Space.toComputational (s : Space) : ComputationalSpace :=
+def SignalSpace.toComputational (s : SignalSpace) : ComputationalSignalSpace :=
  { x := s.x.toFloat, y := s.y.toFloat, z := s.z.toFloat }
 ```
 

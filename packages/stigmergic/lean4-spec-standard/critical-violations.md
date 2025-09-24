@@ -1,9 +1,5 @@
 # Critical Violations to Check First
 
-> Version: 0.1.0-draft
-> Status: Section 1 Draft for Review
-> Part of: Lean 4 Specification Standard
-
 ## Core Philosophy Reminder
 
 **THE FUNDAMENTAL PRINCIPLE**: If a property matters, the compiler must check it.
@@ -18,14 +14,14 @@ Before any other review, check for these most common and critical violations. Th
 
 ```lean
 -- ❌ VIOLATION: Laws as documentation only
-class InformationSpace (ι : Type) where
+class InformationSignalSpace (ι : Type) where
  copy : ι → ι × ι
  erase : ι → Unit
  /-- Law: Copy preserves information. -/
  copy_preserves : ∀ i, (copy i).1 = i ∧ (copy i).2 = i -- This is just a comment!
 
 -- ✅ CORRECT: Laws as required proof fields
-class InformationSpace (ι : Type) where
+class InformationSignalSpace (ι : Type) where
  copy : ι → ι × ι
  erase : ι → Unit
  copy_preserves : ∀ i, (copy i).1 = i ∧ (copy i).2 = i -- Must prove this!

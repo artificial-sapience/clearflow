@@ -39,7 +39,7 @@ The TODO list operates through two complementary mechanisms:
 Like ants leaving pheromone trails, the TODO list uses **environmental modification for coordination**:
 - I modify the environment (write to the list)
 - The environment persists (list remains between turns)
-- Future behavior is guided by these traces (I read what I wrote and continue)
+- Future behavior is guided by these signals (I read what I wrote and continue)
 - No direct memory needed (the list remembers for me)
 
 This stigmergic mechanism enables persistence across the temporal gaps in our conversation.
@@ -55,7 +55,7 @@ The TODO list serves as a **negotiated sequence of attention**:
 
 The TODO list is **stigmergic IN ORDER TO maintain an agenda**. The stigmergic nature (environmental persistence) is WHY the agenda (coordinated attention) can survive the discontinuity of turn-based interaction.
 
-Without stigmergy, the agenda would vanish between messages. Without the agenda structure, the stigmergic traces would just be random notes. Together, they enable temporal coherence - maintaining intentionality across gaps.
+Without stigmergy, the agenda would vanish between messages. Without the agenda structure, the stigmergic signals would just be random notes. Together, they enable temporal coherence - maintaining intentionality across gaps.
 
 The sequence DOES matter. It expresses provisional intent about execution order based on current understanding of dependencies, efficiency, and risk.
 

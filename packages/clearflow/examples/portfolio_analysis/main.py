@@ -4,7 +4,7 @@ import asyncio
 import sys
 import uuid
 from pathlib import Path
-from types import TracebackType
+from types import SignalbackType
 
 from examples.portfolio_analysis.flow import create_portfolio_analysis_flow
 from examples.portfolio_analysis.market_data import (
@@ -44,7 +44,7 @@ class SpinnerContext:
         self,
         _exc_type: type[BaseException] | None,
         _exc_val: BaseException | None,
-        _exc_tb: TracebackType | None,
+        _exc_tb: SignalbackType | None,
     ) -> None:
         """Stop the spinner."""
         if self._status:

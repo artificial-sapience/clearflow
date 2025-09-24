@@ -8,10 +8,10 @@ Instead of programmers defining routes or even attraction patterns, we let LLMs 
 
 Each LLM agent continuously:
 
-1. **Observes** the message environment
+1. **Observes** the signal space
 2. **Decides** what's relevant to its expertise
 3. **Evaluates** whether to act
-4. **Determines** what trace to leave
+4. **Determines** what signal to leave
 
 ### Traditional Approach (Human-Defined Routes)
 
@@ -43,16 +43,16 @@ class AutonomousLLMNode:
         self.llm = model
         self.learned_attractions = {}  # Dynamically discovered
 
-    async def observe_environment(self, message_pool: list[Message]) -> dict:
-        """LLM examines environment and decides interest levels."""
+    async def observe_space(self, space: list[Signal]) -> dict:
+        """LLM examines space and decides interest levels."""
 
         prompt = f"""
         Role: {self.role}
 
-        Current message pool:
-        {[msg.model_dump_json() for msg in message_pool]}
+        Current space:
+        {[msg.model_dump_json() for msg in space]}
 
-        For each message, output your:
+        For each signal, output your:
         1. Interest level (0.0 to 1.0)
         2. Reasoning for this interest
         3. Whether you can contribute something valuable
@@ -64,20 +64,20 @@ class AutonomousLLMNode:
         response = await self.llm.analyze(prompt)
         return response.attractions  # Dynamic, reasoned attractions
 
-    async def decide_action(self, message: Message) -> Optional[Message]:
+    async def decide_action(self, signal: Signal) -> Optional[Signal]:
         """LLM decides whether and how to respond."""
 
         prompt = f"""
         Role: {self.role}
-        Message requiring attention: {message}
-        Current environment state: {self.environment_summary}
+        Signal requiring attention: {signal}
+        Current space state: {self.environment_summary}
         Your expertise: {self.expertise_description}
 
         Decide:
-        1. Should you process this message? Why?
+        1. Should you process this signal? Why?
         2. What value can you add?
-        3. What new trace should you leave for others?
-        4. What urgency/priority should your trace have?
+        3. What new signal should you leave for others?
+        4. What urgency/priority should your signal have?
 
         Output NULL if you should not act.
         """
@@ -91,23 +91,23 @@ class AutonomousLLMNode:
 
 ```python
 class SemanticAttractionNode:
-    """LLM understands message meaning, not just type."""
+    """LLM understands signal meaning, not just type."""
 
-    async def calculate_attraction(self, message: Message) -> float:
+    async def calculate_attraction(self, signal: Signal) -> float:
         """LLM evaluates semantic relevance."""
 
         prompt = f"""
         My role and expertise: {self.role}
-        Message content: {message.content}
-        Message context: {message.context_chain}
+        Signal content: {signal.content}
+        Signal context: {signal.context_chain}
 
-        Rate my relevance to this message (0-1) based on:
+        Rate my relevance to this signal (0-1) based on:
         - Semantic alignment with my expertise
         - Current system needs
         - What value I could add
         - Whether others might be better suited
 
-        Consider not just the message type but its actual content,
+        Consider not just the signal type but its actual content,
         context, and implications.
         """
 
@@ -120,15 +120,15 @@ class SemanticAttractionNode:
 class AdaptiveRepulsionNode:
     """LLM learns what to avoid from experience."""
 
-    async def should_avoid(self, message: Message) -> tuple[bool, str]:
+    async def should_avoid(self, signal: Signal) -> tuple[bool, str]:
         """LLM decides if this should repel based on learned patterns."""
 
         prompt = f"""
-        Message: {message}
+        Signal: {signal}
         My recent failures: {self.failure_history}
-        System state: {self.environment.health_metrics}
+        System state: {self.space.health_metrics}
 
-        Should I avoid this message? Consider:
+        Should I avoid this signal? Consider:
         - Have I failed with similar messages before?
         - Is the system overloaded in my area?
         - Would my intervention likely help or hinder?
@@ -166,19 +166,19 @@ class SelfSpecializingNode:
         self.specialization = await self.llm.introspect(prompt)
 ```
 
-### 4. Collaborative Trace Enrichment
+### 4. Collaborative Signal Enrichment
 
 ```python
-class CollaborativeTraceNode:
+class CollaborativeSignalNode:
     """LLM adds context to help future agents."""
 
-    async def enrich_trace(self, original: Message, my_output: Message) -> Message:
+    async def enrich_signal(self, original: Signal, my_output: Signal) -> Signal:
         """LLM decides what metadata helps others."""
 
         prompt = f"""
-        Original message: {original}
+        Original signal: {original}
         My contribution: {my_output}
-        Current system needs: {self.environment.goals}
+        Current system needs: {self.space.goals}
 
         What additional context should I add to help future agents?
         Consider:
@@ -187,7 +187,7 @@ class CollaborativeTraceNode:
         - What opportunities did I notice?
         - What expertise is needed next?
 
-        Add metadata that makes the trace more valuable for others.
+        Add metadata that makes the signal more valuable for others.
         """
 
         enrichment = await self.llm.generate_metadata(prompt)
@@ -203,7 +203,7 @@ class LLMDrivenStigmergicEnvironment:
     """Fully autonomous LLM-driven coordination."""
 
     def __init__(self):
-        self.message_pool: list[Message] = []
+        self.space: list[Signal] = []
         self.agents: list[AutonomousLLMNode] = []
         self.emergence_history: list[EmergentPattern] = []
 
@@ -213,36 +213,36 @@ class LLMDrivenStigmergicEnvironment:
         # Each agent observes and decides independently
         agent_decisions = []
         for agent in self.agents:
-            # LLM observes entire environment
-            attractions = await agent.observe_environment(self.message_pool)
+            # LLM observes entire space
+            attractions = await agent.observe_space(self.space)
 
             # LLM decides which messages to potentially act on
-            for message in self.message_pool:
-                attraction_score = attractions.get(message.id, 0)
+            for signal in self.space:
+                attraction_score = attractions.get(signal.id, 0)
 
                 # LLM makes autonomous decision
                 if attraction_score > agent.self_determined_threshold():
-                    decision = await agent.decide_action(message)
+                    decision = await agent.decide_action(signal)
                     if decision:
-                        agent_decisions.append((agent, message, decision))
+                        agent_decisions.append((agent, signal, decision))
 
         # Execute decisions (could be parallel or ordered by urgency)
-        for agent, consumed_message, new_trace in agent_decisions:
-            self.message_pool.remove(consumed_message)
-            self.message_pool.append(new_trace)
+        for agent, consumed_message, new_signal in agent_decisions:
+            self.space.remove(consumed_message)
+            self.space.append(new_signal)
 
             # Let agent learn from its action
-            await agent.reflect_on_action(consumed_message, new_trace)
+            await agent.reflect_on_action(consumed_message, new_signal)
 
     async def inject_goal(self, goal: str):
         """Human injects high-level goal, LLMs figure out the rest."""
 
-        initial_trace = Message(
+        initial_signal = Signal(
             content=goal,
             type="goal",
             metadata={"human_injected": True, "timestamp": now()}
         )
-        self.message_pool.append(initial_trace)
+        self.space.append(initial_signal)
 
         # LLMs autonomously organize to achieve it
         while not self.is_goal_achieved(goal):
@@ -253,7 +253,7 @@ class LLMDrivenStigmergicEnvironment:
         """LLM analyzes what patterns are emerging."""
 
         analyst_prompt = f"""
-        Observe the recent message patterns:
+        Observe the recent signal patterns:
         {self.recent_messages()}
 
         What coordination patterns are emerging?
@@ -283,9 +283,9 @@ class FullyAutonomousLLMAgent:
 
         prompt = f"""
         Based on:
-        - Current environment load: {self.environment.load}
+        - Current space load: {self.space.load}
         - My recent performance: {self.performance_metrics}
-        - System urgency: {self.environment.urgency}
+        - System urgency: {self.space.urgency}
 
         What should my activation threshold be?
         Lower = more responsive but risk overload
@@ -301,8 +301,8 @@ class FullyAutonomousLLMAgent:
 
         prompt = f"""
         Environment state: {environment_state}
-        Current agents: {[a.role for a in environment.agents]}
-        Unmet needs: {environment.analyze_gaps()}
+        Current agents: {[a.role for a in space.agents]}
+        Unmet needs: {space.analyze_gaps()}
         My capabilities: {self.introspect_capabilities()}
 
         What role should I adopt to maximize system value?
@@ -320,7 +320,7 @@ class FullyAutonomousLLMAgent:
         """LLMs coordinate amongst themselves."""
 
         prompt = f"""
-        Other agents in environment:
+        Other agents in space:
         {[{a.role: a.current_focus} for a in other_agents]}
 
         My current intention: {self.current_intention}
@@ -336,16 +336,16 @@ class FullyAutonomousLLMAgent:
 
         return await self.llm.negotiate(prompt)
 
-    async def generate_novel_trace_types(self):
-        """LLM invents new message types as needed."""
+    async def generate_novel_signal_types(self):
+        """LLM invents new signal types as needed."""
 
         prompt = f"""
-        Current message types in system: {self.known_message_types}
+        Current signal types in system: {self.known_message_types}
         Unmet communication needs: {self.identify_gaps()}
 
-        Invent a new message type that would improve coordination.
+        Invent a new signal type that would improve coordination.
         Define:
-        1. Message structure
+        1. Signal structure
         2. When it should be emitted
         3. What agents should be attracted to it
         4. How it improves system behavior
@@ -359,13 +359,13 @@ class FullyAutonomousLLMAgent:
 ### 1. Self-Organization
 
 - No central coordinator needed
-- Nodes form implicit workflows through trace patterns
+- Nodes form implicit workflows through signal patterns
 - System adapts to node availability
 
 ### 2. Robustness
 
 - Node failures don't break prescribed paths (there are none)
-- Other nodes can potentially handle orphaned traces
+- Other nodes can potentially handle orphaned signals
 - Graceful degradation under load
 
 ### 3. Adaptability
@@ -376,7 +376,7 @@ class FullyAutonomousLLMAgent:
 
 ### 4. Scalability
 
-- Adding nodes means more trace processors
+- Adding nodes means more signal processors
 - No central bottleneck
 - Local decisions based on local information
 
@@ -391,7 +391,7 @@ agents = [
     FullyAutonomousLLMAgent(),  # Will discover its own role
 ]
 
-# Create autonomous environment
+# Create autonomous space
 env = LLMDrivenStigmergicEnvironment()
 for agent in agents:
     env.add_agent(agent)
@@ -404,7 +404,7 @@ await env.inject_goal("Analyze AAPL for investment with focus on downside protec
 # - Self-organize division of labor
 # - Determine their own attraction patterns
 # - Negotiate when conflicts arise
-# - Invent new message types if needed
+# - Invent new signal types if needed
 # - Learn from successes and failures
 # - Achieve the goal through emergent coordination
 ```
@@ -417,7 +417,7 @@ await env.inject_goal("Analyze AAPL for investment with focus on downside protec
 # - Agent 4 sees technical analysis gap, specializes there
 
 # Cycle 2: Protocol Emergence
-# - Risk specialist invents "VolatilityAlert" message type
+# - Risk specialist invents "VolatilityAlert" signal type
 # - Others learn to be attracted/repelled by it
 
 # Cycle 3: Optimization
@@ -425,7 +425,7 @@ await env.inject_goal("Analyze AAPL for investment with focus on downside protec
 # - Market analyst yields some tasks to technical analyst
 
 # Cycle 4: Innovation
-# - Compliance agent creates new "RegulatoryFlag" trace
+# - Compliance agent creates new "RegulatoryFlag" signal
 # - System adapts to incorporate this new signal
 
 # ... continues until goal achieved
@@ -456,28 +456,28 @@ class GuidedStigmergicFlow:
     """Stigmergy with optional constraints."""
 
     def __init__(self):
-        self.environment = MessagePool()
+        self.space = SignalSpace()
         self.constraints = []  # Optional routing rules
 
     def add_constraint(self, pattern: MessageType, preferred_node: Node):
         """Suggest (don't enforce) preferred handlers."""
         self.constraints.append((pattern, preferred_node))
 
-    async def deposit_with_hints(self, message: Message):
+    async def emit_with_hints(self, signal: Signal):
         """Deposit with optional routing hints."""
         # Check for preferences
         for pattern, node in self.constraints:
-            if isinstance(message, pattern):
+            if isinstance(signal, pattern):
                 # Boost this node's attraction temporarily
                 node.boost_attraction(2.0)
 
         # Still use stigmergic activation
-        await self.deposit(message)
+        await self.emit(signal)
 ```
 
 ## Design Principles for Stigmergic ClearFlow
 
-1. **Messages are traces, not commands**
+1. **Messages are signals, not commands**
    - Think "evidence of work" not "do this next"
    - Design messages to be discoverable
 
@@ -502,7 +502,7 @@ class GuidedStigmergicFlow:
 
 1. **No More Programming Flows** - LLMs discover coordination patterns
 2. **No More Fixed Roles** - LLMs determine their specializations
-3. **No More Static Protocols** - LLMs invent message types as needed
+3. **No More Static Protocols** - LLMs invent signal types as needed
 4. **No More Predetermined Attractions** - LLMs decide what's relevant
 
 ### The New Human Role
@@ -534,7 +534,7 @@ S = (A, M, E, W, τ, δ)
 Where:
 
 - **A** = {a₁, a₂, ...} - Set of agent nodes
-- **M** = {m₁, m₂, ...} - Set of message nodes (traces)
+- **M** = {m₁, m₂, ...} - Set of signal nodes (signals)
 - **E** ⊆ (A × M) ∪ (M × A) - Directed edges (bipartite graph)
 - **W**: E → ℝ - Weight function (attraction/repulsion strength)
 - **τ**: M → ℝ⁺ - Timestamp function
@@ -542,7 +542,7 @@ Where:
 
 ### Attraction Function
 
-The attraction between agent *a* and message *m* is:
+The attraction between agent *a* and signal *m* is:
 
 ```math
 A(a,m) = σ(W_sem · V_sim(a,m) + W_tmp · e^(-t/τ) + W_grph · (1/d(a,m)) + b)
@@ -551,8 +551,8 @@ A(a,m) = σ(W_sem · V_sim(a,m) + W_tmp · e^(-t/τ) + W_grph · (1/d(a,m)) + b)
 Where:
 
 - **V_sim(a,m)** = cosine_similarity(embed(a), embed(m))
-- **t** = now() - τ(m) (message age)
-- **d(a,m)** = graph distance between agent and message
+- **t** = now() - τ(m) (signal age)
+- **d(a,m)** = graph distance between agent and signal
 - **W_*** = learned weight vectors
 - **σ** = activation function (e.g., sigmoid)
 - **b** = bias term
@@ -581,12 +581,12 @@ class MathematicalStigmergicSystem:
         self.W_graph = np.ones((n_agents, 1))
 
     async def compute_attraction_matrix(self) -> np.ndarray:
-        """Compute full agent-message attraction matrix efficiently."""
+        """Compute full agent-signal attraction matrix efficiently."""
 
         # Get all agent embeddings (n_agents × d)
         A = np.stack([a.embedding for a in self.agents])
 
-        # Get all message embeddings (n_messages × d)
+        # Get all signal embeddings (n_messages × d)
         M = np.stack([m.embedding for m in self.messages])
 
         # Semantic similarity matrix via matrix multiplication
@@ -610,36 +610,36 @@ class MathematicalStigmergicSystem:
 
         return sigmoid(attractions)
 
-    async def deposit_trace_vectorized(self, message: Message):
-        """Deposit trace with vector embedding for efficient retrieval."""
+    async def emit_signal_vectorized(self, signal: Signal):
+        """Deposit signal with vector embedding for efficient retrieval."""
 
         # Compute embedding once
-        embedding = await self.llm.embed(message.content)
+        embedding = await self.llm.embed(signal.content)
 
         # Store in vector DB with metadata
         self.vector_db.add(
             embeddings=[embedding],
             metadatas=[{
-                "id": message.id,
-                "type": message.type,
+                "id": signal.id,
+                "type": signal.type,
                 "timestamp": now(),
-                "creator": message.agent_id,
-                "urgency": message.urgency
+                "creator": signal.agent_id,
+                "urgency": signal.urgency
             }],
-            ids=[message.id]
+            ids=[signal.id]
         )
 
         # Update graph
         self.graph.query("""
-            CREATE (m:Message {id: $msg_id, timestamp: $timestamp})
+            CREATE (m:Signal {id: $msg_id, timestamp: $timestamp})
             CREATE (a:Agent {id: $agent_id})-[:CREATED]->(m)
-        """, msg_id=message.id, timestamp=now(), agent_id=message.agent_id)
+        """, msg_id=signal.id, timestamp=now(), agent_id=signal.agent_id)
 
-    async def find_attracted_agents(self, message: Message, top_k: int = 10):
-        """Efficiently find agents most attracted to a message."""
+    async def find_attracted_agents(self, signal: Signal, top_k: int = 10):
+        """Efficiently find agents most attracted to a signal."""
 
         # Use vector similarity for initial filtering
-        message_embedding = await self.llm.embed(message.content)
+        message_embedding = await self.llm.embed(signal.content)
 
         # Batch compute all agent attractions
         agent_embeddings = np.stack([a.embedding for a in self.agents])
@@ -651,7 +651,7 @@ class MathematicalStigmergicSystem:
         )
 
         # Apply decay
-        age = now() - message.timestamp
+        age = now() - signal.timestamp
         decay = np.exp(-age / self.decay_constant)
 
         # Apply learned weights
@@ -723,7 +723,7 @@ CREATE INDEX ON current_attractions (score DESC);
 ```python
 import torch
 import torch.nn as nn
-from torch_geometric.nn import SAGEConv, global_mean_pool
+from torch_geometric.nn import SAGEConv, global_mean_space
 
 class StigmergicGNN(nn.Module):
     """Learn optimal attraction patterns using Graph Neural Networks."""
@@ -816,8 +816,8 @@ class MatrixStigmergy:
     def __init__(self, max_agents=1000, max_messages=10000, dim=1536):
         # Pre-allocate matrices for performance
         self.A = np.zeros((max_agents, dim))  # Agent embeddings
-        self.M = np.zeros((max_messages, dim))  # Message embeddings
-        self.T = np.zeros(max_messages)  # Message timestamps
+        self.M = np.zeros((max_messages, dim))  # Signal embeddings
+        self.T = np.zeros(max_messages)  # Signal timestamps
         self.W = np.ones((max_agents, 3))  # Learned weights
 
         # Graph distance matrix (sparse for efficiency)
@@ -872,9 +872,9 @@ class MatrixStigmergy:
 
 To replace ClearFlow with stigmergic coordination, we need exactly three fundamental capabilities:
 
-1. **Traces**: Messages that persist in environment (replacing ClearFlow's transient messages)
-2. **Attraction**: Agents find relevant traces (replacing ClearFlow's explicit routing)
-3. **Action**: Agents process traces and emit new ones (replacing ClearFlow's nodes)
+1. **Signals**: Messages that persist in space (replacing ClearFlow's transient messages)
+2. **Attraction**: Agents find relevant signals (replacing ClearFlow's explicit routing)
+3. **Action**: Agents process signals and emit new ones (replacing ClearFlow's nodes)
 
 That's it. Everything else emerges.
 
@@ -888,7 +888,7 @@ from datetime import datetime
 
 # 1. TRACES - The only data structure we need
 @dataclass
-class Trace:
+class Signal:
     """Environmental modification that persists."""
     content: str
     type: str  # "goal", "task", "progress", "completion"
@@ -896,74 +896,74 @@ class Trace:
     creator_id: str
     metadata: dict = None
 
-# 2. ENVIRONMENT - Just a list of traces
+# 2. ENVIRONMENT - Just a list of signals
 class Environment:
-    """Minimal stigmergic environment."""
+    """Minimal stigmergic space."""
 
     def __init__(self):
-        self.traces: List[Trace] = []
+        self.signals: List[Signal] = []
 
-    def deposit(self, trace: Trace):
-        """Add trace to environment."""
-        self.traces.append(trace)
+    def emit(self, signal: Signal):
+        """Add signal to space."""
+        self.signals.append(signal)
 
-    def search(self, query: str, limit: int = 10) -> List[Trace]:
-        """Find relevant traces (MVP: simple text matching)."""
+    def search(self, query: str, limit: int = 10) -> List[Signal]:
+        """Find relevant signals (MVP: simple text matching)."""
         # In production: Use vector search
         # For MVP: Simple keyword matching
-        relevant = [t for t in self.traces if query.lower() in t.content.lower()]
+        relevant = [t for t in self.signals if query.lower() in t.content.lower()]
         return sorted(relevant, key=lambda t: t.timestamp, reverse=True)[:limit]
 
 # 3. AGENT - DSPy-powered processor
 class StigmergicAgent(dspy.Module):
-    """Agent that observes traces and acts."""
+    """Agent that observes signals and acts."""
 
     def __init__(self, role: str):
         super().__init__()
         self.role = role
 
         # DSPy signature for attraction
-        self.should_act = dspy.ChainOfThought("trace, role -> should_act: bool, reason")
+        self.should_act = dspy.ChainOfThought("signal, role -> should_act: bool, reason")
 
         # DSPy signature for action
         self.generate_action = dspy.ChainOfThought(
-            "trace, role, context -> response_type, response_content"
+            "signal, role, context -> response_type, response_content"
         )
 
-    def forward(self, env: Environment) -> Optional[Trace]:
-        """Observe environment, decide to act, emit trace."""
+    def forward(self, env: Environment) -> Optional[Signal]:
+        """Observe space, decide to act, emit signal."""
 
-        # Find potentially relevant traces
-        relevant_traces = env.search(self.role, limit=5)
+        # Find potentially relevant signals
+        relevant_signals = env.search(self.role, limit=5)
 
-        if not relevant_traces:
+        if not relevant_signals:
             return None
 
-        # Check each trace for attraction
-        for trace in relevant_traces:
+        # Check each signal for attraction
+        for signal in relevant_signals:
             # Use DSPy to decide if we should act
             decision = self.should_act(
-                trace=trace.content,
+                signal=signal.content,
                 role=self.role
             )
 
             if decision.should_act:
                 # Generate response
                 response = self.generate_action(
-                    trace=trace.content,
+                    signal=signal.content,
                     role=self.role,
-                    context=str([t.content for t in relevant_traces[:3]])
+                    context=str([t.content for t in relevant_signals[:3]])
                 )
 
-                # Emit new trace
-                new_trace = Trace(
+                # Emit new signal
+                new_signal = Signal(
                     content=response.response_content,
                     type=response.response_type,
                     timestamp=datetime.now(),
                     creator_id=self.role
                 )
 
-                return new_trace
+                return new_signal
 
         return None
 ```
@@ -987,38 +987,38 @@ class MinimalStigmergicSystem:
 
     def inject_goal(self, goal: str):
         """Human injects a goal."""
-        trace = Trace(
+        signal = Signal(
             content=goal,
             type="goal",
             timestamp=datetime.now(),
             creator_id="human"
         )
-        self.env.deposit(trace)
+        self.env.emit(signal)
 
     def run_cycle(self):
         """One cycle of stigmergic coordination."""
-        new_traces = []
+        new_signals = []
 
         # Each agent observes and potentially acts
         for agent in self.agents:
-            trace = agent.forward(self.env)
-            if trace:
-                new_traces.append(trace)
+            signal = agent.forward(self.env)
+            if signal:
+                new_signals.append(signal)
 
-        # Deposit all new traces
-        for trace in new_traces:
-            self.env.deposit(trace)
+        # Deposit all new signals
+        for signal in new_signals:
+            self.env.emit(signal)
 
-        return new_traces
+        return new_signals
 
     def run_until_complete(self, max_cycles: int = 100) -> bool:
-        """Run until we see a completion trace."""
+        """Run until we see a completion signal."""
         for _ in range(max_cycles):
-            new_traces = self.run_cycle()
+            new_signals = self.run_cycle()
 
             # Check for completion
-            for trace in new_traces:
-                if trace.type == "completion":
+            for signal in new_signals:
+                if signal.type == "completion":
                     return True
 
         return False
@@ -1031,7 +1031,7 @@ system.add_agent("goal_decomposer")
 system.add_agent("task_worker")
 system.add_agent("quality_checker")
 
-# Inject goal (replacing ClearFlow's initial message)
+# Inject goal (replacing ClearFlow's initial signal)
 system.inject_goal("Build a REST API for user management")
 
 # Run (replacing ClearFlow's execution)
@@ -1052,16 +1052,16 @@ class ImprovedAgent(StigmergicAgent):
         self.embedder = dspy.OpenAI(model="text-embedding-3-small")
         self.attraction_threshold = 0.7
 
-    def find_relevant_traces(self, env: Environment) -> List[Trace]:
+    def find_relevant_signals(self, env: Environment) -> List[Signal]:
         """Use embeddings for semantic similarity."""
         role_embedding = self.embedder(self.role)
 
         similarities = []
-        for trace in env.traces:
-            trace_embedding = self.embedder(trace.content)
-            similarity = cosine_similarity(role_embedding, trace_embedding)
+        for signal in env.signals:
+            signal_embedding = self.embedder(signal.content)
+            similarity = cosine_similarity(role_embedding, signal_embedding)
             if similarity > self.attraction_threshold:
-                similarities.append((trace, similarity))
+                similarities.append((signal, similarity))
 
         return [t for t, _ in sorted(similarities, key=lambda x: x[1], reverse=True)]
 ```
@@ -1094,7 +1094,7 @@ class SpecializingAgent(LearningAgent):
     def discover_specialization(self, env: Environment):
         """Agent discovers what it's good at."""
 
-        # Analyze successful traces
+        # Analyze successful signals
         success_patterns = dspy.ChainOfThought(
             "successes, failures -> specialization, attraction_weights"
         )
@@ -1110,19 +1110,19 @@ class SpecializingAgent(LearningAgent):
 
 ### Why This Works as an MVP
 
-1. **Truly Minimal**: Just traces, environment, and agents
+1. **Truly Minimal**: Just signals, space, and agents
 2. **Truly Viable**: Can handle real coordination tasks
 3. **DSPy-Native**: Uses DSPy for all intelligence, not raw prompts
 4. **Growable**: Each enhancement is a small addition
-5. **Observable**: Every trace is visible for debugging
+5. **Observable**: Every signal is visible for debugging
 
 ### Comparison with ClearFlow
 
 | ClearFlow | Stigmergic MVP |
 |-----------|----------------|
 | Explicit routing | Emergent attraction |
-| Nodes process messages | Agents process traces |
-| Messages are transient | Traces persist |
+| Nodes process messages | Agents process signals |
+| Messages are transient | Signals persist |
 | Flow defines coordination | Coordination emerges |
 | Type safety via classes | Type flexibility via DSPy |
 
@@ -1135,10 +1135,10 @@ class MinimalHumanInterface:
     async def achieve(self, goal: str):
         """Single entry point for human intent."""
 
-        # Spawn pool of autonomous LLM agents
+        # Spawn space of autonomous LLM agents
         agents = [FullyAutonomousLLMAgent() for _ in range(n)]
 
-        # Create environment
+        # Create space
         env = LLMDrivenStigmergicEnvironment(agents)
 
         # Inject goal and let emergence happen
@@ -1161,13 +1161,13 @@ result = await achieve("Create a risk-balanced portfolio optimized for 5-year re
 
 ### Core Concept: Goals as Environmental Gradients
 
-In stigmergic communication, goals aren't commands to execute but **persistent traces that create attraction fields**, pulling the system toward desired outcomes through environmental modification.
+In stigmergic communication, goals aren't commands to execute but **persistent signals that create attraction fields**, pulling the system toward desired outcomes through environmental modification.
 
-### Goal Injection: From Human Intent to Environmental Traces
+### Goal Injection: From Human Intent to Environmental Signals
 
 ```python
-class GoalMessage(Message):
-    """Goals create persistent attraction fields in the environment."""
+class GoalMessage(Signal):
+    """Goals create persistent attraction fields in the space."""
 
     content: str                # Desired outcome
     constraints: list[str]      # What must remain true
@@ -1184,7 +1184,7 @@ class GoalMessage(Message):
             decay_rate=0.0  # Persistent until achieved
         )
 
-class SubGoalMessage(Message):
+class SubGoalMessage(Signal):
     """Subgoals emerge from decomposition, not central planning."""
 
     parent_goal_id: str
@@ -1205,9 +1205,9 @@ class GoalInjector:
                          constraints: list[str] = None,
                          invariants: list[str] = None,
                          strategy: str = None):
-        """Transform intent into environmental traces."""
+        """Transform intent into environmental signals."""
 
-        # Create goal as persistent environmental trace
+        # Create goal as persistent environmental signal
         goal_msg = GoalMessage(
             content=goal,
             constraints=constraints or [],
@@ -1220,8 +1220,8 @@ class GoalInjector:
             }
         )
 
-        # Deposit into environment - creates attraction gradient
-        await self.environment.deposit_permanent(goal_msg)
+        # Deposit into space - creates attraction gradient
+        await self.space.emit_permanent(goal_msg)
 
         # Goal immediately starts attracting relevant agents
         return goal_msg.id
@@ -1274,7 +1274,7 @@ class GoalDecomposerAgent(AutonomousLLMNode):
 
         decomposition = await self.llm.analyze(prompt)
 
-        # Emit subgoals as new environmental traces
+        # Emit subgoals as new environmental signals
         subgoals = []
         for sg in decomposition:
             subgoal_msg = SubGoalMessage(
@@ -1284,7 +1284,7 @@ class GoalDecomposerAgent(AutonomousLLMNode):
                 contributes_to=sg.contribution,
                 estimated_difficulty=sg.complexity
             )
-            await self.environment.deposit(subgoal_msg)
+            await self.space.emit(subgoal_msg)
             subgoals.append(subgoal_msg)
 
         return subgoals
@@ -1303,12 +1303,12 @@ class AgendaFormingAgent(AutonomousLLMNode):
         self.expertise_areas: list[str] = []
         self.current_capacity: float = 1.0
 
-    async def form_agenda(self, environment: MessagePool):
+    async def form_agenda(self, space: SignalSpace):
         """Create personal agenda from goal attractions."""
 
         # Calculate attraction to all goals/subgoals
         goal_attractions = []
-        for msg in environment.get_goals():
+        for msg in space.get_goals():
             # Attraction based on expertise match + priority + capacity
             attraction = (
                 self.expertise_match(msg) *
@@ -1340,7 +1340,7 @@ class AgendaFormingAgent(AutonomousLLMNode):
                 remaining_capacity -= estimated_effort
 
         # Broadcast intention (stigmergic coordination)
-        await self.environment.deposit(IntentionTrace(
+        await self.space.emit(IntentionSignal(
             agent_id=self.id,
             working_on=[item.goal.id for item in self.agenda],
             expertise=self.expertise_areas,
@@ -1350,11 +1350,11 @@ class AgendaFormingAgent(AutonomousLLMNode):
 
 ### Progress as Environmental Modification
 
-Progress creates traces that modify the attraction landscape:
+Progress creates signals that modify the attraction landscape:
 
 ```python
-class ProgressTrace(Message):
-    """Progress toward goals modifies environment."""
+class ProgressSignal(Signal):
+    """Progress toward goals modifies space."""
 
     goal_id: str
     subgoal_id: str | None
@@ -1368,10 +1368,10 @@ class ProgressTrace(Message):
         # Less urgent as we make progress
         return base_attraction * (1.0 - self.percent_complete)
 
-    def create_requirement_attractions(self) -> list[RequirementTrace]:
-        """Progress can create new requirement traces."""
+    def create_requirement_attractions(self) -> list[RequirementSignal]:
+        """Progress can create new requirement signals."""
         return [
-            RequirementTrace(
+            RequirementSignal(
                 description=req,
                 blocks_goal=self.goal_id,
                 urgency=1.0 - self.percent_complete
@@ -1386,16 +1386,16 @@ class ProgressTrace(Message):
 class ConstraintChecker(AutonomousLLMNode):
     """Agents that monitor and enforce constraints."""
 
-    attracts_to = [GoalMessage, SubGoalMessage, ProgressTrace]
+    attracts_to = [GoalMessage, SubGoalMessage, ProgressSignal]
 
-    async def check_constraint(self, action: Message, constraint: str) -> bool:
+    async def check_constraint(self, action: Signal, constraint: str) -> bool:
         """Evaluate if action violates constraint."""
 
         analysis = await self.llm.evaluate_constraint_violation(action, constraint)
 
         if analysis.violates:
             # Create repulsion field
-            await self.environment.deposit(
+            await self.space.emit(
                 ConstraintViolationWarning(
                     action_id=action.id,
                     constraint=constraint,
@@ -1414,16 +1414,16 @@ class InvariantGuardian(AutonomousLLMNode):
         self.invariant = invariant
         self.violation_history = []
 
-    async def monitor_invariant(self, environment: MessagePool):
+    async def monitor_invariant(self, space: SignalSpace):
         """Continuously monitor for invariant threats."""
 
-        for msg in environment.messages:
+        for msg in space.messages:
             threat_level = await self.assess_threat_to_invariant(msg)
 
             if threat_level > 0.5:
-                # Emit protective trace
-                await environment.deposit(
-                    InvariantProtectionTrace(
+                # Emit protective signal
+                await space.emit(
+                    InvariantProtectionSignal(
                         invariant=self.invariant,
                         threat_source=msg.id,
                         threat_level=threat_level,
@@ -1438,21 +1438,21 @@ class InvariantGuardian(AutonomousLLMNode):
 The complete attraction function incorporating goals:
 
 ```
-A(agent, message) = σ(
-    W_semantic · cos_sim(agent.embedding, message.embedding) +
-    W_temporal · exp(-age(message) / τ) +
-    W_goal · goal_gradient(message) +
-    W_progress · (1 - progress_toward(message.goal)) +
-    W_constraint · constraint_compatibility(message) +
-    W_invariant · invariant_safety(message) +
-    W_expertise · expertise_match(agent, message) +
+A(agent, signal) = σ(
+    W_semantic · cos_sim(agent.embedding, signal.embedding) +
+    W_temporal · exp(-age(signal) / τ) +
+    W_goal · goal_gradient(signal) +
+    W_progress · (1 - progress_toward(signal.goal)) +
+    W_constraint · constraint_compatibility(signal) +
+    W_invariant · invariant_safety(signal) +
+    W_expertise · expertise_match(agent, signal) +
     bias
 )
 ```
 
 Where:
 
-- `goal_gradient(m)` = Strength of goal's attraction field at message m
+- `goal_gradient(m)` = Strength of goal's attraction field at signal m
 - `progress_toward(g)` = ∈ [0,1], reduces attraction as goal completes
 - `constraint_compatibility(m)` = -1 if violates, +1 if respects constraints
 - `invariant_safety(m)` = -∞ if threatens invariant, 0 otherwise
@@ -1477,7 +1477,7 @@ class StigmergicGoalOrchestrator:
         # 3. Decomposer agents break it into subgoals
         # 4. Subgoals attract specialist agents
         # 5. Agents form personal agendas
-        # 6. Work begins, creating progress traces
+        # 6. Work begins, creating progress signals
         # 7. Progress modifies attraction landscape
         # 8. Constraints create repulsion from bad paths
         # 9. Invariant guardians maintain system integrity
@@ -1515,7 +1515,7 @@ class StigmergicGoalOrchestrator:
 |-----------|-------|-----------|--------------|
 | Find attracted agents | O(n·m) | O(n·log m) | O(k·log m) |
 | Compute all attractions | O(n·m·d) | O(n·m) | O(n·m) |
-| Deposit trace | O(1) | O(log n) | O(1) |
+| Deposit signal | O(1) | O(log n) | O(1) |
 | Update weights | O(n·m) | O(batch) | O(batch) |
 
 Where:
@@ -1529,7 +1529,7 @@ Where:
 
 - **Embeddings**: n·d + m·d floats (e.g., 1000 agents + 10000 messages × 1536 = ~17M floats = 68MB)
 - **Graph**: Sparse matrix (typically ~5% density = ~500K edges = 4MB)
-- **Metadata**: ~1KB per message = 10MB for 10K messages
+- **Metadata**: ~1KB per signal = 10MB for 10K messages
 
 Total: ~100MB for a medium-scale system (1K agents, 10K messages)
 
@@ -1575,7 +1575,7 @@ While LLM intelligence provides:
 
 - **Semantic understanding** - Beyond type matching
 - **Adaptive behavior** - Self-modifying weights
-- **Creative solutions** - Novel message types
+- **Creative solutions** - Novel signal types
 - **Autonomous coordination** - Self-organization
 
 ### The Result

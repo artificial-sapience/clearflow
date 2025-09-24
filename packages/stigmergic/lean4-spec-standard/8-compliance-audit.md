@@ -1,9 +1,5 @@
 # 8. Compliance Scorecard and Audit Guide
 
-> Version: 0.1.0-draft
-> Status: Section 1 Draft for Review
-> Part of: Lean 4 Specification Standard
-
 ## Core Philosophy Reminder
 
 **THE FUNDAMENTAL PRINCIPLE**: If a property matters, the compiler must check it.
@@ -35,6 +31,7 @@ Use this scorecard to quickly assess compliance level:
 - [ ] Bijective correspondence between math and English
 - [ ] File organization uses `section` blocks
 - [ ] Normative choices documented with revision mechanisms
+- [ ] **Every specification module has corresponding *Decisions.lean file**
 
 **Compliance Levels**:
 
@@ -84,6 +81,28 @@ Use this scorecard to quickly assess compliance level:
 ### Phase 3: Documentation Review
 
 Apply the existing documentation standards, but remember: **documentation is not verification**.
+
+#### Normative Decision Documentation (REQUIRED)
+
+For each specification module (e.g., `Signal.lean`, `Agent.lean`):
+
+1. **Check for corresponding *Decisions.lean file**:
+   - `Signal.lean` → `SignalDecisions.lean`
+   - `Agent.lean` → `AgentDecisions.lean`
+   - etc.
+
+2. **Each decision must document**:
+   - Alternatives considered
+   - Rationale for the choice
+   - Dependencies on other decisions
+   - Current status (Active/Superseded)
+
+3. **Decision categories**:
+   - DC (Definitional Commitments)
+   - OA (Ontological Assumptions)
+   - AD (Architectural Decisions)
+
+This creates an audit trail of design choices and enables informed evolution of the specification.
 
 ## Common Pitfalls to Avoid
 
@@ -142,6 +161,13 @@ For aspects that cannot be automatically checked:
 - [ ] Experimental features properly marked
 - [ ] Evolution mechanisms documented
 
+### Normative Decision Tracking
+
+- [ ] Each .lean specification has corresponding *Decisions.lean file
+- [ ] All major design choices are captured as NormativeDecision objects
+- [ ] Alternatives and rationale are documented
+- [ ] Decision dependencies are explicit
+
 ## Red Flags in Review
 
 Be especially alert for:
@@ -152,6 +178,8 @@ Be especially alert for:
 4. **String-based dispatch** - Loss of type safety
 5. **Undocumented axioms** - Hidden assumptions
 6. **Implementation types in specs** - Breaks abstraction
+7. **Missing *Decisions.lean file** - No audit trail for design choices
+8. **Normative decisions only in comments** - Not first-class objects
 
 ## Summary
 

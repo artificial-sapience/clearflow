@@ -21,7 +21,7 @@ def placeholder() -> str:
     is under development. It will be removed when real implementation begins.
 
     Returns:
-        A message indicating the package is under development.
+        A signal indicating the package is under development.
 
     """
     return "Stigmergic package is under development"

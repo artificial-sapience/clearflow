@@ -1,9 +1,5 @@
 # 1. Core Principles
 
-> Version: 0.1.0-draft
-> Status: Section 1 Draft for Review
-> Part of: Lean 4 Specification Standard
-
 ## Core Philosophy Reminder
 
 **THE FUNDAMENTAL PRINCIPLE**: If a property matters, the compiler must check it.
@@ -177,8 +173,8 @@ structure ResourceComposition where
  id_left : ∀ a, compose identity a = a
  id_right : ∀ a, compose a identity = a
 
-/-- Example: A message with opaque content the specification cannot inspect -/
-structure Message where
+/-- Example: A signal with opaque content the specification cannot inspect -/
+structure Signal where
  timestamp : ℝ
  content : OpaqueData -- Specification can pass it but never examine it
 

@@ -3,9 +3,9 @@
 
   Minimal Viable System: A stigmergic system that can grow from
   three fundamental capabilities:
-  1. Traces (persistent environmental modifications)
-  2. Attraction (agents finding relevant traces)
-  3. Action (agents processing traces and emitting new ones)
+  1. Signals (persistent environmental modifications)
+  2. Attraction (agents finding relevant signals)
+  3. Action (agents processing signals and emitting new ones)
 -/
 
 import Mathlib.Data.Real.Basic
@@ -17,20 +17,20 @@ namespace StigmergicCoordination
 -- Core type aliases for MVP
 abbrev Time := Nat  -- Simplified to discrete time steps
 abbrev AgentRole := String
-abbrev TraceType := String
+abbrev SignalType := String
 abbrev Content := String
 
-/-- MVP Trace: The only data structure we need -/
-structure Trace where
+/-- MVP Signal: The only data structure we need -/
+structure Signal where
   content : Content
-  traceType : TraceType  -- "goal", "task", "progress", "completion"
+  signalType : SignalType  -- "goal", "task", "progress", "completion"
   timestamp : Time
   creatorRole : AgentRole
   deriving Repr, DecidableEq
 
-/-- MVP Environment: Just a collection of traces -/
+/-- MVP Environment: Just a collection of signals -/
 structure Environment where
-  traces : List Trace
+  signals : List Signal
   currentTime : Time
   deriving Repr
 
@@ -44,41 +44,41 @@ structure Agent where
   CORE MVP FUNCTIONS: The three fundamental capabilities
 ===============================================================-/
 
-/-- 1. DEPOSIT: Add trace to environment -/
-def deposit (env : Environment) (trace : Trace) : Environment :=
-  { env with traces := trace :: env.traces }
+/-- 1. DEPOSIT: Add signal to environment -/
+def emit (env : Environment) (signal : Signal) : Environment :=
+  { env with signals := signal :: env.signals }
 
-/-- 2. ATTRACTION: Find relevant traces (MVP uses simple matching) -/
-def findRelevantTraces (env : Environment) (role : AgentRole) (limit : Nat) : List Trace :=
+/-- 2. ATTRACTION: Find relevant signals (MVP uses simple matching) -/
+def findRelevantSignals (env : Environment) (role : AgentRole) (limit : Nat) : List Signal :=
   -- MVP: Simple role-based filtering
   -- Production: Would use semantic similarity
-  env.traces
-    |> List.filter (fun t => role == t.creatorRole || t.traceType == "goal")
+  env.signals
+    |> List.filter (fun t => role == t.creatorRole || t.signalType == "goal")
     |> List.take limit
 
-/-- 3. ACTION: Agent processes trace and generates response -/
-def agentAct (agent : Agent) (trace : Trace) (time : Time) : Option Trace :=
+/-- 3. ACTION: Agent processes signal and generates response -/
+def agentAct (agent : Agent) (signal : Signal) (time : Time) : Option Signal :=
   -- MVP: Simple role-based response
   -- Production: Would use DSPy for intelligent processing
-  match agent.role, trace.traceType with
+  match agent.role, signal.signalType with
   | "goal_decomposer", "goal" =>
       some {
-        content := s!"Task derived from: {trace.content}",
-        traceType := "task",
+        content := s!"Task derived from: {signal.content}",
+        signalType := "task",
         timestamp := time,
         creatorRole := agent.role
       }
   | "task_worker", "task" =>
       some {
-        content := s!"Working on: {trace.content}",
-        traceType := "progress",
+        content := s!"Working on: {signal.content}",
+        signalType := "progress",
         timestamp := time,
         creatorRole := agent.role
       }
   | "quality_checker", "progress" =>
       some {
-        content := s!"Validated: {trace.content}",
-        traceType := "completion",
+        content := s!"Validated: {signal.content}",
+        signalType := "completion",
         timestamp := time,
         creatorRole := agent.role
       }
@@ -89,21 +89,21 @@ def agentAct (agent : Agent) (trace : Trace) (time : Time) : Option Trace :=
 ===============================================================-/
 
 /-- Single agent cycle: observe, decide, act -/
-def agentCycle (agent : Agent) (env : Environment) : Option Trace :=
-  let relevantTraces := findRelevantTraces env agent.role 5
-  match relevantTraces with
+def agentCycle (agent : Agent) (env : Environment) : Option Signal :=
+  let relevantSignals := findRelevantSignals env agent.role 5
+  match relevantSignals with
   | [] => none
-  | trace :: _ => agentAct agent trace env.currentTime
+  | signal :: _ => agentAct agent signal env.currentTime
 
 /-- System cycle: all agents act, environment updates -/
 def systemCycle (agents : List Agent) (env : Environment) : Environment :=
-  let newTraces := agents.filterMap (fun a => agentCycle a env)
-  let envWithNewTraces := newTraces.foldl deposit env
-  { envWithNewTraces with currentTime := env.currentTime + 1 }
+  let newSignals := agents.filterMap (fun a => agentCycle a env)
+  let envWithNewSignals := newSignals.foldl emit env
+  { envWithNewSignals with currentTime := env.currentTime + 1 }
 
 /-- Check if goal is complete -/
 def isComplete (env : Environment) : Bool :=
-  env.traces.any (fun t => t.traceType == "completion")
+  env.signals.any (fun t => t.signalType == "completion")
 
 /-- Run system until completion or timeout -/
 def runUntilComplete (agents : List Agent) (env : Environment) (maxCycles : Nat) : Environment :=
@@ -126,13 +126,13 @@ def semanticSimilarity (content1 content2 : Content) : Float :=
 
 /-- Phase 2: Add feedback learning -/
 structure Feedback where
-  traceId : Nat
+  signalId : Nat
   success : Bool
   reason : String
   deriving Repr
 
 /-- Phase 3: Add dynamic specialization -/
-def updateAgentRole (agent : Agent) (successes : List Trace) : Agent :=
+def updateAgentRole (agent : Agent) (successes : List Signal) : Agent :=
   -- Analyze what agent is good at
   -- Update role accordingly
   sorry
@@ -141,13 +141,13 @@ def updateAgentRole (agent : Agent) (successes : List Trace) : Agent :=
   THEOREMS: Properties of the minimal system
 ===============================================================-/
 
-/-- System makes progress: new traces are generated -/
+/-- System makes progress: new signals are generated -/
 theorem system_makes_progress
   (agents : List Agent)
   (env : Environment)
-  (has_goal : ∃ t ∈ env.traces, t.traceType = "goal")
+  (has_goal : ∃ t ∈ env.signals, t.signalType = "goal")
   (has_agents : agents.length > 0) :
-  (systemCycle agents env).traces.length ≥ env.traces.length :=
+  (systemCycle agents env).signals.length ≥ env.signals.length :=
   sorry
 
 /-- Goals eventually lead to completion under ideal conditions -/
@@ -157,16 +157,16 @@ theorem eventual_completion
   (has_decomposer : ∃ a ∈ agents, a.role = "goal_decomposer")
   (has_worker : ∃ a ∈ agents, a.role = "task_worker")
   (has_checker : ∃ a ∈ agents, a.role = "quality_checker")
-  (has_goal : ∃ t ∈ env.traces, t.traceType = "goal") :
+  (has_goal : ∃ t ∈ env.signals, t.signalType = "goal") :
   ∃ n : Nat, isComplete (runUntilComplete agents env n) :=
   sorry
 
-/-- Traces persist: environment maintains history -/
-theorem traces_persist
+/-- Signals persist: environment maintains history -/
+theorem signals_persist
   (env : Environment)
-  (trace : Trace)
-  (deposited : trace ∈ (deposit env trace).traces) :
-  ∀ n : Nat, trace ∈ (iterate (systemCycle []) n (deposit env trace)).traces :=
+  (signal : Signal)
+  (emited : signal ∈ (emit env signal).signals) :
+  ∀ n : Nat, signal ∈ (iterate (systemCycle []) n (emit env signal)).signals :=
   sorry
 
 /-===============================================================
@@ -183,14 +183,14 @@ def createInitialAgents : List Agent :=
   })
 
 def createInitialEnvironment : Environment := {
-  traces := [],
+  signals := [],
   currentTime := 0
 }
 
 def injectGoal (env : Environment) (goalContent : Content) : Environment :=
-  deposit env {
+  emit env {
     content := goalContent,
-    traceType := "goal",
+    signalType := "goal",
     timestamp := env.currentTime,
     creatorRole := "human"
   }

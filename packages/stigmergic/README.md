@@ -1,6 +1,6 @@
 # Stigmergic Coordination
 
-A mathematically-specified system for AI agent coordination through environmental traces.
+A mathematically-specified system for AI agent coordination through environmental signals.
 
 ## Development Approach
 
@@ -34,9 +34,9 @@ This project follows rigorous Lean4 specification standards documented in `lean4
 
 **Stigmergy**: Indirect coordination through environmental modifications
 
-- **Traces**: Persistent messages in environment
-- **Attraction**: Agents finding relevant traces
-- **Action**: Processing and emitting new traces
+- **Signals**: Persistent messages in space
+- **Attraction**: Agents finding relevant signals
+- **Action**: Processing and emitting new signals
 
 ## Status
 

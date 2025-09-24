@@ -9,7 +9,7 @@
 # Lean intermediate files
 *.olean
 *.ilean
-*.trace
+*.signal
 *.hash
 
 # C compilation artifacts

@@ -8,7 +8,7 @@ Stigmergy is not about ants. It's about how **coordination emerges from environm
 
 At its essence, stigmergy is:
 
-> **Coordination through persistent environmental modification where agents sense and respond to accumulated traces, creating emergent organization without direct communication or central control.**
+> **Coordination through persistent environmental modification where agents sense and respond to accumulated signals, creating emergent organization without direct communication or central control.**
 
 This is fundamentally different from:
 
@@ -16,7 +16,7 @@ This is fundamentally different from:
 - **Shared planning**: "We agree on what to do"
 - **Central orchestration**: "Someone tells us all what to do"
 
-Instead, stigmergy is: "I modify the environment, you sense it and respond, creating patterns neither of us planned."
+Instead, stigmergy is: "I modify the space, you sense it and respond, creating patterns neither of us planned."
 
 ## Stigmergy in Human Systems
 
@@ -24,7 +24,7 @@ Instead, stigmergy is: "I modify the environment, you sense it and respond, crea
 
 Wikipedia is perhaps humanity's greatest stigmergic achievement:
 
-- **Traces**: Articles, edits, red links, talk pages
+- **Signals**: Articles, edits, red links, talk pages
 - **Attraction**: Incomplete articles attract editors
 - **Reinforcement**: Good edits attract more refinement
 - **Emergence**: Coherent encyclopedia with no central plan
@@ -34,7 +34,7 @@ Wikipedia is perhaps humanity's greatest stigmergic achievement:
 
 Every successful open source project is stigmergic:
 
-- **Traces**: Code, issues, TODOs, documentation
+- **Signals**: Code, issues, TODOs, documentation
 - **Attraction**: Bugs attract fixers, features attract users
 - **Reinforcement**: Good code attracts more contributions
 - **Emergence**: Complex software systems nobody fully understands
@@ -44,7 +44,7 @@ Every successful open source project is stigmergic:
 
 Science itself advances stigmergically:
 
-- **Traces**: Papers, citations, datasets
+- **Signals**: Papers, citations, datasets
 - **Attraction**: Gaps in knowledge attract researchers
 - **Reinforcement**: Important findings attract more research
 - **Emergence**: Scientific revolutions nobody planned
@@ -54,7 +54,7 @@ Science itself advances stigmergically:
 
 Urban development is inherently stigmergic:
 
-- **Traces**: Buildings, paths, usage patterns
+- **Signals**: Buildings, paths, usage patterns
 - **Attraction**: Busy areas attract more development
 - **Reinforcement**: Success attracts more success
 - **Emergence**: Cities nobody designed
@@ -66,7 +66,7 @@ Urban development is inherently stigmergic:
 
 Every viral phenomenon is stigmergic:
 
-- **Twitter/X**: Hashtags create attraction fields, retweets reinforce traces
+- **Twitter/X**: Hashtags create attraction fields, retweets reinforce signals
 - **Reddit**: Upvotes modify visibility, creating emergent content curation
 - **GitHub**: Stars, forks, and PRs create developer coordination
 - **Stack Overflow**: Questions attract answers, votes create knowledge hierarchy
@@ -75,7 +75,7 @@ Every viral phenomenon is stigmergic:
 
 Markets are stigmergic coordination engines:
 
-- **Traces**: Prices, orders, trades
+- **Signals**: Prices, orders, trades
 - **Attraction**: Opportunities attract capital
 - **Reinforcement**: Successful strategies attract imitators
 - **Emergence**: Price discovery, market efficiency
@@ -85,11 +85,11 @@ Markets are stigmergic coordination engines:
 
 Cooperation emerges stigmergically:
 
-- **Traces**: Reputation, past actions
+- **Signals**: Reputation, past actions
 - **Attraction**: Cooperators attract cooperators
 - **Reinforcement**: Successful strategies spread
 - **Emergence**: Trust networks, social norms
-- **Scale**: Entire societies built on reputational traces
+- **Scale**: Entire societies built on reputational signals
 
 ## Why Stigmergy Matters for AI
 
@@ -112,8 +112,8 @@ These approaches suffer from:
 
 With stigmergic coordination:
 
-- **Agents modify environment**: Leave traces, don't send messages
-- **Coordination emerges**: From trace patterns, not protocols
+- **Agents modify space**: Leave signals, don't send messages
+- **Coordination emerges**: From signal patterns, not protocols
 - **Scale naturally**: No communication bottleneck
 - **Robust by design**: No central point of failure
 - **True emergence**: Behaviors we didn't design appear
@@ -126,7 +126,7 @@ Stigmergy can be formalized as field dynamics:
 ∂E/∂t = Σᵢ Aᵢ(∇E, t) - λ·E
 
 Where:
-- E = Environmental field (traces)
+- E = Environmental field (signals)
 - Aᵢ = Agent i's modification based on gradient ∇E
 - λ = Decay constant
 - Coordination emerges from agents following ∇E
@@ -135,7 +135,7 @@ Where:
 This is essentially **field theory for distributed cognition**:
 
 - Agents are charged particles
-- Traces are field potentials
+- Signals are field potentials
 - Attraction/repulsion are field forces
 - Coordination is field equilibrium
 
@@ -155,9 +155,9 @@ Stigmergic systems scale naturally:
 Stigmergic systems are anti-fragile:
 
 - **No single point of failure**: Fully distributed
-- **Self-healing**: Traces attract repair
+- **Self-healing**: Signals attract repair
 - **Adaptive**: Patterns evolve with conditions
-- **Persistent**: Knowledge embedded in environment survives agent failure
+- **Persistent**: Knowledge embedded in space survives agent failure
 
 ### 3. True Emergence
 
@@ -172,19 +172,19 @@ Stigmergic systems generate novelty:
 
 Stigmergy enables seamless human-AI collaboration:
 
-- **No API needed**: Just shared environment modification
-- **No common language**: Actions speak through traces
+- **No API needed**: Just shared space modification
+- **No common language**: Actions speak through signals
 - **No synchronization**: Asynchronous by nature
-- **No onboarding**: New agents learn from existing traces
+- **No onboarding**: New agents learn from existing signals
 
 ### 5. Cognitive Offloading
 
-Stigmergy embeds intelligence in environment:
+Stigmergy embeds intelligence in space:
 
 - **Extended mind**: Environment becomes part of cognitive system
-- **Persistent memory**: Traces outlive agents
+- **Persistent memory**: Signals outlive agents
 - **Collective memory**: Shared knowledge accumulation
-- **Computational environment**: The medium computes
+- **Computational space**: The medium computes
 
 ## The Vision: Stigmergic AI
 
@@ -199,7 +199,7 @@ Imagine AI systems where:
 
 ### Instead of Managing Agents
 
-- Agents self-organize around traces
+- Agents self-organize around signals
 - Specialization emerges from success
 - Teams form and dissolve dynamically
 - Scale happens automatically
@@ -214,7 +214,7 @@ Imagine AI systems where:
 ### Instead of Controlling Systems
 
 - We cultivate environments
-- Guide through trace modification
+- Guide through signal modification
 - Influence through attraction fields
 - Achieve through emergence
 
@@ -224,10 +224,10 @@ Imagine AI systems where:
 
 Several factors make stigmergic AI timely:
 
-1. **LLM Intelligence**: Agents smart enough to interpret traces semantically
+1. **LLM Intelligence**: Agents smart enough to interpret signals semantically
 2. **Vector Embeddings**: Efficient similarity computation for attraction
 3. **Scalable Infrastructure**: Cloud/edge computing for massive agent populations
-4. **Environmental Persistence**: Databases optimized for trace storage/retrieval
+4. **Environmental Persistence**: Databases optimized for signal storage/retrieval
 5. **Mathematical Tools**: Graph neural networks, field theory, complexity science
 
 ### The Opportunity
@@ -285,7 +285,7 @@ For AI systems, stigmergy offers something profound: the ability to create syste
 - **More creative than we can imagine**
 - **More scalable than we can orchestrate**
 
-This is not about building better message-passing systems or shared memory architectures. It's about creating the conditions for intelligence to emerge, coordination to self-organize, and solutions to discover themselves.
+This is not about building better signal-passing systems or shared memory architectures. It's about creating the conditions for intelligence to emerge, coordination to self-organize, and solutions to discover themselves.
 
 The question isn't whether to pursue stigmergic AI, but whether we can afford not to. As we push toward AGI and beyond, stigmergy may be the only coordination mechanism that scales with our ambitions.
 

@@ -1,9 +1,5 @@
 # 5. Documentation Standards
 
-> Version: 0.1.0-draft
-> Status: Section 1 Draft for Review
-> Part of: Lean 4 Specification Standard
-
 ## Core Philosophy Reminder
 
 **THE FUNDAMENTAL PRINCIPLE**: If a property matters, the compiler must check it.
@@ -520,7 +516,7 @@ inductive ProposalError
  | windowTooLong (actual : Duration) (maximum : Duration)
 
 /-- Error messages are generated from the structured error types -/
-def ProposalError.message : ProposalError → String
+def ProposalError.signal : ProposalError → String
  | .contentTooShort a r => s!"Content has {a} chars but needs at least {r} to ensure substantive content"
  | .contentTooLong a m => s!"Content has {a} chars but maximum is {m} to ensure reviewability"
  | .windowTooShort a r => s!"Window is {a} but minimum is {r} for inclusive participation"
