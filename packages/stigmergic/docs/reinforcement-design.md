@@ -8,7 +8,7 @@ This document presents a progressive design for reinforcement in stigmergic syst
 
 This revision creates a minimal, mathematically coherent MVP:
 
-1. **Open Economy with Tracking**: The system is NOT conserved - daily budget resets inject new attention. All injections are tracked via `totalInjected` for complete accounting. The term "conserved" refers only to budget enforcement (can't spend more than you have), not system-wide conservation.
+1. **Open Economy with Tracking**: The system is NOT conserved - daily budget resets inject new attention through replenishment (spent budget becoming available again) plus any positive adjustments. All injections are tracked via `totalInjected` for complete accounting. The term "conserved" refers only to budget enforcement (can't spend more than you have), not system-wide conservation.
 
 2. **Historical Credibility Only**: Reinforcements use `credibilityAtTime` captured at creation, ensuring immutable history and monotonic decay. No dynamic re-evaluation in MVP.
 
@@ -110,6 +110,10 @@ structure MVPAgent where
   spent : AttentionMinutes  -- Already spent today (≤ dailyBudget)
   cumulativeSpent : AttentionMinutes  -- Total ever spent (for accounting)
   lastReset : Time          -- When budget was last reset
+  -- Invariants:
+  -- baselineBudget > 0 (agents must have some capacity)
+  -- spent ≤ dailyBudget (enforced by operations)
+  -- Migration: For existing agents, set baselineBudget = dailyBudget
 
 /-- Minimal signal with attention invested -/
 structure MVPSignal where
@@ -214,6 +218,15 @@ def getTotalAttentionInvested (space : MVPSignalSpace) (signalId : SignalId) : A
 def advanceTime (space : MVPSignalSpace) (seconds : Nat) : MVPSignalSpace :=
   { space with currentTime := space.currentTime + seconds }
 
+/-- Time Management Contract:
+    Callers MUST invoke advanceTime before operations that depend on time:
+    - getCurrentInfluence (for decay calculations)
+    - resetBudgets (for daily reset checks)
+    - processOutcome (to sync with outcome.measuredAt)
+    Example: space |> advanceTime 60 |> emitSignal agentId strength
+    Note: All operations use space.currentTime for timestamps
+-/
+
 /-- Generate unique, deterministic IDs for signals using monotonic counter -/
 def generateUniqueId (space : MVPSignalSpace) (agentId : AgentId) : SignalId × Nat :=
   let signalId := s!"{agentId}_signal_{space.nextSignalCounter}"
@@ -232,7 +245,7 @@ def emitSignal (space : MVPSignalSpace) (agentId : AgentId)
         emitter := agentId,
         timestamp := space.currentTime,
         initialStrength := strength,
-        penaltyFactor := ⟨1.0, by norm_num⟩  -- Start with no penalty
+        penaltyFactor := ⟨1.0, by norm_num⟩  -- NNReal constructor with proof (1.0 ≥ 0)
       }
 
       -- Deduct from agent's budget (both daily and cumulative)
@@ -349,7 +362,8 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
     let detail := agentDetails.find? (·.agentId = agent.id)
 
     if isEmitter || detail.isSome then
-      -- Fixed learning rate for MVP simplicity
+      -- Fixed learning rate chosen for MVP simplicity and stability
+      -- Sqrt scaling deferred: requires more complex convergence analysis
       -- Alternative: Scale by sqrt(attentionSpent) for proportional credit
       let alpha : Real := 0.1  -- Uniform ±10% adjustment
 
@@ -420,18 +434,28 @@ def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
         let multiplier := 1.0 + unspentRatio * Constants.BUDGET_BURST_PENALTY
         let newBudget := NNReal.ofReal (agent.baselineBudget.val * multiplier)
 
-        -- Calculate actual NEW injection (delta from previous budget)
-        let actualInjection := if newBudget > agent.dailyBudget then
+        -- Track both replenishment and adjustment
+        let replenished := agent.spent  -- Amount that becomes available again
+        let adjustmentDelta := if newBudget > agent.dailyBudget then
+          newBudget - agent.dailyBudget  -- Positive adjustment
+        else if newBudget < agent.dailyBudget then
+          ⟨0, by norm_num⟩ - (agent.dailyBudget - newBudget)  -- Negative (represented as 0 for NNReal)
+        else
+          ⟨0, by norm_num⟩  -- No change
+
+        -- Total injection is replenishment plus any positive adjustment
+        let actualInjection := replenished + (if newBudget > agent.dailyBudget then
           newBudget - agent.dailyBudget
         else
-          ⟨0, by norm_num⟩  -- No injection if budget decreased
+          ⟨0, by norm_num⟩)
 
         let resetAgent := { agent with
           dailyBudget := newBudget,
           spent := ⟨0, by norm_num⟩,
           lastReset := now }
 
-        -- Create per-agent audit event
+        -- Create per-agent audit event with full detail
+        -- Parameters: who, replenished, newBudget, when
         let auditEvent := AuditEvent.budgetReset agent.id actualInjection unspent now
 
         (resetAgent :: agents, auditEvent :: audits, injection + actualInjection)
@@ -574,7 +598,7 @@ theorem reinforcement_preserves_history (space space' : MVPSignalSpace)
 - **Honest model**: Acknowledges daily attention injection
 - **Complete audit**: Tracks `totalInjected` and all transactions
 - **Recovery floor**: 0.5x minimum budget for redemption
-- **System-level events**: Proper "SYSTEM" agent for injections
+- **Per-agent audit**: Individual budget reset events with replenishment tracking
 
 ✅ **Correct Mathematical Properties:**
 - **Factorization proof**: Valid now with static credibility
@@ -1041,6 +1065,12 @@ def propagateCausalCredit (outcome : CausalOutcome) (space : MVPSignalSpace)
   -- NOTE: In Part 6, would need a separate causalOutcomes field or migration
   -- Cannot append CausalOutcome to List MVPOutcome (type mismatch)
   updatedSpace
+
+/-- Migration Path for Part 6:
+    Option 1: Add causalOutcomes : List CausalOutcome to MVPSignalSpace
+    Option 2: Replace outcomes with sum type: List (MVPOutcome | CausalOutcome)
+    Recommended: Option 1 for backward compatibility
+-/
 ```
 
 ## Implementation Checklist
@@ -1123,8 +1153,8 @@ This design provides:
 
 1. **Complete MVP**: Working learning loop from day 1 with proper type safety
 2. **Open Economy**: Tracked attention injection with anti-gaming measures
-3. **Proper decay**: All components decay based on age with valid proofs
+3. **Proper decay**: All components decay based on age with provable properties
 4. **External grounding**: Outcomes drive learning with neutral handling
 5. **Progressive enhancement**: Each phase adds specific value without breaking core
 
-The MVP is now truly minimal but mathematically coherent - it has proper types, valid proofs, and correct dynamics. Later phases add sophistication without breaking the core loop.
+The MVP is now truly minimal but mathematically coherent - it has proper types, provable theorems (proofs pending), and correct dynamics. Later phases add sophistication without breaking the core loop.
