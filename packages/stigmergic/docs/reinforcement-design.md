@@ -8,7 +8,7 @@ This document presents a progressive design for reinforcement in stigmergic syst
 
 This revision creates a minimal, mathematically coherent MVP:
 
-1. **Open Economy with Tracking**: The system is NOT conserved - daily budget resets inject new attention through replenishment (spent budget becoming available again) plus any positive adjustments. All injections are tracked via `totalInjected` for complete accounting. The term "conserved" refers only to budget enforcement (can't spend more than you have), not system-wide conservation.
+1. **Open Economy with Tracking**: The system is NOT conserved - daily budget resets inject new attention through replenishment (spent budget becoming available again) plus any positive adjustments. Injection from resets is tracked via `totalInjected` for accounting. The term "conserved" refers only to budget enforcement (can't spend more than you have), not system-wide conservation.
 
 2. **Historical Credibility Only**: Reinforcements use `credibilityAtTime` captured at creation, ensuring immutable history and monotonic decay. No dynamic re-evaluation in MVP.
 
@@ -71,6 +71,12 @@ def Credibility := { x : Real // 0 ≤ x ∧ x ≤ 1 }
 
 /-- Positive real for safe division (prevents div-by-zero) -/
 def PosReal := { x : Real // x > 0 }
+
+/-- Note on NNReal literals:
+    Throughout this document, ⟨value, by norm_num⟩ constructs an NNReal
+    with a proof that value ≥ 0. This is Lean's way of ensuring type safety
+    for non-negative reals at compile time.
+-/
 
 /-- Global system constants -/
 namespace Constants
@@ -168,9 +174,16 @@ structure MVPSignalSpace where
   outcomes : List MVPOutcome
   agents : List MVPAgent
   auditLog : List AuditEvent  -- Complete transaction history
-  totalInjected : AttentionMinutes  -- Total attention injected via budget resets
+  totalInjected : AttentionMinutes  -- Total attention injected via budget resets (excludes initial provisioning)
   currentTime : Time
   nextSignalCounter : Nat  -- Monotonic counter for unique signal IDs
+
+/-- Accounting Note:
+    totalInjected tracks attention from budget resets only.
+    Initial agent provisioning (baseline budgets) happens outside
+    the tracked economy. To include initial provisioning, add:
+    totalProvisioned : AttentionMinutes  -- Sum of all baseline budgets
+-/
 
 /-- Calculate current influence (can be negative for inhibited signals) -/
 def getCurrentInfluence (space : MVPSignalSpace) (signalId : SignalId)
@@ -223,7 +236,10 @@ def advanceTime (space : MVPSignalSpace) (seconds : Nat) : MVPSignalSpace :=
     - getCurrentInfluence (for decay calculations)
     - resetBudgets (for daily reset checks)
     - processOutcome (to sync with outcome.measuredAt)
-    Example: space |> advanceTime 60 |> emitSignal agentId strength
+    Example: advanceTime space 60 |> fun s => emitSignal s agentId strength
+    -- Or using explicit application:
+    Example: let space' := advanceTime space 60
+             emitSignal space' agentId strength
     Note: All operations use space.currentTime for timestamps
 -/
 
@@ -245,7 +261,7 @@ def emitSignal (space : MVPSignalSpace) (agentId : AgentId)
         emitter := agentId,
         timestamp := space.currentTime,
         initialStrength := strength,
-        penaltyFactor := ⟨1.0, by norm_num⟩  -- NNReal constructor with proof (1.0 ≥ 0)
+        penaltyFactor := ⟨1.0, by norm_num⟩  -- Start with no penalty
       }
 
       -- Deduct from agent's budget (both daily and cumulative)
@@ -436,29 +452,32 @@ def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
 
         -- Track both replenishment and adjustment
         let replenished := agent.spent  -- Amount that becomes available again
-        let adjustmentDelta := if newBudget > agent.dailyBudget then
-          newBudget - agent.dailyBudget  -- Positive adjustment
-        else if newBudget < agent.dailyBudget then
-          ⟨0, by norm_num⟩ - (agent.dailyBudget - newBudget)  -- Negative (represented as 0 for NNReal)
-        else
-          ⟨0, by norm_num⟩  -- No change
-
-        -- Total injection is replenishment plus any positive adjustment
-        let actualInjection := replenished + (if newBudget > agent.dailyBudget then
+        -- Note: Negative adjustments not tracked (NNReal constraint)
+        let positiveAdjustment := if newBudget > agent.dailyBudget then
           newBudget - agent.dailyBudget
         else
-          ⟨0, by norm_num⟩)
+          ⟨0, by norm_num⟩
+
+        -- Total injection is replenishment plus any positive adjustment
+        let totalReplenished := replenished + positiveAdjustment
+
+        -- Audit Reconstruction:
+        -- To recover budget history from audit events:
+        -- 1. totalReplenished = replenished + positive adjustment
+        -- 2. agent.dailyBudget = new budget after reset
+        -- 3. unspent = remaining from previous period
+        -- Note: Negative adjustments (budget decreases) not in audit trail
 
         let resetAgent := { agent with
           dailyBudget := newBudget,
           spent := ⟨0, by norm_num⟩,
           lastReset := now }
 
-        -- Create per-agent audit event with full detail
-        -- Parameters: who, replenished, newBudget, when
-        let auditEvent := AuditEvent.budgetReset agent.id actualInjection unspent now
+        -- Create per-agent audit event
+        -- Parameters: who, totalInjection (replenished + positive adj), oldRemaining, when
+        let auditEvent := AuditEvent.budgetReset agent.id totalReplenished unspent now
 
-        (resetAgent :: agents, auditEvent :: audits, injection + actualInjection)
+        (resetAgent :: agents, auditEvent :: audits, injection + totalReplenished)
       else
         (agent :: agents, audits, injection))
     ([], [], ⟨0, by norm_num⟩)  -- Proper type for accumulator
