@@ -51,11 +51,20 @@ abbrev AttentionMinutes := NNReal
 abbrev Influence := Real
 
 /-- Credibility: bounded probability in [0,1] -/
-def Credibility := { x : NNReal // x.val ≤ 1 }
+structure Credibility where
+  val : Real
+  pos : 0 ≤ val := by decide
+  bound : val ≤ 1 := by decide
+  deriving Repr
 
 /-- Smart constructor for credibility -/
-def mkCredibility (x : Real) : Credibility :=
-  ⟨NNReal.ofReal (max 0 (min 1 x)), by simp; exact min_le_left _ _⟩
+def mkCredibility (x : Real) : Credibility where
+  val := max 0 (min 1 x)
+  pos := by simp [max_def]; split <;> simp [*]
+  bound := by simp [min_def, max_def]; split <;> simp [*]
+
+/-- Extract Real value from Credibility -/
+def Credibility.toReal (c : Credibility) : Real := c.val
 
 /-- Minimal agent with credibility and budget -/
 structure MVPAgent where
@@ -111,6 +120,7 @@ structure MVPSignalSpace where
   outcomes : List MVPOutcome
   agents : List MVPAgent
   auditLog : List AuditEvent  -- Complete transaction history
+  totalInjected : AttentionMinutes  -- Total attention injected via budget resets
   currentTime : Time
 
 /-- Calculate current influence (can be negative for inhibited signals) -/
@@ -134,7 +144,7 @@ def getCurrentInfluence (space : MVPSignalSpace) (signalId : SignalId)
         let rAge := (now - r.at).toSeconds
         let decayFactor := 0.5 ^ (rAge / halfLife)
         -- Influence = sign × attention × credibility × penalty × decay
-        r.influence * r.credibilityAtTime.val.val * r.penaltyFactor.val * decayFactor)
+        r.influence * r.credibilityAtTime.toReal * r.penaltyFactor.val * decayFactor)
       .sum
 
     -- Total influence can be negative (strongly inhibited signal)
@@ -229,19 +239,17 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
   let relevantReinforcements := space.reinforcements.filter
     (·.signalId = outcome.signalId)
 
-  -- 1. Update signal with direct feedback
+  -- 1. Update ONLY signal with feedback (not reinforcements, to avoid double penalty)
   let updatedSignals := space.signals.map (fun signal =>
     if signal.id = outcome.signalId then
-      let penaltyUpdate := if outcome.success then 1.0 else 0.7
-      { signal with penaltyFactor := signal.penaltyFactor * penaltyUpdate }
+      -- Bidirectional adjustment: reward success, penalize failure
+      let adjustment := if outcome.success then 1.3 else 0.7  -- ±30%
+      let newPenalty := min 2.0 (max 0.1 (signal.penaltyFactor * adjustment))
+      { signal with penaltyFactor := newPenalty }
     else signal)
 
-  -- 2. Update reinforcements with outcome penalty
-  let updatedReinforcements := space.reinforcements.map (fun r =>
-    if r.signalId = outcome.signalId then
-      let penaltyUpdate := if outcome.success then 1.0 else 0.7
-      { r with penaltyFactor := r.penaltyFactor * penaltyUpdate }
-    else r)
+  -- 2. Keep reinforcements unchanged (avoid double penalty)
+  let updatedReinforcements := space.reinforcements
 
   -- 3. Aggregate RAW reinforcements per agent (fix circularity)
   let agentRawContributions : List (AgentId × Influence) :=
@@ -267,12 +275,12 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
                      (rawInfluence < 0 ∧ ¬outcome.success)
 
       -- Special handling for zero credibility (zombie prevention)
-      let adjustment := if agent.credibility.val.val = 0 then
+      let adjustment := if agent.credibility.val = 0 then
         if correct then learningEpsilon else 0  -- Can escape from 0
       else
         if correct then alpha else -alpha
 
-      let newCredVal := agent.credibility.val.val + adjustment
+      let newCredVal := agent.credibility.val + adjustment
       { agent with credibility := mkCredibility newCredVal })
 
   let auditEvent := AuditEvent.outcomeProcessed outcome.signalId outcome.success space.currentTime
@@ -284,14 +292,24 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
     outcomes := outcome :: space.outcomes,
     auditLog := auditEvent :: space.auditLog }
 
-/-- Reset agent budgets daily -/
+/-- Reset agent budgets daily and track injection -/
 def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
   let dayInSeconds := 86400.0
-  let updatedAgents := space.agents.map (fun agent =>
-    if (now - agent.lastReset).toSeconds > dayInSeconds then
-      { agent with spent := 0, lastReset := now }
-    else agent)
-  { space with agents := updatedAgents }
+  let (updatedAgents, totalNewInjection) :=
+    space.agents.foldl (fun (agents, injection) agent =>
+      if (now - agent.lastReset).toSeconds > dayInSeconds then
+        let resetAgent := { agent with spent := 0, lastReset := now }
+        (resetAgent :: agents, injection + agent.dailyBudget)
+      else
+        (agent :: agents, injection))
+    ([], 0)
+
+  let auditEvent := AuditEvent.budgetReset "-" totalNewInjection 0 now
+
+  { space with
+    agents := updatedAgents,
+    totalInjected := space.totalInjected + totalNewInjection,
+    auditLog := auditEvent :: space.auditLog }
 ```
 
 ### MVP Correctness Properties
@@ -309,31 +327,26 @@ theorem attention_conserved (space : MVPSignalSpace) :
   -- 5. By induction on reinforcement applications, invariant preserved
   sorry  -- Full proof would require formal induction
 
-/-- Conservation: Cumulative attention equals total invested -/
-theorem attention_conservation (space : MVPSignalSpace) :
+/-- Accounting Integrity: All spent attention is tracked -/
+theorem accounting_integrity (space : MVPSignalSpace) :
   let totalCumulativeSpent := space.agents.map (·.cumulativeSpent) |>.sum
   let totalInSignals := space.signals.map (·.initialStrength) |>.sum
   let totalInReinforcements := space.reinforcements.map (·.attentionSpent) |>.sum
   totalCumulativeSpent = totalInSignals + totalInReinforcements := by
-  -- Proof by induction on operations:
-  -- Base case: Initial state has all cumulativeSpent = 0, no signals, no reinforcements
-  --   0 = 0 + 0 ✓
+  -- This proves accounting balance, not conservation
+  -- The system is OPEN: daily budget resets inject new attention
+  sorry
 
-  -- Inductive step: Each operation preserves the invariant
-  -- Case 1: emitSignal with strength s
-  --   Pre:  totalCumulative = totalSigs + totalReinf
-  --   Op:   agent.cumulativeSpent += s, signals += signal(s)
-  --   Post: (totalCumulative + s) = (totalSigs + s) + totalReinf ✓
-
-  -- Case 2: applyReinforcement with attention a
-  --   Pre:  totalCumulative = totalSigs + totalReinf
-  --   Op:   agent.cumulativeSpent += a, reinforcements += reinf(a)
-  --   Post: (totalCumulative + a) = totalSigs + (totalReinf + a) ✓
-
-  -- Case 3: processOutcome - doesn't modify cumulativeSpent/signals/reinforcements ✓
-  -- Case 4: resetBudgets - only resets daily spent, NOT cumulativeSpent ✓
-
-  sorry  -- Full formal proof requires Lean's induction tactics
+/-- Open Economy: System receives daily attention injections -/
+theorem open_economy (space : MVPSignalSpace) :
+  let totalAvailable := space.agents.map (fun a => a.dailyBudget - a.spent) |>.sum
+  let totalInjected := space.totalInjected
+  -- Total system attention = spent + available + historical injections
+  ∃ (totalSystemAttention : AttentionMinutes),
+    totalSystemAttention = totalAvailable + totalInjected := by
+  -- This theorem acknowledges the open nature of the economy
+  -- New attention enters daily, making this NOT a conserved system
+  sorry
 
 /-- Total attention invested is non-negative -/
 theorem attention_invested_non_negative (space : MVPSignalSpace) (id : SignalId) :
@@ -350,30 +363,26 @@ theorem influence_can_be_negative : ∃ (space : MVPSignalSpace) (id : SignalId)
   -- Constructive proof: create a signal with negative reinforcements
   sorry  -- Would construct example with inhibitory reinforcements
 
-/-- Decay is monotonic without new reinforcements -/
-theorem decay_monotonic (space : MVPSignalSpace) (id : SignalId) (t₁ t₂ : Time) :
+/-- Influence magnitude decay is monotonic without new reinforcements -/
+theorem influence_decay_monotonic (space : MVPSignalSpace) (id : SignalId) (t₁ t₂ : Time) :
   t₁ ≤ t₂ →
   (∀ r ∈ space.reinforcements, r.signalId = id → r.at ≤ t₁) →
-  getCurrentStrength space id t₂ ≤ getCurrentStrength space id t₁ := by
+  abs (getCurrentInfluence space id t₂) ≤ abs (getCurrentInfluence space id t₁) := by
   intro h_time h_no_new
-  -- Proof outline:
-  -- 1. For initial strength: (0.5)^(age₂/halfLife) ≤ (0.5)^(age₁/halfLife)
-  --    because age₂ ≥ age₁ and 0.5^x is decreasing
-  -- 2. For each reinforcement r with r.at ≤ t₁:
-  --    decay at t₂ = (0.5)^((t₂ - r.at)/halfLife)
-  --    decay at t₁ = (0.5)^((t₁ - r.at)/halfLife)
-  --    Since t₂ ≥ t₁, decay at t₂ ≤ decay at t₁
-  -- 3. Sum of smaller components ≤ sum of larger components
-  sorry  -- Requires real number properties
+  -- Proof outline for MAGNITUDE decay (influence can be negative):
+  -- 1. Initial signal component decays: |initial * decay₂| ≤ |initial * decay₁|
+  -- 2. Each reinforcement decays: |reinf * decay₂| ≤ |reinf * decay₁|
+  -- 3. Triangle inequality: |sum at t₂| ≤ |sum at t₁| when all components decay
+  sorry  -- Requires real number and absolute value properties
 
 /-- Credibility stays bounded by type construction -/
 theorem credibility_bounded (space : MVPSignalSpace) :
-  ∀ agent ∈ space.agents, 0 ≤ agent.credibility.val.val ∧ agent.credibility.val.val ≤ 1 := by
+  ∀ agent ∈ space.agents, 0 ≤ agent.credibility.val ∧ agent.credibility.val ≤ 1 := by
   intro agent h_mem
   -- Direct proof by type definition
   constructor
-  · exact agent.credibility.val.property  -- NNReal ≥ 0
-  · exact agent.credibility.property  -- Subtype constraint ≤ 1
+  · exact agent.credibility.pos  -- Field constraint ≥ 0
+  · exact agent.credibility.bound  -- Field constraint ≤ 1
 
 /-- Historical immutability: past reinforcements don't change -/
 theorem reinforcement_immutable (space : MVPSignalSpace) (r : MVPReinforcement) :
@@ -386,32 +395,34 @@ theorem reinforcement_immutable (space : MVPSignalSpace) (r : MVPReinforcement) 
 
 ### What MVP Provides
 
-✅ **Type-Safe Distinctions:**
-- `AttentionMinutes`: Conserved resource (always ≥ 0)
-- `Influence`: Emergent strength (can be negative for inhibition)
-- `Credibility`: Bounded probability [0,1] enforced by type
+✅ **Lean-Compatible Type System:**
+- `AttentionMinutes := NNReal`: Always non-negative
+- `Influence := Real`: Supports inhibition (negative values)
+- `Credibility`: Properly bounded [0,1] with Lean 4 structure
 
-✅ **True Conservation with Auditing:**
-- Cumulative attention perfectly tracked (unaffected by resets)
-- Daily budgets reset without breaking conservation
-- Complete audit trail for all transactions
+✅ **Open Economy with Accounting Integrity:**
+- Acknowledges daily attention injection (NOT conserved)
+- Tracks `totalInjected` for complete audit trail
+- Cumulative spending preserved across resets
+- Honest about being an open system
 
-✅ **Complete Learning Loop:**
-- Outcomes update signals, reinforcements, AND agents
-- RAW influence determines correctness (no circularity)
+✅ **Bidirectional Learning:**
+- Success multiplies penaltyFactor by 1.3 (reward)
+- Failure multiplies by 0.7 (punishment)
+- Single-level penalties (no double punishment)
 - Zombie agents can escape zero credibility
-- Reinforcements receive outcome penalties
 
-✅ **Principled Dissipation:**
-- Attention is conserved but influence is dissipative
-- Low-credibility agents have lower "energy efficiency"
-- System naturally filters noise while preserving accounting
+✅ **Correct Influence Dynamics:**
+- RAW influence determines correctness (no circularity)
+- Penalties apply to signals only (avoid compound effects)
+- Influence decays in magnitude but preserves sign
+- Clear separation: accounting vs emergent strength
 
-✅ **Proven Properties:**
-- Conservation holds via cumulative tracking
-- Credibility bounded by type construction
-- Influence can be negative (supports inhibition)
-- Immutable history preserved
+✅ **Migration Compatibility:**
+- Uses actual agent budgets for normalization
+- Safe arithmetic helpers for enhanced phases
+- Preserves all MVP state during upgrades
+- Type-safe operations throughout
 
 ❌ **Deferred to later phases:**
 - Multiple dimensions (belief/priority/ownership)
@@ -445,7 +456,12 @@ def migrateToEnhancedAgent (mvp : MVPAgent) : EnhancedAgent :=
 
 ```lean
 /-- Migrate MVP signal to dimensional signal -/
-def migrateToDimensionalSignal (mvp : MVPSignal) : DimensionalSignal :=
+def migrateToDimensionalSignal (mvp : MVPSignal) (space : MVPSignalSpace) : DimensionalSignal :=
+  -- Find emitter's budget for proper normalization
+  let emitterBudget := match space.agents.find? (·.id = mvp.emitter) with
+    | some agent => agent.dailyBudget.val
+    | none => 480.0  -- Fallback if agent not found
+
   { id := mvp.id,
     emitter := mvp.emitter,
     timestamp := mvp.timestamp,
@@ -458,7 +474,7 @@ def migrateToDimensionalSignal (mvp : MVPSignal) : DimensionalSignal :=
       lastUpdated := mvp.timestamp
     },
     priority := {
-      urgency := mvp.initialStrength / 480,  -- Normalize to [0,1]
+      urgency := min 1.0 (mvp.initialStrength.val / emitterBudget),  -- Normalized by actual budget
       importance := 0.5,  -- Default medium importance
       deadline := none,
       lastUpdated := mvp.timestamp
@@ -492,6 +508,14 @@ structure EnhancedAgent extends MVPAgent where
   participationCount : Nat  -- Number of signals reinforced
   successCount : Nat        -- Number of correct predictions
 
+/-- Safe credibility arithmetic helpers -/
+def addToCredibility (c : Real) (delta : Real) : Credibility :=
+  mkCredibility (c + delta)
+
+def weightedCredibility (weights : List (Real × Real)) : Credibility :=
+  let sum := weights.map (fun (w, c) => w * c) |>.sum
+  mkCredibility sum
+
 /-- Update credibility with multiple factors -/
 def updateEnhancedCredibility (agent : EnhancedAgent)
     (outcome : MVPOutcome) (groupConsensus : Bool) : EnhancedAgent :=
@@ -499,14 +523,14 @@ def updateEnhancedCredibility (agent : EnhancedAgent)
 
   -- Update outcome-based credibility
   let outcomeUpdate := if outcome.success then alpha else -alpha
-  let newByOutcome := max 0 (min 1 (agent.credibility.byOutcome + outcomeUpdate))
+  let newByOutcome := addToCredibility agent.credibility.byOutcome.val outcomeUpdate
 
   -- Update consensus-based credibility
   let consensusUpdate := if groupConsensus then alpha/2 else -alpha/2
-  let newByConsensus := max 0 (min 1 (agent.credibility.byConsensus + consensusUpdate))
+  let newByConsensus := addToCredibility agent.credibility.byConsensus.val consensusUpdate
 
   -- Overall is weighted average
-  let newOverall := 0.7 * newByOutcome + 0.3 * newByConsensus
+  let newOverall := weightedCredibility [(0.7, newByOutcome.val), (0.3, newByConsensus.val)]
 
   { agent with
     credibility := { agent.credibility with
