@@ -1,77 +1,75 @@
-# Session Context: Stigmergic Coordination Lean4 Specification
+# Session Context: Stigmergic Coordination Specification
 
-## Achievement: Level 1 Compliance ✅
+## Major Breakthrough: Abstract Signal Design
 
-Successfully achieved **Level 1 compliance** with zero `sorry` statements across all modules. The specification is production-ready for LLM agents doing semantic coordination through stigmergic principles.
+This session achieved a fundamental architectural insight: **Signal should be an abstract base type** that users extend, not a concrete type with prescribed fields. This follows ClearFlow's successful pattern where the framework provides abstractions (`Message`, `Command`, `Event`) and users create concrete implementations.
 
-## Major Accomplishments This Session
+### Key Design Decisions
 
-### 1. Achieved Zero Sorry Statements
-- Removed unprovable theorems (signal monotonicity, memory bounds)
-- Fixed `space_signal_uniqueness` proof using `grind`
-- Documented complex properties in *Decisions.lean files instead
+1. **Signal as Abstract Base**
+   - Framework defines only: id, emitter, timestamp
+   - NO forced "content" field
+   - Users extend with domain-specific fields
+   - Natural field names (`text` for chat, `ticker` for markets)
 
-### 2. File Structure Cleanup
-- Renamed `Decision.lean` → `NormativeDecision.lean` (emphasizing value-laden choices)
-- Updated all imports across 15 Lean files
-- Fixed decision structures to match `NormativeDecision` format
+2. **Intelligence Abstraction**
+   - `IntelligenceProvider` interface for all decision-making
+   - Supports LLM, human, and hybrid intelligence
+   - Agents delegate ALL logic to intelligence provider
+   - No fixed thresholds or attraction lists
 
-### 3. Terminology Updates
-- Changed "deposit" → "emit" throughout (more LLM-native)
-- Maintained strength/relevance separation (finalized in previous session)
+3. **Framework/User Separation**
+   - **Framework**: Coordination mechanics, safety properties
+   - **User Code**: Signal types, DSPy integration, domain logic
+   - **No DSPy in core**: Users choose their LLM framework
 
-### 4. Property Organization Refactoring
-- **Intrinsic properties** now colocated with types (e.g., `agent_id_preserved` in Agent.lean)
-- **Cross-cutting properties** in Properties/Safety.lean (e.g., `space_signal_uniqueness`)
-- Added `AD_STGM_022` decision documenting this architectural pattern
-- Benefits: Better discoverability, clearer organization, easier maintenance
+### What We Analyzed
 
-### 5. Compliance Audit
-- Verified Level 1: Type Safety ✅
-- Verified Level 3: Documentation (all modules have *Decisions.lean) ✅
-- Removed inaccurate decisions (OA_STGM_016, OA_STGM_020)
-- All design choices properly tracked as NormativeDecision objects
+1. **Theory Alignment**: Reviewed theory docs, confirmed we're on path but need to emphasize:
+   - "Relevance" over "attraction" (semantic, not physical)
+   - LLM-first design (delegate complexity to intelligence)
+   - Emergent coordination (no prescribed flows)
 
-## Current Architecture
+2. **DSPy's Role**: "Programming not prompting" happens in user code:
+   - Users create Pydantic models extending Signal
+   - DSPy signatures work with user's typed signals
+   - Framework stays agnostic to LLM approach
 
-```
-Stigmergic/
-├── Meta/
-│   └── NormativeDecision.lean       ✅ (renamed from Decision.lean)
-├── Foundation/
-│   ├── Primitives.lean              ✅ (with intrinsic properties)
-│   ├── PrimitivesDecisions.lean     ✅
-│   ├── Signal.lean                  ✅ (with signal theorems)
-│   └── SignalDecisions.lean         ✅
-├── Core/
-│   ├── SignalSpace.lean            ✅
-│   ├── SignalSpaceDecisions.lean   ✅
-│   ├── Agent.lean                  ✅ (with preservation theorems)
-│   └── AgentDecisions.lean         ✅
-└── Properties/
-    ├── Safety.lean                  ✅ (cross-cutting only)
-    ├── SafetyDecisions.lean        ✅
-    ├── Emergence.lean              ✅
-    └── EmergenceDecisions.lean     ✅
-```
+3. **Chat Example**: Perfect first validation:
+   - Shows paradigm shift (prescribed flow → emergent coordination)
+   - Demonstrates human + LLM agents
+   - Natural multi-party support
 
-## Key Design Patterns
+### Current State
 
-1. **Signal Strength vs Agent Relevance**: Clean separation maintained
-2. **Property Organization**: Intrinsic with types, cross-cutting in Properties/
-3. **Normative Decisions**: All design choices as first-class objects
-4. **No Sorry Policy**: Level 1 compliance strictly enforced
+**Lean Specification**: Needs refactoring (see plan.md Task 1.1-1.4)
+- Signal has wrong structure (needs abstraction)
+- Agent has fixed thresholds (needs IntelligenceProvider)
+- Properties need updating for intelligent agents
 
-## Technical Notes
+**Documentation**: Complete and aligned
+- MVP design doc: Updated with abstract Signal pattern
+- Plan: Reorganized with correct task sequence
+- Theory docs: Remain as vision/background
 
-- Uses `grind` tactic (performance concern noted in decisions)
-- Linter suppressions justified and minimal
-- NNReal for continuous values (not Float)
-- Phantom types for ID safety
+### Critical Insights
 
-## What's Next
+1. **Simplicity Through Abstraction**: By making Signal abstract, we get:
+   - Maximum flexibility for users
+   - Clean DSPy integration (Pydantic models ARE signals)
+   - No artificial wrapping or parsing
 
-See plan.md for potential future enhancements. The MVP specification is complete and compliant.
+2. **Intelligence Delegation**: The `IntelligenceProvider` pattern enables:
+   - LLM agents (via DSPy)
+   - Human agents (via input())
+   - Hybrid agents (escalation patterns)
+   - Same coordination mechanics for all
 
-## Working Directory
-`packages/stigmergic/lean/`
+3. **True Emergence**: With abstract signals and delegated intelligence:
+   - No predefined message types
+   - No fixed coordination patterns
+   - Users discover what works for their domain
+
+## Next Steps
+
+See `plan.md` for detailed implementation phases. Priority is fixing the Lean specification to match our abstract Signal design, then implementing the Python framework following ClearFlow's pattern.
