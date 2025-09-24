@@ -44,6 +44,9 @@ The `penaltyFactor` mechanism separates signal origin validity from ongoing supp
 ```lean
 /-- Core type distinctions for clarity and safety -/
 
+/-- Time representation: logical ticks for deterministic behavior -/
+abbrev Time := Nat  -- Logical time in seconds since system start
+
 /-- Attention-minutes: the conserved quantity (always non-negative) -/
 abbrev AttentionMinutes := NNReal
 
@@ -52,6 +55,18 @@ abbrev Influence := Real
 
 /-- Credibility: bounded probability in [0,1] using Lean's Subtype -/
 def Credibility := { x : Real // 0 ≤ x ∧ x ≤ 1 }
+
+/-- Positive real for safe division (prevents div-by-zero) -/
+def PosReal := { x : Real // x > 0 }
+
+/-- Global system constants -/
+namespace Constants
+  def SIGNAL_HALF_LIFE : PosReal := ⟨3600.0, by norm_num⟩  -- 1 hour in seconds
+  def DAY_IN_SECONDS : Nat := 86400
+  def MIN_OWNERSHIP_CREDIBILITY : Real := 0.3  -- Minimum credibility to claim ownership
+  def BUDGET_BURST_PENALTY : Real := 0.1  -- Pro-rating factor for burst prevention
+  def LEARNING_EPSILON : Real := 0.01  -- Minimum learning for zero-credibility escape
+end Constants
 
 /-- Smart constructor for credibility -/
 def mkCredibility (x : Real) : Credibility :=
@@ -145,10 +160,11 @@ def getCurrentInfluence (space : MVPSignalSpace) (signalId : SignalId)
   match space.signals.find? (·.id = signalId) with
   | none => 0
   | some signal =>
-    let halfLife := 3600.0  -- 1 hour in seconds
+    -- Use global constant for half-life
+    let halfLife := Constants.SIGNAL_HALF_LIFE.val
 
     -- Decay initial strength with outcome penalty
-    let age := (now - signal.timestamp).toSeconds
+    let age := Real.ofNat (now - signal.timestamp)
     let decayFactor := 0.5 ^ (age / halfLife)
     let decayedInitial : Influence :=
       signal.initialStrength.val * signal.penaltyFactor.val * decayFactor
@@ -159,7 +175,7 @@ def getCurrentInfluence (space : MVPSignalSpace) (signalId : SignalId)
     let decayedReinforcements : Influence := space.reinforcements
       .filter (·.signalId = signalId)
       .map (fun r =>
-        let rAge := (now - r.at).toSeconds
+        let rAge := Real.ofNat (now - r.at)
         let decayFactor := 0.5 ^ (rAge / halfLife)
         -- Influence = sign × attention × historical_credibility × decay
         -- Note: reinforcements no longer have penalty factors (removed dead code)
@@ -299,7 +315,7 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
     | some signal => some signal.emitter
 
   -- 5. Update agent credibility including emitter
-  let learningEpsilon := 0.01  -- Minimum learning to escape zero
+  let learningEpsilon := Constants.LEARNING_EPSILON  -- Minimum learning to escape zero
   let updatedAgents := space.agents.map (fun agent =>
     -- Check if agent is the emitter
     let isEmitter := emitterId = some agent.id
@@ -308,20 +324,20 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
     let detail := agentDetails.find? (·.agentId = agent.id)
 
     if isEmitter || detail.isSome then
-      let alpha := 0.1  -- Learning rate
+      let alpha : Real := 0.1  -- Learning rate
 
-      -- Determine correctness with nuance
-      let correct := if isEmitter then
+      -- Determine correctness with nuance (returns Option to handle neutral case)
+      let correct : Option Bool := if isEmitter then
         -- Emitter is correct if their signal prediction matched outcome
-        outcome.success
+        some outcome.success
       else
         -- Reinforcer correctness based on NET influence direction
         match detail with
-        | none => false  -- Shouldn't happen
+        | none => some false  -- Shouldn't happen
         | some d =>
-          -- Special case: perfect uncertainty (timid bystander) gets no penalty
+          -- Special case: perfect uncertainty (timid bystander) gets no update
           if d.totalInfluence = 0 then
-            false  -- Neutral position: don't reward, but also don't penalize
+            none  -- Neutral position: skip update entirely
           else
             -- Consider conflicting reinforcements with weighted judgment
             let netCorrect := (d.totalInfluence > 0 ∧ outcome.success) ∨
@@ -329,17 +345,21 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
             -- Bonus for conviction, penalty for self-contradiction
             -- Guard against division by zero
             let totalCount := d.positiveCount + d.negativeCount
-            let conviction := if totalCount = 0 then 1.0  -- No reinforcements = consistent
-                             else 1 - (min d.positiveCount d.negativeCount).toFloat / totalCount.toFloat
-            netCorrect ∧ conviction > 0.5  -- Require some conviction
+            let conviction : Real := if totalCount = 0 then 1.0  -- No reinforcements = consistent
+                             else 1 - Real.ofNat (min d.positiveCount d.negativeCount) / Real.ofNat totalCount
+            some (netCorrect ∧ conviction > 0.5)  -- Require some conviction
 
-      -- Special handling for zero credibility (zombie prevention)
-      let adjustment := if agent.credibility.val = 0 then
-        if correct then learningEpsilon else 0  -- Can escape from 0
-      else
-        if correct then alpha else -alpha
+      -- Apply update based on correctness (or skip if neutral)
+      match correct with
+      | none => agent  -- No update for perfectly neutral agents
+      | some isCorrect =>
+        -- Special handling for zero credibility (zombie prevention)
+        let adjustment := if agent.credibility.val = 0 then
+          if isCorrect then learningEpsilon else 0  -- Can escape from 0
+        else
+          if isCorrect then alpha else -alpha
 
-      { agent with credibility := agent.credibility.add adjustment }
+        { agent with credibility := agent.credibility.add adjustment }
     else
       agent  -- Didn't participate
   )
@@ -353,22 +373,31 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
     outcomes := outcome :: space.outcomes,
     auditLog := auditEvent :: space.auditLog }
 
-/-- Reset agent budgets daily and track injection -/
+/-- Reset agent budgets daily with pro-rating to prevent burst exploitation -/
 def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
-  let dayInSeconds := 86400.0
   let (updatedAgents, totalNewInjection) :=
     space.agents.foldl (fun (agents, injection) agent =>
-      if (now - agent.lastReset).toSeconds > dayInSeconds then
-        let resetAgent := { agent with spent := 0, lastReset := now }
-        (resetAgent :: agents, injection + agent.dailyBudget)
+      if now - agent.lastReset ≥ Constants.DAY_IN_SECONDS then
+        -- Pro-rate new budget based on unspent portion to prevent burst gaming
+        let unspentRatio : Real :=
+          (agent.dailyBudget.val - agent.spent.val) / agent.dailyBudget.val
+        -- Reward conservative spending, penalize burst spending
+        let multiplier := 1.0 + unspentRatio * Constants.BUDGET_BURST_PENALTY
+        let newBudget := NNReal.ofReal (agent.dailyBudget.val * multiplier)
+
+        let resetAgent := { agent with
+          dailyBudget := newBudget,
+          spent := (0 : AttentionMinutes),
+          lastReset := now }
+        (resetAgent :: agents, injection + newBudget)
       else
         (agent :: agents, injection))
-    ([], 0)
+    ([], (0 : AttentionMinutes))  -- Proper type for accumulator
 
   -- Use proper AgentId type for SYSTEM agent
   -- Note: Assumes AgentId has a constructor or literal for "SYSTEM"
   let systemAgent : AgentId := "SYSTEM"  -- Platform agent for budget operations
-  let auditEvent := AuditEvent.budgetReset systemAgent totalNewInjection 0 now
+  let auditEvent := AuditEvent.budgetReset systemAgent totalNewInjection (0 : AttentionMinutes) now
 
   { space with
     agents := updatedAgents,
@@ -427,19 +456,22 @@ theorem influence_can_be_negative : ∃ (space : MVPSignalSpace) (id : SignalId)
   -- Constructive proof: create a signal with negative reinforcements
   sorry  -- Would construct example with inhibitory reinforcements
 
-/-- Influence decay via factorization (now valid with static credibility) -/
+/-- Influence decay via factorization (valid with static credibility and no outcomes) -/
 theorem influence_decay_monotonic (space : MVPSignalSpace) (id : SignalId) (t₁ t₂ : Time) :
   t₁ ≤ t₂ →
   (∀ r ∈ space.reinforcements, r.signalId = id → r.at ≤ t₁) →
-  getCurrentInfluence space id t₂ = getCurrentInfluence space id t₁ * (0.5 ^ ((t₂ - t₁) / halfLife)) := by
-  intro h_time h_no_new
+  (∀ o ∈ space.outcomes, o.signalId = id → o.measuredAt ≤ t₁ ∨ o.measuredAt > t₂) →
+  getCurrentInfluence space id t₂ = getCurrentInfluence space id t₁ *
+    (0.5 ^ (Real.ofNat (t₂ - t₁) / Constants.SIGNAL_HALF_LIFE.val)) := by
+  intro h_time h_no_new_reinforcements h_no_outcomes
   -- Proof sketch:
   -- 1. getCurrentInfluence at t₁ = ∑(initial + reinforcements) with decay factors
-  -- 2. Each component uses STATIC credibilityAtTime (not current credibility)
-  -- 3. Between t₁ and t₂, no new reinforcements added (by h_no_new)
-  -- 4. Each existing component decays by factor c = 0.5^((t₂-t₁)/halfLife)
-  -- 5. Therefore: getCurrentInfluence(t₂) = c * getCurrentInfluence(t₁)
-  -- This proof is NOW VALID because credibilityAtTime is immutable
+  -- 2. Each component uses STATIC credibilityAtTime (immutable)
+  -- 3. Between t₁ and t₂: no new reinforcements (by h_no_new_reinforcements)
+  -- 4. Between t₁ and t₂: no outcomes processed (by h_no_outcomes)
+  --    This ensures penaltyFactor remains constant
+  -- 5. Each existing component decays by factor c = 0.5^((t₂-t₁)/halfLife)
+  -- 6. Therefore: getCurrentInfluence(t₂) = c * getCurrentInfluence(t₁)
   sorry  -- Full proof requires formal expansion of summations
 
 /-- Corollary: Absolute influence decreases monotonically -/
@@ -520,16 +552,13 @@ theorem reinforcement_immutable (space : MVPSignalSpace) (r : MVPReinforcement) 
 ```lean
 /-- Migrate MVP agent to enhanced agent preserving state -/
 def migrateToEnhancedAgent (mvp : MVPAgent) : EnhancedAgent :=
-  { id := mvp.id,
-    credibility := {
+  { base := mvp,  -- Preserve all MVP fields
+    enhancedCredibility := {
       overall := mvp.credibility,
       byOutcome := mvp.credibility,  -- Start with current credibility
       byConsensus := mkCredibility 0.5,  -- Neutral starting point
       byDomain := []  -- No domain-specific data yet
     },
-    dailyBudget := mvp.dailyBudget,
-    spent := mvp.spent,
-    lastReset := mvp.lastReset,
     participationCount := 0,  -- Start tracking
     successCount := 0
   }
@@ -585,9 +614,10 @@ structure EnhancedCredibility where
   byConsensus : Credibility      -- Alignment with group
   byDomain : List (String × Credibility)  -- Domain-specific credibility
 
-/-- Enhanced agent with richer credibility -/
-structure EnhancedAgent extends MVPAgent where
-  credibility : EnhancedCredibility
+/-- Enhanced agent contains MVPAgent plus extended fields -/
+structure EnhancedAgent where
+  base : MVPAgent  -- Contains id, basic credibility, budgets
+  enhancedCredibility : EnhancedCredibility  -- Extended credibility metrics
   participationCount : Nat  -- Number of signals reinforced
   successCount : Nat        -- Number of correct predictions
 
@@ -602,21 +632,21 @@ def weightedCredibility (weights : List (Real × Real)) : Credibility :=
 /-- Update credibility with multiple factors -/
 def updateEnhancedCredibility (agent : EnhancedAgent)
     (outcome : MVPOutcome) (groupConsensus : Bool) : EnhancedAgent :=
-  let alpha := 0.1 / (1 + agent.participationCount.toFloat / 100)  -- Decreasing learning rate
+  let alpha : Real := 0.1 / (1 + Real.ofNat agent.participationCount / 100)  -- Decreasing learning rate
 
   -- Update outcome-based credibility
   let outcomeUpdate := if outcome.success then alpha else -alpha
-  let newByOutcome := agent.credibility.byOutcome.add outcomeUpdate
+  let newByOutcome := agent.enhancedCredibility.byOutcome.add outcomeUpdate
 
   -- Update consensus-based credibility
   let consensusUpdate := if groupConsensus then alpha/2 else -alpha/2
-  let newByConsensus := agent.credibility.byConsensus.add consensusUpdate
+  let newByConsensus := agent.enhancedCredibility.byConsensus.add consensusUpdate
 
   -- Overall is weighted average
   let newOverall := weightedCredibility [(0.7, newByOutcome.toReal), (0.3, newByConsensus.toReal)]
 
   { agent with
-    credibility := { agent.credibility with
+    enhancedCredibility := { agent.enhancedCredibility with
       overall := newOverall,
       byOutcome := newByOutcome,
       byConsensus := newByConsensus },
@@ -639,15 +669,14 @@ def allocateBudgetByCredibility (baseBudget : AttentionMinutes)
 /-- Reset with credibility-adjusted budgets -/
 def resetBudgetsWithCredibility (space : MVPSignalSpace) (now : Time)
     : MVPSignalSpace :=
-  let dayInSeconds := 86400.0
-  let baseBudget := 480.0  -- 8 hours
+  let baseBudget : AttentionMinutes := NNReal.ofReal 480.0  -- 8 hours
 
   let updatedAgents := space.agents.map (fun agent =>
-    if (now - agent.lastReset).toSeconds > dayInSeconds then
+    if now - agent.lastReset > Constants.DAY_IN_SECONDS then
       let newBudget := allocateBudgetByCredibility baseBudget agent.credibility
       { agent with
         dailyBudget := newBudget,
-        spent := 0,
+        spent := (0 : AttentionMinutes),
         lastReset := now }
     else agent)
 
@@ -735,7 +764,7 @@ def applyDimensionalReinforcement (signal : DimensionalSignal)
   | .ownership =>
     -- Exclusive claim (gated by credibility)
     -- Only agents with sufficient credibility can claim ownership
-    if signal.ownership.owner.isNone ∧ agentCred.toReal ≥ 0.3 then
+    if signal.ownership.owner.isNone ∧ agentCred.toReal ≥ Constants.MIN_OWNERSHIP_CREDIBILITY then
       { signal with ownership :=
         { owner := some r.by,
           claimedAt := some now,
@@ -760,9 +789,9 @@ def applyDimensionalReinforcement (signal : DimensionalSignal)
 
 ```lean
 structure DimensionalDecayRates where
-  beliefHalfLife : NNReal    -- Days (truth persists)
-  priorityHalfLife : NNReal  -- Hours (urgency fades)
-  ownershipTimeout : NNReal  -- Minutes (needs activity)
+  beliefHalfLife : PosReal    -- Days (truth persists) - can't be zero
+  priorityHalfLife : PosReal  -- Hours (urgency fades) - can't be zero
+  ownershipTimeout : PosReal  -- Minutes (needs activity) - can't be zero
 
 def applyDimensionalDecay (signal : DimensionalSignal) (now : Time)
     (rates : DimensionalDecayRates) : DimensionalSignal :=
@@ -877,7 +906,7 @@ structure Environment where
   totalSignals : Nat         -- Current signal count
   activeAgents : Nat         -- Agents currently online
   noiseLevel : NNReal       -- Background activity level
-  averageAttentionSpan : NNReal  -- Typical focus duration
+  averageAttentionSpan : PosReal  -- Typical focus duration (must be positive)
 
 /-- Derive decay rate from information theory -/
 def informationTheoreticDecayRate (signal : DimensionalSignal)
@@ -888,12 +917,12 @@ def informationTheoreticDecayRate (signal : DimensionalSignal)
   -- Many signals → more interference → faster decay
   -- Low attention → shorter persistence → faster decay
 
-  let interferenceFactor := env.totalSignals.toFloat / 100.0
-  let attentionFactor := 1.0 / env.averageAttentionSpan
+  let interferenceFactor : Real := Real.ofNat env.totalSignals / 100.0
+  let attentionFactor : Real := 1.0 / env.averageAttentionSpan.val
 
   -- Shannon-inspired decay rate
-  let halfLife := 3600.0 / (1 + entropy * interferenceFactor * attentionFactor)
-  NNReal.log 2 / halfLife
+  let halfLife := 3600.0 / (1 + entropy.val * interferenceFactor * attentionFactor)
+  NNReal.ofReal (Real.log 2 / halfLife)
 ```
 
 ## Part 6: Causal Credit Assignment (Month 3)
@@ -990,14 +1019,40 @@ def propagateCausalCredit (outcome : CausalOutcome) (space : MVPSignalSpace)
 - [ ] Credit propagation
 - [ ] Multi-step attribution
 
+## Key Design Decisions
+
+### Time Semantics
+- **Time is Logical**: `Time := Nat` represents logical seconds since system start
+- **Deterministic**: No wall-clock dependency, fully reproducible
+- **Monotonic**: Time only advances, never goes backward
+- **Resolution**: Second-level granularity for all operations
+
+### Economic Model
+- **Open System**: Daily budget resets inject new attention (not conserved)
+- **Pro-rated Resets**: Unspent budget affects next allocation (prevents gaming)
+- **Recovery Floor**: 0.5x minimum budget ensures redemption possibility
+- **Burst Prevention**: Spending before reset incurs penalty in next budget
+
+### Learning Dynamics
+- **Neutral is Neutral**: Zero influence means no credibility update
+- **Conviction Matters**: Self-contradictory reinforcements penalized
+- **Emitters Learn**: Signal creators included in all learning loops
+- **Zombie Recovery**: Epsilon learning allows escape from zero credibility
+
+### Type Safety
+- **PosReal for Division**: Prevents division-by-zero at type level
+- **Bounded Types**: Credibility guaranteed in [0,1] by construction
+- **Explicit Conversions**: All Nat→Real conversions explicit (Real.ofNat)
+- **No Implicit Coercion**: Type mismatches caught at compile time
+
 ## Conclusion
 
 This design provides:
 
-1. **Complete MVP**: Working learning loop from day 1
-2. **Conserved resources**: Attention-minutes prevent inflation
-3. **Proper decay**: All components decay based on age
-4. **External grounding**: Outcomes drive learning
-5. **Progressive enhancement**: Each phase adds specific value
+1. **Complete MVP**: Working learning loop from day 1 with proper type safety
+2. **Open Economy**: Tracked attention injection with anti-gaming measures
+3. **Proper decay**: All components decay based on age with valid proofs
+4. **External grounding**: Outcomes drive learning with neutral handling
+5. **Progressive enhancement**: Each phase adds specific value without breaking core
 
-The MVP is now truly minimal but complete - it has learning, conservation, and correct dynamics. Later phases add sophistication without breaking the core loop.
+The MVP is now truly minimal but mathematically coherent - it has proper types, valid proofs, and correct dynamics. Later phases add sophistication without breaking the core loop.
