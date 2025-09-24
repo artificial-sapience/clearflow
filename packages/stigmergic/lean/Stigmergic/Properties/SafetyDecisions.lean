@@ -56,4 +56,28 @@ def AD_STGM_018_SpaceAddDeferred : NormativeDecision := {
   supersededBy := none
 }
 
+/-- Property organization: intrinsic with types, cross-cutting in Properties/ -/
+def AD_STGM_022_PropertyOrganization : NormativeDecision := {
+  id := ⟨"AD_STGM_022"⟩
+  date := 1737500000
+  type := .AD
+  decision := "Intrinsic properties colocated with types, cross-cutting in Properties/"
+  alternatives := [
+    ("All properties in Properties/", "poor discoverability for type-specific invariants"),
+    ("All properties with types", "no central place for cross-cutting concerns"),
+    ("Random distribution", "inconsistent and confusing")
+  ]
+  rationale := [
+    "Type-specific invariants are easier to maintain with the type",
+    "Developers see guarantees when reading type definitions",
+    "Cross-cutting concerns need a global view",
+    "Safety audits benefit from centralized cross-cutting properties",
+    "Clear separation makes both local and global properties discoverable"
+  ]
+  dependencies := [⟨"DC_STGM_017"⟩]
+  status := .Active
+  context := some "Refactored to move agent_threshold_valid, agent_id_preserved to Agent.lean"
+  supersededBy := none
+}
+
 end Stigmergic
