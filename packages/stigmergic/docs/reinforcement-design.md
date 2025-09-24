@@ -319,15 +319,19 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
         match detail with
         | none => false  -- Shouldn't happen
         | some d =>
-          -- Consider conflicting reinforcements with weighted judgment
-          let netCorrect := (d.totalInfluence > 0 ∧ outcome.success) ∨
-                           (d.totalInfluence < 0 ∧ ¬outcome.success)
-          -- Bonus for consistency, penalty for self-contradiction
-          -- Guard against division by zero
-          let totalCount := d.positiveCount + d.negativeCount
-          let consistency := if totalCount = 0 then 1.0  -- No reinforcements = consistent
-                            else 1 - (min d.positiveCount d.negativeCount).toFloat / totalCount.toFloat
-          netCorrect ∧ consistency > 0.5  -- Require some consistency
+          -- Special case: perfect uncertainty (timid bystander) gets no penalty
+          if d.totalInfluence = 0 then
+            false  -- Neutral position: don't reward, but also don't penalize
+          else
+            -- Consider conflicting reinforcements with weighted judgment
+            let netCorrect := (d.totalInfluence > 0 ∧ outcome.success) ∨
+                             (d.totalInfluence < 0 ∧ ¬outcome.success)
+            -- Bonus for conviction, penalty for self-contradiction
+            -- Guard against division by zero
+            let totalCount := d.positiveCount + d.negativeCount
+            let conviction := if totalCount = 0 then 1.0  -- No reinforcements = consistent
+                             else 1 - (min d.positiveCount d.negativeCount).toFloat / totalCount.toFloat
+            netCorrect ∧ conviction > 0.5  -- Require some conviction
 
       -- Special handling for zero credibility (zombie prevention)
       let adjustment := if agent.credibility.val = 0 then
@@ -479,8 +483,8 @@ theorem reinforcement_immutable (space : MVPSignalSpace) (r : MVPReinforcement) 
 ✅ **Complete Learning Loop:**
 - **Emitter included**: Signal creators learn from outcomes
 - **Detailed tracking**: Counts positive/negative reinforcements
-- **Consistency bonus**: Rewards coherent behavior
-- **Dynamic re-evaluation**: Past influence adjusts with credibility changes
+- **Conviction bonus**: Rewards one-sided (convicted) behavior
+- **Static credibility**: Past influence based on immutable historical credibility (predictable decay)
 - **Zombie recovery**: Escape path from zero credibility
 
 ✅ **Open Economy Accounting:**
@@ -499,7 +503,7 @@ theorem reinforcement_immutable (space : MVPSignalSpace) (r : MVPReinforcement) 
 ✅ **Nuanced Aggregation:**
 - Tracks positive/negative counts separately
 - Records max/min influence per agent
-- Considers consistency in judgment
+- Considers conviction in judgment (one-sidedness)
 - Uses historical credibility only (MVP simplification)
 
 ❌ **Deferred to later phases:**
@@ -804,16 +808,17 @@ structure GovernanceRules where
   maxAmplificationRatio : NNReal    -- Max total positive / initial
   suspiciousBehaviorThreshold : NNReal
 
-/-- Detect suspicious reinforcement patterns -/
+/-- Detect suspicious reinforcement patterns using sliding window -/
 def detectSuspiciousBehavior (patterns : List ReinforcementPattern)
-    (rules : GovernanceRules) : List AgentId :=
+    (rules : GovernanceRules) (now : Time) (windowSeconds : Real := 3600) : List AgentId :=
   patterns.filterMap (fun p =>
-    let timeSpan := match (p.timestamps.maximum?, p.timestamps.minimum?) with
-      | (some max, some min) => (max - min).toSeconds
-      | _ => 1.0  -- Default to 1 second if no valid span
-    let rate := p.timestamps.length.toFloat / timeSpan
+    -- Check recent window only (e.g., last hour)
+    let recentTimestamps := p.timestamps.filter (λ t =>
+      (now - t).toSeconds < windowSeconds)
+    -- Calculate rate within the sliding window
+    let rate := recentTimestamps.length.toFloat / windowSeconds
     if rate > rules.maxReinforcementRate.toReal then
-      some p.agentPair.1  -- Flag agent
+      some p.agentPair.1  -- Flag agent for burst activity
     else none)
 
 /-- Apply governance before reinforcement -/
