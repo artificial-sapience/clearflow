@@ -1,4 +1,4 @@
-import Stigmergic.Meta.Decision
+import Stigmergic.Meta.NormativeDecision
 
 /-!
 # Stigmergic.Core.Space - Normative Decisions

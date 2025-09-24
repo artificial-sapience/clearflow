@@ -1,4 +1,4 @@
-import Stigmergic.Meta.Decision
+import Stigmergic.Meta.NormativeDecision
 
 /-!
 # Stigmergic Signal Module Normative Decisions

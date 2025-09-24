@@ -381,18 +381,35 @@ theorem working_set_bounded (agent : Agent) (signalId : SignalId) :
   unfold Agent.execute
   grind
 
-/-
-  Design Note: Role-Based Relevance
+/-- Agent ID is preserved by all operations.
 
-  By design, agents calculate higher relevance for signals matching their role.
-  This is achieved through the semantic match scores in calculateRelevance:
-  - Role-matched signals: 0.6 to 1.0 semantic match
-  - Non-matched signals: 0.1 semantic match
+ Mathematically: ∀agent ∀action, execute(agent, action).id = agent.id
 
-  This is a design choice for semantic coordination, not a fundamental
-  property that needs proving. The key stigmergic property is that signals
-  with higher relevance (however calculated) influence agent decisions more.
--/
+ In English: Agent operations never change the agent's identity. -/
+theorem agent_id_preserved_all (agent : Agent) (action : Action) :
+  (agent.execute action).id = agent.id := by
+  unfold Agent.execute
+  cases action <;> simp
+
+/-- Agent role is preserved by all operations.
+
+ Mathematically: ∀agent ∀action, execute(agent, action).role = agent.role
+
+ In English: Agent operations never change the agent's role. -/
+theorem agent_role_preserved_all (agent : Agent) (action : Action) :
+  (agent.execute action).role = agent.role := by
+  unfold Agent.execute
+  cases action <;> simp
+
+/-- Agent threshold is preserved by all operations.
+
+ Mathematically: ∀agent ∀action, execute(agent, action).threshold = agent.threshold
+
+ In English: Agent operations never change the agent's threshold. -/
+theorem agent_threshold_preserved (agent : Agent) (action : Action) :
+  (agent.execute action).threshold = agent.threshold := by
+  unfold Agent.execute
+  cases action <;> simp
 
 end AgentProperties
 

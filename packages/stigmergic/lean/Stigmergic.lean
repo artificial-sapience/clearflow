@@ -6,9 +6,11 @@ import Stigmergic.Foundation.Primitives
 import Stigmergic.Foundation.PrimitivesDecisions
 import Stigmergic.Foundation.Signal
 import Stigmergic.Foundation.SignalDecisions
-import Stigmergic.Meta.Decision
+import Stigmergic.Meta.NormativeDecision
 import Stigmergic.Properties.Safety
+import Stigmergic.Properties.SafetyDecisions
 import Stigmergic.Properties.Emergence
+import Stigmergic.Properties.EmergenceDecisions
 
 set_option linter.minImports false -- This is a top-level import file
 

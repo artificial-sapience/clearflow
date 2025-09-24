@@ -122,22 +122,6 @@ theorem role_based_coordination (agent1 agent2 : Agent)
     agent1.role.attractedTypes = agent2.role.attractedTypes := by
   rw [hrole]
 
-/-- Signal strength influences agent behavior.
-
- Mathematically: ∀s₁ s₂, s₁.strength > s₂.strength → P(act_on(s₁)) > P(act_on(s₂))
-
- In English: Stronger signals are more likely to trigger agent actions. -/
-theorem strength_influences_action (agent : Agent) (s1 s2 : Signal)
-    (now : Time)
-    (h_strength : s1.strength > s2.strength)
-    (h_type : s1.signalType = s2.signalType)
-    (h_age : s1.getAge now = s2.getAge now) :
-    agent.calculateRelevance s1 now > agent.calculateRelevance s2 now := by
-  unfold Agent.calculateRelevance Signal.getCurrentStrength
-  -- Stronger signals have higher relevance when all else is equal
-  -- This holds by the multiplication structure but would
-  -- require detailed case analysis of decay patterns
-  sorry
 
 /-- Multiple agents can process the same signal.
 
