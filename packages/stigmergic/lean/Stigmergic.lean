@@ -7,6 +7,8 @@ import Stigmergic.Foundation.PrimitivesDecisions
 import Stigmergic.Foundation.Signal
 import Stigmergic.Foundation.SignalDecisions
 import Stigmergic.Meta.Decision
+import Stigmergic.Properties.Safety
+import Stigmergic.Properties.Emergence
 
 set_option linter.minImports false -- This is a top-level import file
 
@@ -25,6 +27,7 @@ framework described in stigmergic-coordination-theory.md.
 
 - `Stigmergic.Foundation` - Basic types (signals, time, identifiers)
 - `Stigmergic.Core` - Agent and space mechanics
-- `Stigmergic.Properties` - Theorems and invariants
+- `Stigmergic.Properties` - Safety theorems and emergence properties
+- `Stigmergic.Meta` - Normative decision tracking
 
 -/

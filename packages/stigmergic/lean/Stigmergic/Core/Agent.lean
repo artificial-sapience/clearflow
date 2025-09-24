@@ -17,7 +17,7 @@ Agents are the active participants in stigmergic coordination. They:
 - Perceive signals in their environment
 - Calculate attraction to different signals
 - Make decisions based on signal information
-- Deposit new signals to influence future behavior
+- Emit new signals to influence future behavior
 - Maintain internal state that evolves over time
 
 ## Main Definitions
