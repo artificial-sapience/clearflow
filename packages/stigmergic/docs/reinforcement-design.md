@@ -21,7 +21,7 @@ The MVP implements a complete learning system with:
 The `penaltyFactor` mechanism applies ONLY to signals (not reinforcements):
 
 - Affects signal's initial strength decay only
-- Starts at 1.0 (no penalty), decreases to 0.7 on success (30% boost), increases to 1.3 on failure (30% penalty)
+- Starts at 1.0 (neutral), increases to 1.43 on success (43% boost), decreases to 0.7 on failure (30% penalty)
 - Allows a "disproven" signal (high penalty) to persist if the collective continues investing
 - Enables ideas to "pivot" from flawed premises through continued collective support
 - This is intentional: the system distinguishes between "originally wrong" and "currently valuable"
@@ -116,7 +116,9 @@ structure MVPSignal where
   initialStrength : AttentionMinutes  -- Attention invested at emission
   penaltyFactor : NNReal    -- Multiplicative penalty from outcomes, starts at 1.0
 
-/-- Reinforcement event with proper type separation -/
+/-- Reinforcement event with proper type separation
+    IMPLEMENTATION NOTE: Make this structure opaque or use abstract interface
+    to ensure invariants are enforced via mkMVPReinforcement smart constructor -/
 structure MVPReinforcement where
   signalId : SignalId
   by : AgentId
@@ -200,6 +202,21 @@ def mkMVPReinforcement (signalId : SignalId) (by : AgentId) (influence : Influen
 ### MVP Operations
 
 ```lean
+/-- BAT-Lite: Bounded-Active Time configuration -/
+structure ActiveTimeConfig where
+  activityWindow : Nat := 300       -- W = 5 minutes in seconds
+  minWriters : Nat := 2             -- Need ≥2 distinct agents for activity
+  halfLife : PosReal := ⟨21600.0, by norm_num⟩  -- H = 6 hours active time
+  holdDuration : Nat := 600         -- 10 minutes hold for LLM operations
+
+/-- Track activity for BAT-Lite time advancement -/
+structure ActivityTracker where
+  recentWrites : List (AgentId × Time)  -- Recent write events (agent, wallTime)
+  logicalTime : Time       -- τ (tau) - advances only when active
+  wallTime : Time          -- Wall-clock for TTL/compliance
+  signalHolds : List (SignalId × Time)  -- Signals on hold until time
+  influenceCache : List (SignalId × Influence × Time)  -- Cached for holds
+
 /-- Signal space with complete tracking and audit trail -/
 structure MVPSignalSpace where
   signals : List MVPSignal
@@ -210,8 +227,10 @@ structure MVPSignalSpace where
   totalProvisioned : AttentionMinutes  -- Initial baseline budgets (agent creation)
   totalNetAdjustments : Real           -- Net capacity changes (can be negative)
   totalReplenished : AttentionMinutes  -- DIAGNOSTIC: recycled attention (not in conservation)
-  currentTime : Time
+  currentTime : Time  -- Logical time (τ) for decay calculations
   nextSignalCounter : Nat  -- Monotonic counter for unique signal IDs
+  config : ActiveTimeConfig  -- BAT-Lite configuration
+  activityTracker : ActivityTracker  -- Track activity and time
 
 /-- Accounting Invariant:
     Current capacity = totalProvisioned + totalNetAdjustments
@@ -223,6 +242,24 @@ structure MVPSignalSpace where
 
 /-- Calculate current influence (can be negative for inhibited signals) -/
 def getCurrentInfluence (space : MVPSignalSpace) (signalId : SignalId)
+    (now : Time) : Influence :=
+  -- Check if signal is on hold
+  match space.activityTracker.signalHolds.find? (·.1 = signalId) with
+  | some (_, holdUntil) =>
+    if holdUntil > now then
+      -- Return cached influence (no decay during hold)
+      match space.activityTracker.influenceCache.find? (·.1 = signalId) with
+      | some (_, influence, _) => influence
+      | none => 0  -- Shouldn't happen, but handle gracefully
+    else
+      -- Hold expired, calculate normally
+      calculateDecayedInfluence space signalId now
+  | none =>
+    -- No hold, calculate normally
+    calculateDecayedInfluence space signalId now
+
+/-- Helper: Calculate decayed influence for a signal -/
+def calculateDecayedInfluence (space : MVPSignalSpace) (signalId : SignalId)
     (now : Time) : Influence :=
   match space.signals.find? (·.id = signalId) with
   | none => 0
@@ -263,20 +300,80 @@ def getTotalAttentionInvested (space : MVPSignalSpace) (signalId : SignalId) : A
       .sum
     signal.initialStrength + reinforcementTotal
 
-/-- Advance the logical time of the system -/
-def advanceTime (space : MVPSignalSpace) (seconds : Nat) : MVPSignalSpace :=
-  { space with currentTime := space.currentTime + seconds }
+/-- Determine if system is active (≥2 distinct writers in window) -/
+def isSystemActive (tracker : ActivityTracker) (config : ActiveTimeConfig) : Bool :=
+  let windowStart := if tracker.wallTime > config.activityWindow then
+    tracker.wallTime - config.activityWindow
+  else 0
+  let recentWriters := tracker.recentWrites
+    .filter (fun (_, t) => t ≥ windowStart)
+    .map (·.1)
+    .eraseDup
+  recentWriters.length ≥ config.minWriters
 
-/-- Time Management Contract:
-    Callers MUST invoke advanceTime before operations that depend on time:
-    - getCurrentInfluence (for decay calculations)
-    - resetBudgets (for daily reset checks)
-    - processOutcome (to sync with outcome.measuredAt)
-    Example: advanceTime space 60 |> fun s => emitSignal s agentId strength
-    -- Or using explicit application:
-    Example: let space' := advanceTime space 60
-             emitSignal space' agentId strength
-    Note: All operations use space.currentTime for timestamps
+/-- Extract write events from recent operations -/
+def extractRecentWrites (space : MVPSignalSpace) (wallTime : Time) : List (AgentId × Time) :=
+  -- Get emissions from recent audit log
+  let emissions := space.auditLog.filterMap (fun event =>
+    match event with
+    | AuditEvent.emission agentId _ _ t =>
+      if t = wallTime then some (agentId, wallTime) else none
+    | AuditEvent.reinforcement agentId _ _ t =>
+      if t = wallTime then some (agentId, wallTime) else none
+    | _ => none)
+  emissions
+
+/-- BAT-Lite: Update time based on collaborative activity -/
+def updateActiveTime (space : MVPSignalSpace) (wallClockNow : Time) : MVPSignalSpace :=
+  -- Record any new writes from this operation
+  let newWrites := extractRecentWrites space wallClockNow
+
+  -- Update tracker with new writes
+  let updatedTracker := { space.activityTracker with
+    recentWrites := newWrites ++ space.activityTracker.recentWrites,
+    wallTime := wallClockNow
+  }
+
+  -- Determine if system is active
+  let isActive := isSystemActive updatedTracker space.config
+
+  -- Advance logical time only if active
+  let timeDelta := wallClockNow - updatedTracker.wallTime
+  let newLogicalTime := if isActive then
+    updatedTracker.logicalTime + timeDelta  -- Active: advance at 1× wall-clock
+  else
+    updatedTracker.logicalTime  -- Inactive: freeze logical time (no decay)
+
+  { space with
+    activityTracker := { updatedTracker with logicalTime := newLogicalTime },
+    currentTime := newLogicalTime  -- Use logical time for all decay calculations
+  }
+
+/-- Place a hold on a signal during long LLM operations -/
+def holdSignal (space : MVPSignalSpace) (signalId : SignalId) : MVPSignalSpace :=
+  let holdUntil := space.activityTracker.logicalTime + space.config.holdDuration
+  -- Cache current influence before hold
+  let currentInfluence := getCurrentInfluence space signalId space.currentTime
+  { space with activityTracker :=
+    { space.activityTracker with
+      signalHolds := (signalId, holdUntil) :: space.activityTracker.signalHolds,
+      influenceCache := (signalId, currentInfluence, space.currentTime) ::
+                       space.activityTracker.influenceCache }}
+
+/-- Release expired holds -/
+def releaseExpiredHolds (space : MVPSignalSpace) : MVPSignalSpace :=
+  let activeHolds := space.activityTracker.signalHolds.filter
+    (fun (_, holdUntil) => holdUntil > space.currentTime)
+  { space with activityTracker :=
+    { space.activityTracker with signalHolds := activeHolds }}
+
+/-- Time Management with BAT-Lite:
+    The system automatically tracks collaborative activity and advances logical time
+    only when ≥2 distinct agents are writing within the activity window.
+    - Decay uses logical time (τ), not wall-clock time
+    - Signals can be held during LLM operations to prevent decay
+    - Wall-clock time tracked separately for compliance/TTL
+    - No manual time advancement needed - operations update time automatically
 -/
 
 /-- Generate unique, deterministic IDs for signals using monotonic counter -/
@@ -376,8 +473,8 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
   -- 1. Update ONLY signal with feedback (not reinforcements, to avoid double penalty)
   let updatedSignals := space.signals.map (fun signal =>
     if signal.id = outcome.signalId then
-      -- Bidirectional adjustment: reduce penalty on success, increase on failure
-      let adjustment := if outcome.success then 0.7 else 1.3  -- Success reduces penalty
+      -- Bidirectional adjustment: boost on success, penalty on failure
+      let adjustment := if outcome.success then 1.43 else 0.7  -- Success boosts strength
       let newPenalty := NNReal.ofReal (min 2.0 (max 0.1 (signal.penaltyFactor.val * adjustment)))
       { signal with penaltyFactor := newPenalty }
     else signal)
@@ -487,7 +584,7 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
 /-- Reset agent budgets daily with pro-rating to prevent burst exploitation -/
 def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
   let (reversedAgents, reversedAuditEvents, newReplenished, newAdjustments) :=
-    space.agents.foldl (fun (agents, audits, replenished, adjustments : Real) agent =>
+    space.agents.foldl (fun (agents, audits, replenished, adjustments) agent =>
       if now - agent.lastReset ≥ Constants.DAY_IN_SECONDS then
         let prevBudget := agent.dailyBudget  -- Capture BEFORE reset
         -- Pro-rate new budget based on unspent portion to prevent burst gaming
@@ -708,61 +805,6 @@ theorem reinforcement_preserves_history (space space' : MVPSignalSpace)
 - Information-theoretic decay
 - Causal chains
 
-## Migration Guide: MVP to Enhanced Phases
-
-### Upgrading from MVP to Enhanced Credibility (Part 2)
-
-```lean
-/-- Migrate MVP agent to enhanced agent preserving state -/
-def migrateToEnhancedAgent (mvp : MVPAgent) : EnhancedAgent :=
-  { base := mvp,  -- Preserve all MVP fields
-    enhancedCredibility := {
-      overall := mvp.credibility,
-      byOutcome := mvp.credibility,  -- Start with current credibility
-      byConsensus := mkCredibility 0.5,  -- Neutral starting point
-      byDomain := []  -- No domain-specific data yet
-    },
-    participationCount := 0,  -- Start tracking
-    successCount := 0
-  }
-```
-
-### Upgrading to Dimensional Signals (Part 3)
-
-```lean
-/-- Migrate MVP signal to dimensional signal -/
-def migrateToDimensionalSignal (mvp : MVPSignal) (space : MVPSignalSpace) : DimensionalSignal :=
-  -- Find emitter's budget for proper normalization
-  let emitterBudget := match space.agents.find? (·.id = mvp.emitter) with
-    | some agent => agent.dailyBudget.val
-    | none => 480.0  -- Fallback if agent not found
-
-  { id := mvp.id,
-    emitter := mvp.emitter,
-    timestamp := mvp.timestamp,
-    initialStrength := mvp.initialStrength,
-    penaltyFactor := mvp.penaltyFactor,
-    belief := {
-      logOdds := 0,  -- Neutral belief initially
-      evidenceSources := [mvp.emitter],
-      evidenceCount := 1,
-      lastUpdated := mvp.timestamp
-    },
-    priority := {
-      urgency := NNReal.ofReal (min 1.0 (if emitterBudget > 0 then mvp.initialStrength.val / emitterBudget else 0)),
-      importance := NNReal.ofReal 0.5,  -- Default medium importance
-      deadline := none,
-      lastUpdated := mvp.timestamp
-    },
-    ownership := {
-      owner := none,
-      claimedAt := none,
-      lastActivity := none,
-      progressPercentage := 0
-    }
-  }
-```
-
 ## Part 2: Enhanced Credibility (Week 2)
 
 ### Multi-Factor Credibility
@@ -839,7 +881,7 @@ def resetBudgetsWithCredibility (space : MVPSignalSpace) (now : Time)
       let newBudget := allocateBudgetByCredibility baseBudget agent.credibility
       { agent with
         dailyBudget := newBudget,
-        spent := (0 : AttentionMinutes),
+        spent := ⟨0, by norm_num⟩,
         lastReset := now }
     else agent)
 
@@ -972,7 +1014,7 @@ def applyDimensionalDecay (signal : DimensionalSignal) (now : Time)
   -- Priority: fast decay toward 0
   let priorityAge := Real.ofNat (now - signal.priority.lastUpdated)
   let priorityDecay := Real.rpow 0.5 (priorityAge / rates.priorityHalfLife.val)
-  let decayedUrgency := signal.priority.urgency * priorityDecay
+  let decayedUrgency := NNReal.ofReal (signal.priority.urgency.val * priorityDecay)
 
   -- Ownership: timeout releases
   let ownershipValid := match signal.ownership.lastActivity with
