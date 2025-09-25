@@ -44,8 +44,47 @@ abbrev TaskId := String
 /-- External system identifier (for Part 6: Causality) -/
 abbrev ExternalSystem := String
 
-/-- Time representation: logical ticks for deterministic behavior -/
-abbrev Time := Nat  -- Logical time in seconds since system start
+/-- Opaque wrapper for wall-clock time -/
+structure WallTime where
+  private mk ::
+  val : Nat
+deriving DecidableEq, Repr
+
+/-- Opaque wrapper for logical time -/
+structure LogicalTime where
+  private mk ::
+  val : Nat
+deriving DecidableEq, Repr
+
+/-- Smart constructors ensure proper usage -/
+def WallTime.ofNat (n : Nat) : WallTime := WallTime.mk n
+def LogicalTime.ofNat (n : Nat) : LogicalTime := LogicalTime.mk n
+
+/-- Arithmetic operations for time types -/
+instance : HSub WallTime WallTime Nat where
+  hSub w1 w2 := w1.val - w2.val
+
+instance : HAdd LogicalTime Nat LogicalTime where
+  hAdd t n := LogicalTime.mk (t.val + n)
+
+instance : LT WallTime where
+  lt w1 w2 := w1.val < w2.val
+
+instance : LT LogicalTime where
+  lt t1 t2 := t1.val < t2.val
+
+instance : LE WallTime where
+  le w1 w2 := w1.val ≤ w2.val
+
+instance : LE LogicalTime where
+  le t1 t2 := t1.val ≤ t2.val
+
+instance : Max WallTime where
+  max w1 w2 := WallTime.mk (max w1.val w2.val)
+
+/-- Conversion ONLY where semantically valid -/
+def LogicalTime.toNat (t : LogicalTime) : Nat := t.val
+def WallTime.toNat (w : WallTime) : Nat := w.val
 
 /-- Attention-minutes: tracked spending unit (always non-negative) -/
 abbrev AttentionMinutes := NNReal
@@ -101,7 +140,7 @@ structure MVPAgent where
   dailyBudget : AttentionMinutes  -- Current budget (baseline + adjustments)
   spent : AttentionMinutes  -- Already spent today (≤ dailyBudget)
   cumulativeSpent : AttentionMinutes  -- Total ever spent (for accounting)
-  lastReset : Time          -- When budget was last reset
+  lastReset : WallTime      -- When budget was last reset (wall time for daily cycles)
   -- Invariants:
   -- baselineBudget > 0 (agents must have some capacity)
   -- spent ≤ dailyBudget (enforced by operations)
@@ -111,7 +150,8 @@ structure MVPAgent where
 structure MVPSignal where
   id : SignalId
   emitter : AgentId
-  timestamp : Time
+  timestamp : LogicalTime  -- Creation in logical time for decay
+  wallCreated : WallTime   -- Wall time for TTL/retention
   initialStrength : AttentionMinutes  -- Attention invested at emission
   penaltyFactor : NNReal    -- Multiplicative penalty from outcomes, starts at 1.0
 
@@ -124,7 +164,8 @@ structure MVPReinforcement where
   influence : Influence  -- Signed: positive = amplify, negative = inhibit
   attentionSpent : AttentionMinutes  -- Always positive (cost to reinforce)
   credibilityAtTime : Credibility  -- Agent's credibility when reinforcing (immutable)
-  at : Time
+  at : LogicalTime     -- Logical time for decay calculations
+  wallAt : WallTime    -- Wall time for retention/TTL
   -- Invariant: attentionSpent = NNReal.ofReal (abs influence)
   -- Invariant: attentionSpent ≤ agent.dailyBudget - agent.spent at creation time
   -- Design: No penalty factor on reinforcements (only signals have penalties)
@@ -133,7 +174,8 @@ structure MVPReinforcement where
 structure MVPOutcome where
   signalId : SignalId
   success : Bool
-  measuredAt : Time
+  measuredAt : LogicalTime   -- Logical time of measurement
+  wallMeasuredAt : WallTime  -- Wall time for compliance/TTL
   measuredBy : String  -- External system that provided validation
 
 /-- Track detailed reinforcement patterns per agent -/
@@ -192,13 +234,20 @@ structure ActiveTimeConfig where
   halfLife : PosReal := ⟨21600.0, by norm_num⟩  -- H = 6 hours active time
   holdDuration : Nat := 600         -- 10 minutes hold for LLM operations
 
+/-- Enhanced hold tracking that separates decay from learning -/
+structure SignalHold where
+  signalId : SignalId
+  holdStart : LogicalTime      -- When hold began
+  holdUntil : LogicalTime      -- When hold expires
+  baseInfluence : Influence    -- Influence at hold start
+  decayPaused : LogicalTime    -- Decay frozen at this time
+
 /-- Track activity for BAT-Lite time advancement -/
 structure ActivityTracker where
-  recentWrites : List (AgentId × Time)  -- Recent write events (agent, wallTime)
-  logicalTime : Time       -- τ (tau) - advances only when active
-  wallTime : Time          -- Wall-clock for TTL/compliance
-  signalHolds : List (SignalId × Time)  -- Signals on hold until time
-  influenceCache : List (SignalId × Influence × Time)  -- Cached for holds
+  recentWrites : List (AgentId × WallTime)  -- Recent write events (wall time for pruning)
+  logicalTime : LogicalTime     -- τ (tau) - advances only when active
+  wallTime : WallTime          -- Wall-clock for TTL/compliance
+  signalHolds : List SignalHold  -- Enhanced hold tracking
 
 /-- Result that always includes maintained space -/
 structure TimeResult (α : Type) where
@@ -220,7 +269,7 @@ structure MVPSignalSpace where
   totalProvisioned : AttentionMinutes  -- Initial baseline budgets (agent creation)
   totalNetAdjustments : Real           -- Net capacity changes (can be negative)
   totalReplenished : AttentionMinutes  -- DIAGNOSTIC: recycled attention (not in conservation)
-  currentTime : Time  -- Logical time (τ) for decay calculations
+  currentTime : LogicalTime  -- Logical time (τ) for decay calculations
   nextSignalCounter : Nat  -- Monotonic counter for unique signal IDs
   config : ActiveTimeConfig  -- BAT-Lite configuration
   activityTracker : ActivityTracker  -- Track activity and time
@@ -235,17 +284,41 @@ structure MVPSignalSpace where
 
 /-- Calculate current influence (can be negative for inhibited signals) -/
 def getCurrentInfluence (space : MVPSignalSpace) (signalId : SignalId)
-    (now : Time) : Influence :=
-  -- Check if signal is on hold
-  match space.activityTracker.signalHolds.find? (·.1 = signalId) with
-  | some (_, holdUntil) =>
-    if holdUntil > now then
-      -- Return cached influence (no decay during hold)
-      match space.activityTracker.influenceCache.find? (·.1 = signalId) with
-      | some (_, influence, _) => influence
-      | none => 0  -- Shouldn't happen, but handle gracefully
+    (now : LogicalTime) : Influence :=
+  match space.activityTracker.signalHolds.find? (·.signalId = signalId) with
+  | some hold =>
+    if hold.holdUntil > now then
+      -- During hold: pause decay but allow penalty updates
+      match space.signals.find? (·.id = signalId) with
+      | none => 0
+      | some signal =>
+        -- Base influence uses FROZEN decay time
+        let frozenAge := (hold.decayPaused.toNat - signal.timestamp.toNat : Nat)
+        let frozenDecay := Real.rpow 0.5 (Real.ofNat frozenAge / space.config.halfLife.val)
+
+        -- But use CURRENT penalty factor (allows learning during hold)
+        let baseWithCurrentPenalty :=
+          signal.initialStrength.val * signal.penaltyFactor.val * frozenDecay
+
+        -- Add reinforcements with appropriate decay
+        let reinforcements := space.reinforcements
+          .filter (·.signalId = signalId)
+          .map (fun r =>
+            let rAge := if r.at < hold.holdStart then
+              -- Pre-hold: decay to hold start, then freeze
+              (hold.decayPaused.toNat - r.at.toNat : Nat)
+            else
+              -- Post-hold: no decay yet
+              0
+            let decayFactor := if rAge > 0 then
+              Real.rpow 0.5 (Real.ofNat rAge / space.config.halfLife.val)
+            else 1
+            r.influence * r.credibilityAtTime.toReal * decayFactor)
+          .sum
+
+        baseWithCurrentPenalty + reinforcements
     else
-      -- Hold expired, calculate normally
+      -- Hold expired, resume normal decay
       calculateDecayedInfluence space signalId now
   | none =>
     -- No hold, calculate normally
@@ -253,7 +326,7 @@ def getCurrentInfluence (space : MVPSignalSpace) (signalId : SignalId)
 
 /-- Helper: Calculate decayed influence for a signal -/
 def calculateDecayedInfluence (space : MVPSignalSpace) (signalId : SignalId)
-    (now : Time) : Influence :=
+    (now : LogicalTime) : Influence :=
   match space.signals.find? (·.id = signalId) with
   | none => 0
   | some signal =>
@@ -261,7 +334,7 @@ def calculateDecayedInfluence (space : MVPSignalSpace) (signalId : SignalId)
     let halfLife := space.config.halfLife.val
 
     -- Decay initial strength with outcome penalty
-    let age := Real.ofNat (now - signal.timestamp)
+    let age := Real.ofNat (now.toNat - signal.timestamp.toNat)
     let decayFactor := Real.rpow 0.5 (age / halfLife)
     let decayedInitial : Influence :=
       signal.initialStrength.val * signal.penaltyFactor.val * decayFactor
@@ -272,7 +345,7 @@ def calculateDecayedInfluence (space : MVPSignalSpace) (signalId : SignalId)
     let decayedReinforcements : Influence := space.reinforcements
       .filter (·.signalId = signalId)
       .map (fun r =>
-        let rAge := Real.ofNat (now - r.at)
+        let rAge := Real.ofNat (now.toNat - r.at.toNat)
         let decayFactor := Real.rpow 0.5 (rAge / halfLife)
         -- Influence = sign × attention × historical_credibility × decay
         -- Note: reinforcements no longer have penalty factors (removed dead code)
@@ -305,27 +378,66 @@ def isSystemActive (tracker : ActivityTracker) (config : ActiveTimeConfig) : Boo
   recentWriters.length ≥ config.minWriters
 
 /-- BAT-Lite: Update time based on collaborative activity -/
-def updateActiveTime (space : MVPSignalSpace) (wallClockNow : Time)
-    (writer : Option AgentId) : MVPSignalSpace :=
+def updateActiveTime (space : MVPSignalSpace) (wallClockNow : WallTime)
+    (writer : Option AgentId) : Except String MVPSignalSpace :=
   let prevWallTime := space.activityTracker.wallTime
-  let timeDelta := wallClockNow - prevWallTime  -- COMPUTE BEFORE ANY UPDATES
 
-  -- Prune stale writes
-  let windowStart := if wallClockNow > space.config.activityWindow then
-    wallClockNow - space.config.activityWindow else 0
+  -- Enforce monotonic wall time
+  if wallClockNow < prevWallTime then
+    .error s!"Wall clock regression: {wallClockNow.val} < {prevWallTime.val}"
+  else
+    let timeDelta := wallClockNow - prevWallTime  -- Nat subtraction, safe after check
+
+    -- Prune stale writes
+    let windowStart := if wallClockNow.val > space.config.activityWindow then
+      WallTime.ofNat (wallClockNow.val - space.config.activityWindow)
+    else WallTime.ofNat 0
+    let prunedWrites := space.activityTracker.recentWrites.filter
+      (fun (_, t) => t ≥ windowStart)
+
+    -- Add new writer if provided
+    let newWrites := match writer with
+      | some agentId => (agentId, wallClockNow) :: prunedWrites
+      | none => prunedWrites
+
+    -- Check activity WITH potential new writer
+    let distinctWriters := newWrites.map (·.1) |>.eraseDup
+    let isActive := distinctWriters.length >= space.config.minWriters
+
+    -- Advance logical time using PRE-COMPUTED delta
+    let newLogicalTime := if isActive && timeDelta > 0 then
+      space.activityTracker.logicalTime + timeDelta
+    else
+      space.activityTracker.logicalTime
+
+    .ok { space with
+      activityTracker := { space.activityTracker with
+        recentWrites := newWrites,
+        wallTime := wallClockNow,  -- Update AFTER using old value
+        logicalTime := newLogicalTime },
+      currentTime := newLogicalTime }
+
+/-- Internal unsafe version that assumes validation passed -/
+private def updateActiveTimeUnsafe (space : MVPSignalSpace) (wallClockNow : WallTime)
+    (writer : Option AgentId) : MVPSignalSpace :=
+  -- Assumes wallClockNow >= prevWallTime, proceeds without check
+  let prevWallTime := space.activityTracker.wallTime
+  let timeDelta := wallClockNow - prevWallTime
+
+  -- Prune and update as in validated version
+  let windowStart := if wallClockNow.val > space.config.activityWindow then
+    WallTime.ofNat (wallClockNow.val - space.config.activityWindow)
+  else WallTime.ofNat 0
   let prunedWrites := space.activityTracker.recentWrites.filter
-    (fun (_, t) => t >= windowStart)
+    (fun (_, t) => t ≥ windowStart)
 
-  -- Add new writer if provided
   let newWrites := match writer with
     | some agentId => (agentId, wallClockNow) :: prunedWrites
     | none => prunedWrites
 
-  -- Check activity WITH potential new writer
   let distinctWriters := newWrites.map (·.1) |>.eraseDup
   let isActive := distinctWriters.length >= space.config.minWriters
 
-  -- Advance logical time using PRE-COMPUTED delta
   let newLogicalTime := if isActive && timeDelta > 0 then
     space.activityTracker.logicalTime + timeDelta
   else
@@ -334,72 +446,109 @@ def updateActiveTime (space : MVPSignalSpace) (wallClockNow : Time)
   { space with
     activityTracker := { space.activityTracker with
       recentWrites := newWrites,
-      wallTime := wallClockNow,  -- Update AFTER using old value
+      wallTime := wallClockNow,
       logicalTime := newLogicalTime },
     currentTime := newLogicalTime }
 
-/-- For Option-returning operations - ALWAYS returns maintained space -/
-def withTimeUpdate (space : MVPSignalSpace) (wallClockNow : Time)
-    (agentId : Option AgentId)
-    (operation : MVPSignalSpace → Option (MVPSignalSpace × α))
-    : TimeResult α :=
-  -- Update time with speculative writer
-  let speculativeSpace := updateActiveTime space wallClockNow agentId
-
-  -- Try operation
-  match operation speculativeSpace with
-  | none =>
-    -- Failed - return maintained space WITHOUT writer
-    let maintainedSpace := updateActiveTime space wallClockNow none
-    { space := maintainedSpace, result := none }
-  | some (mutatedSpace, value) =>
-    -- Success - return mutated space WITH writer
-    { space := mutatedSpace, result := some value }
-
-/-- For Except-returning operations -/
-def withTimeUpdateExcept (space : MVPSignalSpace) (wallClockNow : Time)
+/-- Enhanced wrapper for Except operations -/
+def withTimeUpdateExcept (space : MVPSignalSpace) (wallClockNow : WallTime)
     (agentId : Option AgentId)
     (operation : MVPSignalSpace → Except String (MVPSignalSpace × α))
     : TimeResultExcept α :=
-  -- Update time with speculative writer
-  let speculativeSpace := updateActiveTime space wallClockNow agentId
+  -- First validate monotonicity
+  if wallClockNow < space.activityTracker.wallTime then
+    { space := space,
+      result := .error s!"Clock regression: {wallClockNow.val} < {space.activityTracker.wallTime.val}" }
+  else
+    -- Update time with speculative writer
+    let speculativeSpace := updateActiveTimeUnsafe space wallClockNow agentId
 
-  match operation speculativeSpace with
-  | .error msg =>
-    -- Failed - return maintained space WITHOUT writer
-    let maintainedSpace := updateActiveTime space wallClockNow none
-    { space := maintainedSpace, result := .error msg }
-  | .ok (mutatedSpace, value) =>
-    -- Success - return mutated space WITH writer
-    { space := mutatedSpace, result := .ok value }
+    match operation speculativeSpace with
+    | .error msg =>
+      -- Failed - return maintained space WITHOUT writer
+      let maintainedSpace := updateActiveTimeUnsafe space wallClockNow none
+      { space := maintainedSpace, result := .error msg }
+    | .ok (mutatedSpace, value) =>
+      -- Success - return mutated space WITH writer
+      { space := mutatedSpace, result := .ok value }
+
+/-- For Option-returning operations -/
+def withTimeUpdate (space : MVPSignalSpace) (wallClockNow : WallTime)
+    (agentId : Option AgentId)
+    (operation : MVPSignalSpace → Option (MVPSignalSpace × α))
+    : TimeResult α :=
+  -- Validate monotonicity first
+  if wallClockNow < space.activityTracker.wallTime then
+    { space := space, result := none }  -- Clock regression fails silently for Option
+  else
+    -- Update time with speculative writer
+    let speculativeSpace := updateActiveTimeUnsafe space wallClockNow agentId
+
+    -- Try operation
+    match operation speculativeSpace with
+    | none =>
+      -- Failed - return maintained space WITHOUT writer
+      let maintainedSpace := updateActiveTimeUnsafe space wallClockNow none
+      { space := maintainedSpace, result := none }
+    | some (mutatedSpace, value) =>
+      -- Success - return mutated space WITH writer
+      { space := mutatedSpace, result := some value }
 
 /-- For pure operations (always succeed) -/
-def withTimeUpdatePure (space : MVPSignalSpace) (wallClockNow : Time)
+def withTimeUpdatePure (space : MVPSignalSpace) (wallClockNow : WallTime)
     (agentId : Option AgentId)
     (operation : MVPSignalSpace → MVPSignalSpace)
     : MVPSignalSpace :=
-  let updatedSpace := updateActiveTime space wallClockNow agentId
-  operation updatedSpace
+  -- Validate monotonicity
+  if wallClockNow < space.activityTracker.wallTime then
+    space  -- Clock regression: return unchanged space
+  else
+    let updatedSpace := updateActiveTimeUnsafe space wallClockNow agentId
+    operation updatedSpace
 
 /-- Place a hold on a signal during long LLM operations -/
 def holdSignal (space : MVPSignalSpace) (signalId : SignalId)
-    (agentId : AgentId) (wallClockNow : Time) : MVPSignalSpace :=
+    (agentId : AgentId) (wallClockNow : WallTime) : MVPSignalSpace :=
   withTimeUpdatePure space wallClockNow (some agentId) (fun s =>
-    let holdUntil := s.currentTime + s.config.holdDuration
+    let holdStart := s.currentTime
+    let holdUntil := LogicalTime.ofNat (s.currentTime.toNat + s.config.holdDuration)
     let currentInfluence := getCurrentInfluence s signalId s.currentTime
+
+    -- Create proper SignalHold record
+    let newHold : SignalHold := {
+      signalId := signalId,
+      holdStart := holdStart,
+      holdUntil := holdUntil,
+      baseInfluence := currentInfluence,
+      decayPaused := s.currentTime  -- Freeze decay at current logical time
+    }
+
     { s with activityTracker :=
       { s.activityTracker with
-        signalHolds := (signalId, holdUntil) :: s.activityTracker.signalHolds,
-        influenceCache := (signalId, currentInfluence, s.currentTime) ::
-                         s.activityTracker.influenceCache }})
+        signalHolds := newHold :: s.activityTracker.signalHolds }})
 
 /-- Release expired holds -/
-def releaseExpiredHolds (space : MVPSignalSpace) (wallClockNow : Time) : MVPSignalSpace :=
+def releaseExpiredHolds (space : MVPSignalSpace) (wallClockNow : WallTime) : MVPSignalSpace :=
   withTimeUpdatePure space wallClockNow none (fun s =>
+    -- Filter out expired holds based on logical time
     let activeHolds := s.activityTracker.signalHolds.filter
-      (fun (_, holdUntil) => holdUntil > s.currentTime)
+      (fun hold => hold.holdUntil > s.currentTime)
     { s with activityTracker :=
-      { s.activityTracker with signalHolds := activeHolds }})
+      { s.activityTracker with
+        signalHolds := activeHolds }})
+
+/-- Usage: Call releaseExpiredHolds periodically or before time-sensitive operations
+    to prevent stale holds from blocking decay. Suggested patterns:
+    1. Before processing outcomes that need accurate influence
+    2. As part of periodic maintenance (e.g., alongside resetBudgets)
+    3. Before holdSignal to clean up previous holds on the same signal
+
+    Example maintenance pattern:
+    def performMaintenance (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
+      space
+        |> releaseExpiredHolds now
+        |> resetBudgets now
+-/
 
 /-- Time Management with BAT-Lite:
     The system automatically tracks collaborative activity and advances logical time
@@ -478,12 +627,20 @@ def applyReinforcement (space : MVPSignalSpace) (influence : Influence)
 
 /-- Process outcome: update signal, reinforcements, and agent credibility -/
 def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
-    (wallClockNow : Time) : MVPSignalSpace :=
-  withTimeUpdatePure space wallClockNow none (fun s =>
-    -- Core outcome processing logic (unchanged except remove audit)
-    let space' := if outcome.measuredAt > s.currentTime then
-      { s with currentTime := outcome.measuredAt }
-    else s
+    (wallClockNow : WallTime) : TimeResultExcept Unit :=
+  withTimeUpdateExcept space wallClockNow none (fun s =>
+    -- Validate signal exists
+    match s.signals.find? (·.id = outcome.signalId) with
+    | none => .error s!"Cannot process outcome: signal {outcome.signalId} not found"
+    | some signal =>
+      -- Fast-forward time if needed
+      let space' := if outcome.measuredAt > s.currentTime then
+        { s with
+          currentTime := outcome.measuredAt,
+          activityTracker := { s.activityTracker with
+            logicalTime := outcome.measuredAt,
+            wallTime := max s.activityTracker.wallTime wallClockNow } }
+      else s
 
   let relevantReinforcements := space'.reinforcements.filter
     (·.signalId = outcome.signalId)
@@ -590,14 +747,15 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
       agent  -- Didn't participate
   )
 
-  -- No audit event creation
+      -- No audit event creation
 
-  { space' with
-    signals := updatedSignals,
-    reinforcements := updatedReinforcements,
-    agents := updatedAgents,
-    outcomes := outcome :: space'.outcomes }
-  )
+      let finalSpace := { space' with
+        signals := updatedSignals,
+        reinforcements := updatedReinforcements,
+        agents := updatedAgents,
+        outcomes := outcome :: space'.outcomes }
+
+      .ok (finalSpace, ()))
 
 /-- Reset agent budgets daily with pro-rating to prevent burst exploitation -/
 def resetBudgets (space : MVPSignalSpace) (wallClockNow : Time) : MVPSignalSpace :=
@@ -791,6 +949,67 @@ def chainedOps (space : MVPSignalSpace) : MVPSignalSpace :=
 
   let reinforce1 := applyReinforcement space1 5 "sig1" "agent2" time2
   reinforce1.space  -- Always has maintenance
+
+-- Helper for chaining TimeResult operations
+def chainTimeResult (result : TimeResult α)
+    (f : α → MVPSignalSpace → TimeResult β) : TimeResult β :=
+  match result.result with
+  | none => { space := result.space, result := none }
+  | some value => f value result.space
+
+-- Example usage with helper:
+def chainedWithHelper (space : MVPSignalSpace) : TimeResult SignalId :=
+  emitSignal space "agent1" ⟨10, by norm_num⟩ time1
+    |> chainTimeResult (fun signalId space =>
+      applyReinforcement space 5 signalId "agent2" time2
+        |> chainTimeResult (fun _ space =>
+          emitSignal space "agent3" ⟨5, by norm_num⟩ time3))
+
+-- Complete integration example with new type system:
+def exampleWithNewTypes (space : MVPSignalSpace) : String :=
+  -- Create proper typed timestamps
+  let wall1 := WallTime.ofNat 1000000  -- Unix timestamp
+  let wall2 := WallTime.ofNat 1000010  -- 10 seconds later
+
+  -- Emit signal with wall time
+  let emitResult := emitSignal space "agent1" ⟨10, by norm_num⟩ wall1
+  match emitResult.result with
+  | none => "Emission failed"
+  | some signalId =>
+    -- Process outcome with error handling
+    let outcome : MVPOutcome := {
+      signalId := signalId,
+      success := true,
+      measuredAt := LogicalTime.ofNat 100,
+      wallMeasuredAt := wall2,
+      measuredBy := "evaluator"
+    }
+
+    let processResult := processOutcome emitResult.space outcome wall2
+    match processResult.result with
+    | .error msg => s!"Process failed: {msg}"
+    | .ok () => "Success"
+
+-- Example showing clock regression detection:
+def clockRegressionExample (space : MVPSignalSpace) : String :=
+  let wall1 := WallTime.ofNat 1000
+  let wallBad := WallTime.ofNat 999  -- Regression!
+
+  let result := emitSignal space "agent1" ⟨10, by norm_num⟩ wall1
+  let space1 := result.space
+
+  -- This will fail due to clock regression
+  let result2 := processOutcome space1
+    { signalId := "test",
+      success := true,
+      measuredAt := LogicalTime.ofNat 50,
+      wallMeasuredAt := wallBad,
+      measuredBy := "test" }
+    wallBad
+
+  match result2.result with
+  | .error msg => s!"Caught: {msg}"  -- "Clock regression: 999 < 1000"
+  | .ok () => "Shouldn't happen"
 ```
 
 #### CRITICAL: Space Threading Invariant
@@ -1363,10 +1582,17 @@ def propagateCausalCredit (outcome : CausalOutcome) (space : MVPSignalSpace)
 
 ### Time Semantics
 
-- **Time is Logical**: `Time := Nat` represents logical seconds since system start
-- **Deterministic**: No wall-clock dependency, fully reproducible
-- **Monotonic**: Time only advances, never goes backward
+- **Dual-Time System**: Tracks both wall-clock time and logical time (τ)
+- **Logical Time (τ)**: Advances only when ≥2 agents are active within window
+- **Wall-Clock Input**: Operations require wallClockNow for activity tracking and TTL
+- **Deterministic Decay**: All decay calculations use logical time, not wall-clock
+- **Monotonic**: Both times only advance, never go backward
 - **Resolution**: Second-level granularity for all operations
+
+The system uses wall-clock readings to determine when logical time should advance,
+but all decay and influence calculations depend solely on logical time. This ensures
+collaborative activity drives the system's temporal evolution while maintaining
+deterministic behavior for decay.
 
 ### Economic Model
 
