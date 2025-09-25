@@ -1,10 +1,15 @@
-# Reinforcement in Stigmergic Systems: From MVP to First Principles
+# Reinforcement in Stigmergic Systems: MVP Specification and Future Roadmap
 
 ## Executive Summary
 
-This document presents a progressive design for reinforcement in stigmergic systems, starting with a complete but minimal MVP that includes learning loops and resource constraints, then building toward a theoretically grounded system. Each phase adds specific capabilities while maintaining backward compatibility.
+This document contains two distinct sections:
 
-## Part 1: MVP Design (Week 1)
+1. **Part 1: MVP Specification** - A complete, shippable system ready for implementation
+2. **Parts 2-6: Future Roadmap** - Advanced features for subsequent releases (NOT part of MVP)
+
+⚠️ **IMPORTANT**: Only Part 1 is the MVP. Parts 2-6 describe future enhancements that are NOT required for initial deployment.
+
+## Part 1: MVP Specification (Ready for Implementation)
 
 ### Core Concepts
 
@@ -1048,6 +1053,7 @@ def brokenPattern (space : MVPSignalSpace) : MVPSignalSpace :=
 ```
 
 This invariant is critical because:
+
 1. **Pruning happens in every operation** - returning original space loses this
 2. **Time maintenance is mandatory** - even failed ops must update wall clock
 3. **Activity tracking depends on it** - stale writes break quorum detection
@@ -1057,11 +1063,13 @@ This invariant is critical because:
 Which operations count as "writers" for BAT-Lite:
 
 **Count as writers (human actions):**
+
 - `emitSignal` - Agent creating a signal
 - `applyReinforcement` - Agent reinforcing a signal
 - `holdSignal` - Agent placing a hold (shows engagement)
 
 **Don't count as writers (system/evaluator actions):**
+
 - `processOutcome` - External evaluator action
 - `resetBudgets` - Scheduled system maintenance
 - `provisionAgent` - Administrative action
@@ -1114,7 +1122,39 @@ Which operations count as "writers" for BAT-Lite:
 - Information-theoretic decay
 - Causal chains
 
-## Part 2: Enhanced Credibility (Week 2)
+### 🎯 MVP Implementation Checklist
+
+When implementing Part 1 in Python/other languages:
+
+✅ **Required for MVP:**
+
+- [ ] Opaque time types (WallTime, LogicalTime)
+- [ ] All structures from Part 1 (MVPSignal, MVPReinforcement, MVPOutcome, MVPAgent)
+- [ ] Core operations (emitSignal, applyReinforcement, processOutcome)
+- [ ] BAT-Lite time management
+- [ ] Signal holds with proper semantics
+- [ ] Budget resets with pro-rating
+- [ ] Error handling (TimeResult, TimeResultExcept)
+- [ ] Monotonic clock validation
+
+❌ **NOT Required for MVP:**
+
+- Enhanced credibility models (Part 2)
+- Orthogonal dimensions (Part 3)
+- Governance features (Part 4)
+- Information theory (Part 5)
+- Causal credit (Part 6)
+
+**End of MVP Specification**
+
+---
+
+# FUTURE ROADMAP (Not Part of MVP)
+
+⚠️ **IMPORTANT**: Everything below this line describes future enhancements that are NOT part of the MVP.
+These sections are included for completeness and to show the system's evolution path, but should NOT be implemented in the initial release.
+
+## Part 2: Enhanced Credibility (Future Release - NOT MVP)
 
 ### Multi-Factor Credibility
 
@@ -1197,9 +1237,10 @@ def resetBudgetsWithCredibility (space : MVPSignalSpace) (now : Time)
   { space with agents := updatedAgents }
 ```
 
-## Part 3: Orthogonal Dimensions (Week 3)
+## Part 3: Orthogonal Dimensions (Future Release - NOT MVP)
 
-**⚠️ WARNING: This section contains known issues and is NOT part of MVP:**
+**⚠️ WARNING: This section contains known design issues:**
+
 - Type coercion issues: NNReal * Real operations are ill-typed in Lean
 - Progress accumulation: Currently overwrites instead of aggregating
 - Bounds enforcement: progressPercentage can exceed 100
@@ -1339,7 +1380,7 @@ def applyDimensionalDecay (signal : DimensionalSignal) (now : Time)
                        lastActivity := none, progressPercentage := 0 }}
 ```
 
-## Part 4: Advanced Governance (Week 4)
+## Part 4: Advanced Governance (Future Release - NOT MVP)
 
 ### Rate Limiting and Anti-Gaming
 
@@ -1401,7 +1442,7 @@ def checkGovernance (space : MVPSignalSpace) (r : MVPReinforcement)
       true
 ```
 
-## Part 5: Information-Theoretic Foundation (Month 2)
+## Part 5: Information-Theoretic Foundation (Future Release - NOT MVP)
 
 ### Principled Decay from Shannon Entropy
 
@@ -1445,9 +1486,10 @@ def informationTheoreticDecayRate (signal : DimensionalSignal)
   NNReal.ofReal (Real.log 2 / halfLife)
 ```
 
-## Part 6: Causal Credit Assignment (Month 3)
+## Part 6: Causal Credit Assignment (Future Release - NOT MVP)
 
-**⚠️ WARNING: This section is incomplete and NOT part of MVP:**
+**⚠️ WARNING: This section is incomplete:**
+
 - agentContributions field is completely ignored (all agents get uniform credit)
 - CausalOutcome is not persisted alongside MVPOutcome
 - Migration path needs proper sum type or separate field
