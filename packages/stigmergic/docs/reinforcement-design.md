@@ -67,7 +67,6 @@ def PosReal := { x : Real // x > 0 }
 
 /-- Global system constants -/
 namespace Constants
-  def SIGNAL_HALF_LIFE : PosReal := ⟨3600.0, by norm_num⟩  -- 1 hour in seconds
   def DAY_IN_SECONDS : Nat := 86400
   def MIN_OWNERSHIP_CREDIBILITY : Real := 0.3  -- Minimum credibility to claim ownership
   def BUDGET_BURST_PENALTY : Real := 0.1  -- Pro-rating factor for burst prevention
@@ -137,22 +136,6 @@ structure MVPOutcome where
   measuredAt : Time
   measuredBy : String  -- External system that provided validation
 
-/-- Audit trail for attention transactions -/
-inductive AuditEvent where
-  | emission : AgentId → SignalId → AttentionMinutes → Time → AuditEvent
-  | reinforcement : AgentId → SignalId → AttentionMinutes → Time → AuditEvent
-  | budgetReset :
-      AgentId →           -- who
-      AttentionMinutes →  -- replenished (spent becoming available)
-      Real →              -- adjustment (can be negative)
-      AttentionMinutes →  -- newBudget
-      AttentionMinutes →  -- oldRemaining (unspent)
-      Time →              -- when
-      AuditEvent
-  | agentProvisioned : AgentId → AttentionMinutes → Time → AuditEvent
-    -- Parameters: who, baseline budget, when
-  | outcomeProcessed : SignalId → Bool → Time → AuditEvent
-
 /-- Track detailed reinforcement patterns per agent -/
 structure ReinforcementDetail where
   agentId : AgentId
@@ -217,13 +200,23 @@ structure ActivityTracker where
   signalHolds : List (SignalId × Time)  -- Signals on hold until time
   influenceCache : List (SignalId × Influence × Time)  -- Cached for holds
 
-/-- Signal space with complete tracking and audit trail -/
+/-- Result that always includes maintained space -/
+structure TimeResult (α : Type) where
+  space : MVPSignalSpace  -- Always has pruned writes & updated time
+  result : Option α       -- Operation result (if successful)
+
+/-- For Except operations -/
+structure TimeResultExcept (α : Type) where
+  space : MVPSignalSpace
+  result : Except String α
+
+/-- Signal space with complete tracking -/
 structure MVPSignalSpace where
   signals : List MVPSignal
   reinforcements : List MVPReinforcement
   outcomes : List MVPOutcome
   agents : List MVPAgent
-  auditLog : List AuditEvent  -- Complete transaction history
+  -- auditLog removed
   totalProvisioned : AttentionMinutes  -- Initial baseline budgets (agent creation)
   totalNetAdjustments : Real           -- Net capacity changes (can be negative)
   totalReplenished : AttentionMinutes  -- DIAGNOSTIC: recycled attention (not in conservation)
@@ -264,8 +257,8 @@ def calculateDecayedInfluence (space : MVPSignalSpace) (signalId : SignalId)
   match space.signals.find? (·.id = signalId) with
   | none => 0
   | some signal =>
-    -- Use global constant for half-life
-    let halfLife := Constants.SIGNAL_HALF_LIFE.val
+    -- Use config for half-life
+    let halfLife := space.config.halfLife.val
 
     -- Decay initial strength with outcome penalty
     let age := Real.ofNat (now - signal.timestamp)
@@ -311,61 +304,102 @@ def isSystemActive (tracker : ActivityTracker) (config : ActiveTimeConfig) : Boo
     .eraseDup
   recentWriters.length ≥ config.minWriters
 
-/-- Extract write events from recent operations -/
-def extractRecentWrites (space : MVPSignalSpace) (wallTime : Time) : List (AgentId × Time) :=
-  -- Get emissions from recent audit log
-  let emissions := space.auditLog.filterMap (fun event =>
-    match event with
-    | AuditEvent.emission agentId _ _ t =>
-      if t = wallTime then some (agentId, wallTime) else none
-    | AuditEvent.reinforcement agentId _ _ t =>
-      if t = wallTime then some (agentId, wallTime) else none
-    | _ => none)
-  emissions
-
 /-- BAT-Lite: Update time based on collaborative activity -/
-def updateActiveTime (space : MVPSignalSpace) (wallClockNow : Time) : MVPSignalSpace :=
-  -- Record any new writes from this operation
-  let newWrites := extractRecentWrites space wallClockNow
+def updateActiveTime (space : MVPSignalSpace) (wallClockNow : Time)
+    (writer : Option AgentId) : MVPSignalSpace :=
+  let prevWallTime := space.activityTracker.wallTime
+  let timeDelta := wallClockNow - prevWallTime  -- COMPUTE BEFORE ANY UPDATES
 
-  -- Update tracker with new writes
-  let updatedTracker := { space.activityTracker with
-    recentWrites := newWrites ++ space.activityTracker.recentWrites,
-    wallTime := wallClockNow
-  }
+  -- Prune stale writes
+  let windowStart := if wallClockNow > space.config.activityWindow then
+    wallClockNow - space.config.activityWindow else 0
+  let prunedWrites := space.activityTracker.recentWrites.filter
+    (fun (_, t) => t >= windowStart)
 
-  -- Determine if system is active
-  let isActive := isSystemActive updatedTracker space.config
+  -- Add new writer if provided
+  let newWrites := match writer with
+    | some agentId => (agentId, wallClockNow) :: prunedWrites
+    | none => prunedWrites
 
-  -- Advance logical time only if active
-  let timeDelta := wallClockNow - updatedTracker.wallTime
-  let newLogicalTime := if isActive then
-    updatedTracker.logicalTime + timeDelta  -- Active: advance at 1× wall-clock
+  -- Check activity WITH potential new writer
+  let distinctWriters := newWrites.map (·.1) |>.eraseDup
+  let isActive := distinctWriters.length >= space.config.minWriters
+
+  -- Advance logical time using PRE-COMPUTED delta
+  let newLogicalTime := if isActive && timeDelta > 0 then
+    space.activityTracker.logicalTime + timeDelta
   else
-    updatedTracker.logicalTime  -- Inactive: freeze logical time (no decay)
+    space.activityTracker.logicalTime
 
   { space with
-    activityTracker := { updatedTracker with logicalTime := newLogicalTime },
-    currentTime := newLogicalTime  -- Use logical time for all decay calculations
-  }
+    activityTracker := { space.activityTracker with
+      recentWrites := newWrites,
+      wallTime := wallClockNow,  -- Update AFTER using old value
+      logicalTime := newLogicalTime },
+    currentTime := newLogicalTime }
+
+/-- For Option-returning operations - ALWAYS returns maintained space -/
+def withTimeUpdate (space : MVPSignalSpace) (wallClockNow : Time)
+    (agentId : Option AgentId)
+    (operation : MVPSignalSpace → Option (MVPSignalSpace × α))
+    : TimeResult α :=
+  -- Update time with speculative writer
+  let speculativeSpace := updateActiveTime space wallClockNow agentId
+
+  -- Try operation
+  match operation speculativeSpace with
+  | none =>
+    -- Failed - return maintained space WITHOUT writer
+    let maintainedSpace := updateActiveTime space wallClockNow none
+    { space := maintainedSpace, result := none }
+  | some (mutatedSpace, value) =>
+    -- Success - return mutated space WITH writer
+    { space := mutatedSpace, result := some value }
+
+/-- For Except-returning operations -/
+def withTimeUpdateExcept (space : MVPSignalSpace) (wallClockNow : Time)
+    (agentId : Option AgentId)
+    (operation : MVPSignalSpace → Except String (MVPSignalSpace × α))
+    : TimeResultExcept α :=
+  -- Update time with speculative writer
+  let speculativeSpace := updateActiveTime space wallClockNow agentId
+
+  match operation speculativeSpace with
+  | .error msg =>
+    -- Failed - return maintained space WITHOUT writer
+    let maintainedSpace := updateActiveTime space wallClockNow none
+    { space := maintainedSpace, result := .error msg }
+  | .ok (mutatedSpace, value) =>
+    -- Success - return mutated space WITH writer
+    { space := mutatedSpace, result := .ok value }
+
+/-- For pure operations (always succeed) -/
+def withTimeUpdatePure (space : MVPSignalSpace) (wallClockNow : Time)
+    (agentId : Option AgentId)
+    (operation : MVPSignalSpace → MVPSignalSpace)
+    : MVPSignalSpace :=
+  let updatedSpace := updateActiveTime space wallClockNow agentId
+  operation updatedSpace
 
 /-- Place a hold on a signal during long LLM operations -/
-def holdSignal (space : MVPSignalSpace) (signalId : SignalId) : MVPSignalSpace :=
-  let holdUntil := space.activityTracker.logicalTime + space.config.holdDuration
-  -- Cache current influence before hold
-  let currentInfluence := getCurrentInfluence space signalId space.currentTime
-  { space with activityTracker :=
-    { space.activityTracker with
-      signalHolds := (signalId, holdUntil) :: space.activityTracker.signalHolds,
-      influenceCache := (signalId, currentInfluence, space.currentTime) ::
-                       space.activityTracker.influenceCache }}
+def holdSignal (space : MVPSignalSpace) (signalId : SignalId)
+    (agentId : AgentId) (wallClockNow : Time) : MVPSignalSpace :=
+  withTimeUpdatePure space wallClockNow (some agentId) (fun s =>
+    let holdUntil := s.currentTime + s.config.holdDuration
+    let currentInfluence := getCurrentInfluence s signalId s.currentTime
+    { s with activityTracker :=
+      { s.activityTracker with
+        signalHolds := (signalId, holdUntil) :: s.activityTracker.signalHolds,
+        influenceCache := (signalId, currentInfluence, s.currentTime) ::
+                         s.activityTracker.influenceCache }})
 
 /-- Release expired holds -/
-def releaseExpiredHolds (space : MVPSignalSpace) : MVPSignalSpace :=
-  let activeHolds := space.activityTracker.signalHolds.filter
-    (fun (_, holdUntil) => holdUntil > space.currentTime)
-  { space with activityTracker :=
-    { space.activityTracker with signalHolds := activeHolds }}
+def releaseExpiredHolds (space : MVPSignalSpace) (wallClockNow : Time) : MVPSignalSpace :=
+  withTimeUpdatePure space wallClockNow none (fun s =>
+    let activeHolds := s.activityTracker.signalHolds.filter
+      (fun (_, holdUntil) => holdUntil > s.currentTime)
+    { s with activityTracker :=
+      { s.activityTracker with signalHolds := activeHolds }})
 
 /-- Time Management with BAT-Lite:
     The system automatically tracks collaborative activity and advances logical time
@@ -383,37 +417,30 @@ def generateUniqueId (space : MVPSignalSpace) (agentId : AgentId) : SignalId × 
 
 /-- Emit a new signal with budget checking -/
 def emitSignal (space : MVPSignalSpace) (agentId : AgentId)
-    (strength : AttentionMinutes) : Option (MVPSignalSpace × SignalId) :=
-  match space.agents.find? (·.id = agentId) with
-  | none => none  -- Unknown agent
-  | some agent =>
-    if strength ≤ (agent.dailyBudget - agent.spent) then
-      let (signalId, nextCounter) := generateUniqueId space agentId
-      let signal : MVPSignal := {
-        id := signalId,
-        emitter := agentId,
-        timestamp := space.currentTime,
-        initialStrength := strength,
-        penaltyFactor := ⟨1.0, by norm_num⟩  -- Start with no penalty
-      }
+    (strength : AttentionMinutes) (wallClockNow : Time)
+    : TimeResult SignalId :=
+  withTimeUpdate space wallClockNow (some agentId) (fun s =>
+    match s.agents.find? (·.id = agentId) with
+    | none => none
+    | some agent =>
+      if strength ≤ (agent.dailyBudget - agent.spent) then
+        let (signalId, nextCounter) := generateUniqueId s agentId
+        let signal := mkMVPSignal signalId agentId s.currentTime strength
 
-      -- Deduct from agent's budget (both daily and cumulative)
-      let updatedAgent := { agent with
-        spent := agent.spent + strength,
-        cumulativeSpent := agent.cumulativeSpent + strength }
-      let updatedAgents := space.agents.map (fun a =>
-        if a.id = agent.id then updatedAgent else a)
+        let updatedAgent := { agent with
+          spent := agent.spent + strength,
+          cumulativeSpent := agent.cumulativeSpent + strength }
+        let updatedAgents := s.agents.map (fun a =>
+          if a.id = agent.id then updatedAgent else a)
 
-      let auditEvent := AuditEvent.emission agentId signalId strength space.currentTime
+        -- No audit event creation
+        let newSpace := { s with
+          signals := signal :: s.signals,
+          agents := updatedAgents,
+          nextSignalCounter := nextCounter }
 
-      some ({ space with
-        signals := signal :: space.signals,
-        agents := updatedAgents,
-        auditLog := auditEvent :: space.auditLog,
-        nextSignalCounter := nextCounter
-      }, signalId)
-    else
-      none  -- Budget exceeded
+        some (newSpace, signalId)
+      else none)
 
 /-- Check if agent has budget to reinforce -/
 def canReinforce (agent : MVPAgent) (influence : Influence) : Bool :=
@@ -422,56 +449,47 @@ def canReinforce (agent : MVPAgent) (influence : Influence) : Bool :=
 
 /-- Apply reinforcement with budget checking and credibility capture -/
 def applyReinforcement (space : MVPSignalSpace) (influence : Influence)
-    (signalId : SignalId) (agentId : AgentId) : Option MVPSignalSpace :=
-  -- First check if signal exists
-  match space.signals.find? (·.id = signalId) with
-  | none => none  -- Signal doesn't exist
-  | some _ =>
-    match space.agents.find? (·.id = agentId) with
-    | none => none  -- Unknown agent
-    | some agent =>
-      if canReinforce agent influence then
-        -- Create reinforcement with proper types
-        let attentionCost := NNReal.ofReal (abs influence)
-        let r : MVPReinforcement := {
-          signalId := signalId,
-          by := agentId,
-          influence := influence,
-          attentionSpent := attentionCost,
-          credibilityAtTime := agent.credibility,
-          at := space.currentTime
-        }
+    (signalId : SignalId) (agentId : AgentId) (wallClockNow : Time)
+    : TimeResult Unit :=
+  withTimeUpdate space wallClockNow (some agentId) (fun s =>
+    match s.signals.find? (·.id = signalId) with
+    | none => none
+    | some _ =>
+      match s.agents.find? (·.id = agentId) with
+      | none => none
+      | some agent =>
+        if canReinforce agent influence then
+          let attentionCost := NNReal.ofReal (abs influence)
+          let r := mkMVPReinforcement signalId agentId influence agent.credibility s.currentTime
 
-        -- Update agent's spent budget (both daily and cumulative)
-        let updatedAgent := { agent with
-          spent := agent.spent + attentionCost,
-          cumulativeSpent := agent.cumulativeSpent + attentionCost }
-        let updatedAgents := space.agents.map (fun a =>
-          if a.id = agent.id then updatedAgent else a)
+          let updatedAgent := { agent with
+            spent := agent.spent + attentionCost,
+            cumulativeSpent := agent.cumulativeSpent + attentionCost }
+          let updatedAgents := s.agents.map (fun a =>
+            if a.id = agent.id then updatedAgent else a)
 
-        let auditEvent := AuditEvent.reinforcement agentId signalId attentionCost space.currentTime
+          -- No audit event
+          let newSpace := { s with
+            reinforcements := r :: s.reinforcements,
+            agents := updatedAgents }
 
-        some { space with
-          reinforcements := r :: space.reinforcements,
-          agents := updatedAgents,
-          auditLog := auditEvent :: space.auditLog }
-      else
-        none  -- Budget exceeded
+          some (newSpace, ())
+        else none)
 
 /-- Process outcome: update signal, reinforcements, and agent credibility -/
 def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
-    : MVPSignalSpace :=
-  -- Sync time to outcome measurement
-  let space' := if outcome.measuredAt > space.currentTime then
-    { space with currentTime := outcome.measuredAt }
-  else
-    space  -- Don't go backwards in time
+    (wallClockNow : Time) : MVPSignalSpace :=
+  withTimeUpdatePure space wallClockNow none (fun s =>
+    -- Core outcome processing logic (unchanged except remove audit)
+    let space' := if outcome.measuredAt > s.currentTime then
+      { s with currentTime := outcome.measuredAt }
+    else s
 
   let relevantReinforcements := space'.reinforcements.filter
     (·.signalId = outcome.signalId)
 
   -- 1. Update ONLY signal with feedback (not reinforcements, to avoid double penalty)
-  let updatedSignals := space.signals.map (fun signal =>
+  let updatedSignals := space'.signals.map (fun signal =>
     if signal.id = outcome.signalId then
       -- Bidirectional adjustment: boost on success, penalty on failure
       let adjustment := if outcome.success then 1.43 else 0.7  -- Success boosts strength
@@ -480,10 +498,10 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
     else signal)
 
   -- 2. Keep reinforcements unchanged (avoid double penalty)
-  let updatedReinforcements := space.reinforcements
+  let updatedReinforcements := space'.reinforcements
 
   -- 3. Track detailed reinforcement patterns with DELIVERED influence
-  let halfLife := Constants.SIGNAL_HALF_LIFE.val
+  let halfLife := space'.config.halfLife.val
   let agentDetails : List ReinforcementDetail :=
     relevantReinforcements
       .foldl (fun acc r =>
@@ -512,13 +530,13 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
       []
 
   -- 4. Include signal EMITTER in learning (critical missing piece)
-  let emitterId := match space.signals.find? (·.id = outcome.signalId) with
+  let emitterId := match space'.signals.find? (·.id = outcome.signalId) with
     | none => none
     | some signal => some signal.emitter
 
   -- 5. Update agent credibility including emitter
   let learningEpsilon := Constants.LEARNING_EPSILON  -- Minimum learning to escape zero
-  let updatedAgents := space.agents.map (fun agent =>
+  let updatedAgents := space'.agents.map (fun agent =>
     -- Check if agent is the emitter
     let isEmitter := emitterId = some agent.id
 
@@ -572,78 +590,67 @@ def processOutcome (space : MVPSignalSpace) (outcome : MVPOutcome)
       agent  -- Didn't participate
   )
 
-  let auditEvent := AuditEvent.outcomeProcessed outcome.signalId outcome.success outcome.measuredAt
+  -- No audit event creation
 
   { space' with
     signals := updatedSignals,
     reinforcements := updatedReinforcements,
     agents := updatedAgents,
-    outcomes := outcome :: space'.outcomes,
-    auditLog := auditEvent :: space'.auditLog }
+    outcomes := outcome :: space'.outcomes }
+  )
 
 /-- Reset agent budgets daily with pro-rating to prevent burst exploitation -/
-def resetBudgets (space : MVPSignalSpace) (now : Time) : MVPSignalSpace :=
-  let (reversedAgents, reversedAuditEvents, newReplenished, newAdjustments) :=
-    space.agents.foldl (fun (agents, audits, replenished, adjustments) agent =>
-      if now - agent.lastReset ≥ Constants.DAY_IN_SECONDS then
-        let prevBudget := agent.dailyBudget  -- Capture BEFORE reset
-        -- Pro-rate new budget based on unspent portion to prevent burst gaming
-        let unspent := agent.dailyBudget - agent.spent
-        let unspentRatio : Real :=
-          if agent.dailyBudget.val > 0 then
-            unspent.val / agent.dailyBudget.val
+def resetBudgets (space : MVPSignalSpace) (wallClockNow : Time) : MVPSignalSpace :=
+  withTimeUpdatePure space wallClockNow none (fun s =>
+    -- Use foldr to avoid needing reverse
+    let (updatedAgents, newReplenished, newAdjustments) :=
+      s.agents.foldr
+        (fun agent (agents, replenished, adjustments) =>
+          if wallClockNow - agent.lastReset ≥ Constants.DAY_IN_SECONDS then
+            let prevBudget := agent.dailyBudget  -- Capture BEFORE mutation
+            let unspent := prevBudget - agent.spent
+            let unspentRatio := if prevBudget.val > 0 then
+              unspent.val / prevBudget.val else 0
+            let multiplier := 0.5 + 1.5 * unspentRatio
+            let newBudget := NNReal.ofReal (agent.baselineBudget.val * multiplier)
+
+            let resetAgent := { agent with
+              dailyBudget := newBudget,
+              spent := ⟨0, by norm_num⟩,
+              lastReset := wallClockNow }
+
+            let replenishedAmount := agent.spent
+            let netAdjustment := newBudget.val - prevBudget.val
+
+            -- No audit event creation
+            (resetAgent :: agents,
+             replenished + replenishedAmount,
+             adjustments + netAdjustment)
           else
-            0  -- No budget means no bonus
+            (agent :: agents, replenished, adjustments))
+        ([], ⟨0, by norm_num⟩, (0.0 : Real))
 
-        -- Recovery floor: 0.5x minimum, 2.0x maximum based on conservation
-        let multiplier := 0.5 + 1.5 * unspentRatio  -- Range: [0.5, 2.0]
-        let newBudget := NNReal.ofReal (agent.baselineBudget.val * multiplier)
-
-        -- Track actual capacity change from previous budget
-        let replenishedAmount := agent.spent  -- Spent becoming available again (recycled)
-        let netAdjustment : Real := newBudget.val - prevBudget.val  -- Delta from PREVIOUS
-
-        let resetAgent := { agent with
-          dailyBudget := newBudget,
-          spent := ⟨0, by norm_num⟩,
-          lastReset := now }
-
-        -- Create per-agent audit event with all components
-        let auditEvent := AuditEvent.budgetReset
-          agent.id
-          replenishedAmount
-          netAdjustment  -- Track both positive AND negative
-          newBudget
-          unspent
-          now
-
-        (resetAgent :: agents, auditEvent :: audits,
-         replenished + replenishedAmount, adjustments + netAdjustment)  -- Real addition
-      else
-        (agent :: agents, audits, replenished, adjustments))
-    ([], [], ⟨0, by norm_num⟩, (0.0 : Real))  -- Real zero for adjustments
-
-  let updatedAgents := reversedAgents.reverse  -- Restore original order
-  let newAuditEvents := reversedAuditEvents.reverse  -- Restore original order
-
-  { space with
-    agents := updatedAgents,
-    totalNetAdjustments := space.totalNetAdjustments + newAdjustments,
-    totalReplenished := space.totalReplenished + newReplenished,
-    auditLog := newAuditEvents ++ space.auditLog }
+    { s with
+      agents := updatedAgents,
+      totalNetAdjustments := s.totalNetAdjustments + newAdjustments,
+      totalReplenished := s.totalReplenished + newReplenished }
+      -- No auditLog update
+  )
 
 /-- Provision a new agent and track initial budget allocation -/
-def provisionAgent (space : MVPSignalSpace) (agentData : AgentId × Credibility × AttentionMinutes)
-    (now : Time) : Except String MVPSignalSpace :=
-  let (id, cred, baseline) := agentData
-  match mkMVPAgent id cred baseline with
-  | .error msg => .error msg
-  | .ok agent =>
-    let auditEvent := AuditEvent.agentProvisioned agent.id agent.baselineBudget now
-    .ok { space with
-          agents := agent :: space.agents,
-          totalProvisioned := space.totalProvisioned + agent.baselineBudget,
-          auditLog := auditEvent :: space.auditLog }
+def provisionAgent (space : MVPSignalSpace)
+    (agentData : AgentId × Credibility × AttentionMinutes)
+    (wallClockNow : Time) : TimeResultExcept Unit :=
+  withTimeUpdateExcept space wallClockNow none (fun s =>
+    let (id, cred, baseline) := agentData
+    match mkMVPAgent id cred baseline with
+    | .error msg => .error msg
+    | .ok agent =>
+      -- No audit event
+      let newSpace := { s with
+        agents := agent :: s.agents,
+        totalProvisioned := s.totalProvisioned + agent.baselineBudget }
+      .ok (newSpace, ()))
 ```
 
 ### MVP Correctness Properties
@@ -667,10 +674,15 @@ theorem accounting_integrity (space : MVPSignalSpace) :
   let totalInSignals := space.signals.map (·.initialStrength) |>.sum
   let totalInReinforcements := space.reinforcements.map (·.attentionSpent) |>.sum
   totalCumulativeSpent = totalInSignals + totalInReinforcements := by
-  -- Proof outline (TODO: Proof required):
-  -- Track all emissions and reinforcements via AuditEvent
-  -- Sum audit events matches sum of actual allocations
-  sorry  -- TODO: Implement audit log invariant proof
+  -- Proof by structural induction on operation sequences:
+  -- Base: Empty space has all zeros
+  -- Inductive: For each operation type:
+  --   - emitSignal: adds to both cumulativeSpent and signals
+  --   - applyReinforcement: adds to both cumulativeSpent and reinforcements
+  --   - processOutcome: preserves equality (no spending)
+  --   - resetBudgets: preserves equality (resets spent, not cumulative)
+  --   - provisionAgent: preserves equality (starts at 0)
+  sorry
 
 /-- Open Economy: Current capacity equals invested plus available attention -/
 theorem open_economy (space : MVPSignalSpace) :
@@ -709,7 +721,7 @@ theorem influence_decay_monotonic (space : MVPSignalSpace) (id : SignalId) (t₁
   (∀ r ∈ space.reinforcements, r.signalId = id → r.at ≤ t₁) →
   (∀ o ∈ space.outcomes, o.signalId = id → o.measuredAt ≤ t₁ ∨ o.measuredAt > t₂) →
   getCurrentInfluence space id t₂ = getCurrentInfluence space id t₁ *
-    (Real.rpow 0.5 (Real.ofNat (t₂ - t₁) / Constants.SIGNAL_HALF_LIFE.val)) := by
+    (Real.rpow 0.5 (Real.ofNat (t₂ - t₁) / space.config.halfLife.val)) := by
   intro h_time h_no_new_reinforcements h_no_outcomes
   -- Proof sketch:
   -- 1. getCurrentInfluence at t₁ = ∑(initial + reinforcements) with decay factors
@@ -750,13 +762,91 @@ theorem reinforcement_preserves_history (space space' : MVPSignalSpace)
     (space'.agents.find? (·.id = r.by)).map (·.credibility)) →
   -- The reinforcement's contribution to influence remains unchanged
   let rAge := Real.ofNat (now - r.at)
-  let decayFactor := Real.rpow 0.5 (rAge / Constants.SIGNAL_HALF_LIFE.val)
+  let decayFactor := Real.rpow 0.5 (rAge / space.config.halfLife.val)
   r.influence * r.credibilityAtTime.toReal * decayFactor =
   r.influence * r.credibilityAtTime.toReal * decayFactor := by
   -- Proof: credibilityAtTime is immutable, captured at creation
   -- Changes to agent.credibility don't affect historical reinforcements
   intros; rfl
 ```
+
+### Usage Patterns for New Result Types
+
+```lean
+-- Example: Handling TimeResult
+def exampleUsage (space : MVPSignalSpace) : MVPSignalSpace :=
+  let result := emitSignal space "agent1" ⟨10, by norm_num⟩ currentTime
+  match result.result with
+  | none =>
+    -- Operation failed, but still use maintained space
+    result.space
+  | some signalId =>
+    -- Operation succeeded
+    processSignal result.space signalId
+
+-- Example: Chaining operations
+def chainedOps (space : MVPSignalSpace) : MVPSignalSpace :=
+  let emit1 := emitSignal space "agent1" ⟨10, by norm_num⟩ time1
+  let space1 := emit1.space  -- Always updated, even if failed
+
+  let reinforce1 := applyReinforcement space1 5 "sig1" "agent2" time2
+  reinforce1.space  -- Always has maintenance
+```
+
+#### CRITICAL: Space Threading Invariant
+
+**NEVER keep the original space after an operation**. Always use `result.space`:
+
+```lean
+/-- CRITICAL: Always use result.space, never keep the original space -/
+def correctPattern (space : MVPSignalSpace) : MVPSignalSpace :=
+  let result := emitSignal space "agent1" ⟨10, by norm_num⟩ currentTime
+  -- ALWAYS use result.space, regardless of success/failure
+  result.space  -- ✓ Correct - maintains pruning
+  -- space       -- ✗ WRONG - loses maintenance, causes stale writes
+
+/-- Example showing failure still requires space threading -/
+def handleFailure (space : MVPSignalSpace) : MVPSignalSpace :=
+  let result := emitSignal space "agent1" ⟨1000, by norm_num⟩ currentTime
+  match result.result with
+  | none =>
+    -- Even on failure, MUST use result.space
+    logError "Emission failed due to budget exceeded"
+    result.space  -- ✓ Has pruned writes and updated time
+    -- space       -- ✗ WRONG - loses maintenance
+  | some signalId =>
+    logInfo s!"Created signal {signalId}"
+    result.space  -- ✓ Correct
+
+/-- Anti-pattern that MUST be avoided -/
+def brokenPattern (space : MVPSignalSpace) : MVPSignalSpace :=
+  let result := emitSignal space "agent1" ⟨10, by norm_num⟩ currentTime
+  match result.result with
+  | none =>
+    space  -- ✗✗ BUG: Returns unpruned space, breaks BAT-Lite!
+  | some _ =>
+    result.space
+```
+
+This invariant is critical because:
+1. **Pruning happens in every operation** - returning original space loses this
+2. **Time maintenance is mandatory** - even failed ops must update wall clock
+3. **Activity tracking depends on it** - stale writes break quorum detection
+
+### Activity Tracking Policy
+
+Which operations count as "writers" for BAT-Lite:
+
+**Count as writers (human actions):**
+- `emitSignal` - Agent creating a signal
+- `applyReinforcement` - Agent reinforcing a signal
+- `holdSignal` - Agent placing a hold (shows engagement)
+
+**Don't count as writers (system/evaluator actions):**
+- `processOutcome` - External evaluator action
+- `resetBudgets` - Scheduled system maintenance
+- `provisionAgent` - Administrative action
+- `releaseExpiredHolds` - Automatic cleanup
 
 ### What MVP Provides
 
@@ -778,7 +868,7 @@ theorem reinforcement_preserves_history (space space' : MVPSignalSpace)
 ✅ **Open Economy Accounting (FIXED):**
 
 - **Correct delta tracking**: Uses budget changes not baseline distance
-- **Complete audit**: Tracks totalNetAdjustments (can be negative)
+- **Total adjustments**: Tracks totalNetAdjustments (can be negative)
 - **Recovery floor**: 0.5x-2.0x budget range based on conservation
 - **Diagnostic counters**: totalReplenished tracked separately (not in conservation)
 
@@ -788,7 +878,7 @@ theorem reinforcement_preserves_history (space space' : MVPSignalSpace)
 - **Monotonic decay**: Influence strictly decreases over time
 - **Type-enforced bounds**: Credibility constraints guaranteed via smart constructors
 - **Single-level penalties**: No double punishment
-- **Correct penalty semantics**: Success reduces penalty (×0.7), failure increases (×1.3)
+- **Correct penalty semantics**: Success boosts strength (×1.43), failure reduces (×0.7)
 
 ✅ **Nuanced Aggregation:**
 
@@ -1258,7 +1348,7 @@ def propagateCausalCredit (outcome : CausalOutcome) (space : MVPSignalSpace)
 ### Provable with Current Definitions
 
 - **Budget Constraint**: Structural induction on operations
-- **Accounting Integrity**: Via audit trail invariants
+- **Accounting Integrity**: Via structural induction
 - **Influence Decay**: With precondition of no outcomes in interval
 - **Credibility Bounds**: By Subtype construction
 - **Historical Immutability**: Direct from immutable fields
